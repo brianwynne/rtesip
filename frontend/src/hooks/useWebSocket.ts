@@ -45,6 +45,7 @@ export function useWebSocket() {
     pl: 100, pr: 100, plink: false,
   });
   const [sipReady, setSipReady] = useState(false);
+  const [meterLevels, setMeterLevels] = useState({ cap_l: 0, cap_r: 0, play_l: 0, play_r: 0 });
 
   const send = useCallback((data: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -141,6 +142,15 @@ export function useWebSocket() {
             break;
           case "ended":
             setCallState({ state: "idle" });
+            break;
+
+          case "meters":
+            setMeterLevels({
+              cap_l: msg.cap_l as number,
+              cap_r: msg.cap_r as number,
+              play_l: msg.play_l as number,
+              play_r: msg.play_r as number,
+            });
             break;
         }
       };
@@ -249,7 +259,7 @@ export function useWebSocket() {
   }, [send]);
 
   return {
-    connected, authed, authFailed, callState, accounts, volume, sipReady,
+    connected, authed, authFailed, callState, accounts, volume, sipReady, meterLevels,
     send, authenticate,
     call: (address: string) => send({ command: "call", address }),
     hangup: () => send({ command: "hangup" }),

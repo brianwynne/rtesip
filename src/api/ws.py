@@ -16,6 +16,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from src.config.settings import get_section, DATA_DIR
 from src.sip.telnet_client import PjsuaTelnet
 from src.audio.mixer import MixerState
+from src.audio.meters import audio_meter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -48,6 +49,26 @@ async def on_pjsua_event(event: str, data: dict) -> None:
 
     """
     await broadcast(event, data)
+
+
+async def on_meter_levels(cap_l: int, cap_r: int, play_l: int, play_r: int) -> None:
+    """Broadcast live audio meter levels to all authed clients."""
+    if not authed_clients:
+        return
+    await broadcast("meters", {
+        "cap_l": cap_l, "cap_r": cap_r,
+        "play_l": play_l, "play_r": play_r,
+    })
+
+
+async def start_meters() -> None:
+    """Start audio metering and wire to WebSocket broadcaster."""
+    audio_meter.on_levels(on_meter_levels)
+    await audio_meter.start()
+
+
+async def stop_meters() -> None:
+    await audio_meter.stop()
 
 
 async def connect_telnet() -> None:

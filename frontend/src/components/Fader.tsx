@@ -8,6 +8,8 @@ interface Props {
   leftLevel: number;
   rightLevel: number;
   linked: boolean;
+  meterLeft?: number;
+  meterRight?: number;
   onUp: (channel: "l" | "r") => void;
   onDown: (channel: "l" | "r") => void;
   onMute: () => void;
@@ -15,7 +17,7 @@ interface Props {
   onSetLevel?: (channel: "l" | "r", level: number) => void;
 }
 
-export function Fader({ type, leftLevel, rightLevel, linked, onMute, onLink, onUp, onDown, onSetLevel }: Props) {
+export function Fader({ type, leftLevel, rightLevel, linked, meterLeft = 0, meterRight = 0, onMute, onLink, onUp, onDown, onSetLevel }: Props) {
   const isCapture = type === "capture";
   const isMuted = leftLevel === 0 && rightLevel === 0;
   const Icon = isCapture ? (isMuted ? MicOff : Mic) : (isMuted ? VolumeX : Volume2);
@@ -41,8 +43,8 @@ export function Fader({ type, leftLevel, rightLevel, linked, onMute, onLink, onU
 
       {/* Meters */}
       <div className={styles.meters}>
-        <Meter label={chLabelL} level={leftLevel} muted={isMuted} vertical scalePosition="left" />
-        <Meter label={chLabelR} level={rightLevel} muted={isMuted} vertical scalePosition="right" />
+        <Meter label={chLabelL} level={meterLeft} muted={isMuted} vertical scalePosition="left" maxLevel={100} />
+        <Meter label={chLabelR} level={meterRight} muted={isMuted} vertical scalePosition="right" maxLevel={100} />
       </div>
 
       {/* Per-channel level readout (unlinked) */}

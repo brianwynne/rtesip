@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import sip, audio, system, contacts, update
-from src.api.ws import router as ws_router, connect_telnet
+from src.api.ws import router as ws_router, connect_telnet, start_meters, stop_meters
 from src.sip.pjsua_manager import pjsua
 from src.config.system import apply_performance_governor
 
@@ -35,9 +35,13 @@ async def lifespan(app: FastAPI):
     # Connect to pjsua telnet CLI (with retry)
     asyncio.create_task(connect_telnet())
 
+    # Start live audio metering
+    asyncio.create_task(start_meters())
+
     yield
 
     logger.info("rtesip shutting down")
+    await stop_meters()
     await pjsua.stop()
 
 
