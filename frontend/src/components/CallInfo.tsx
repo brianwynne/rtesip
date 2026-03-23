@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { PhoneOff, Shield, ShieldOff, Radio, Clock, Wifi } from "lucide-react";
+import { PhoneOff, Shield, ShieldOff, Radio, Wifi } from "lucide-react";
 import type { CallState } from "../types";
 import styles from "./CallInfo.module.css";
 

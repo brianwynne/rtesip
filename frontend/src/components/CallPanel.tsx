@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, PhoneOff, PhoneForwarded, X, Keyboard, ArrowLeft, User } from "lucide-react";
+import { Phone, PhoneForwarded, X, Keyboard, User } from "lucide-react";
 import { SoftKeyboard } from "./SoftKeyboard";
 import { CallInfo } from "./CallInfo";
 import type { CallState, Contact } from "../types";
@@ -31,7 +31,6 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
   const quickDials = contacts.filter((c) => c.quickDial);
   const isIdle = callState.state === "idle";
   const isIncoming = callState.state === "incoming";
-  const isActive = !isIdle;
 
   return (
     <div className={styles.panel}>

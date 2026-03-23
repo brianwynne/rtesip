@@ -45,7 +45,7 @@ def _get_events(telnet: PjsuaTelnet) -> list[tuple[str, dict]]:
 def test_calling_state(telnet):
     """CALLING line sets call_state and emits 'calling' event."""
     telnet.current_contact = "alice@example.com"
-    telnet._parse_output("Call 0 state changed to CALLING\n")
+    telnet._parse_line("Call 0 state changed to CALLING")
     assert telnet.call_state == CallState.CALLING
 
     events = _get_events(telnet)
@@ -55,7 +55,7 @@ def test_calling_state(telnet):
 def test_ringing_state(telnet):
     """180 Ringing sets state to RINGING."""
     telnet.current_contact = "alice@example.com"
-    telnet._parse_output("Call 0 state changed to EARLY (180 Ringing)\n")
+    telnet._parse_line("Call 0 state changed to EARLY (180 Ringing)")
     assert telnet.call_state == CallState.RINGING
 
     events = _get_events(telnet)
@@ -64,7 +64,7 @@ def test_ringing_state(telnet):
 
 def test_confirmed_via_call_list(telnet):
     """CONFIRMED in call list output sets state to CONNECTED."""
-    telnet._parse_output("Current call id=0 to sip:alice@example.com [CONFIRMED]\n")
+    telnet._parse_line("Current call id=0 to sip:alice@example.com [CONFIRMED]")
     assert telnet.call_state == CallState.CONNECTED
 
     events = _get_events(telnet)
@@ -75,7 +75,7 @@ def test_disconnected_state(telnet):
     """DISCONNCTD line resets state to IDLE and emits 'ended'."""
     telnet.call_state = CallState.CONNECTED
     telnet.current_contact = "alice@example.com"
-    telnet._parse_output("[DISCONNCTD] t: sip:alice@example.com;tag=abc123\n")
+    telnet._parse_line("[DISCONNCTD] t: sip:alice@example.com;tag=abc123")
     assert telnet.call_state == CallState.IDLE
     assert telnet.current_contact is None
 
@@ -89,8 +89,8 @@ def test_disconnected_state(telnet):
 
 def test_registration_200(telnet):
     """Successful registration (200) sets account registered and sip_ready."""
-    telnet._parse_output(
-        "[ 0] sip:alice@example.com: 200/OK (expires=600)\n"
+    telnet._parse_line(
+        "[ 0] sip:alice@example.com: 200/OK (expires=600)"
     )
     assert telnet.active_accounts.get("alice@example.com") is True
     assert telnet.sip_ready is True
@@ -104,8 +104,8 @@ def test_registration_200(telnet):
 
 def test_registration_403(telnet):
     """Failed registration (403) marks account as not registered."""
-    telnet._parse_output(
-        "[ 0] sip:alice@example.com: 403/Forbidden (expires=-1)\n"
+    telnet._parse_line(
+        "[ 0] sip:alice@example.com: 403/Forbidden (expires=-1)"
     )
     assert telnet.active_accounts.get("alice@example.com") is False
 
@@ -117,8 +117,8 @@ def test_registration_403(telnet):
 
 def test_registration_status_format2(telnet):
     """Alternate registration status format is also parsed."""
-    telnet._parse_output(
-        "sip:bob@sip.test.com: registration success, status=200 (OK)\n"
+    telnet._parse_line(
+        "sip:bob@sip.test.com: registration success, status=200 (OK)"
     )
     assert telnet.active_accounts.get("bob@sip.test.com") is True
 
@@ -127,7 +127,7 @@ def test_registration_status_format2(telnet):
 
 def test_incoming_call_from_header(telnet):
     """From: header triggers incoming state with parsed contact."""
-    telnet._parse_output('From: "Bob Smith" <sip:bob@example.com>\n')
+    telnet._parse_line('From: "Bob Smith" <sip:bob@example.com>')
     assert telnet.call_state == CallState.INCOMING
     assert "bob@example.com" in telnet.current_contact
 
@@ -137,7 +137,7 @@ def test_incoming_call_from_header(telnet):
 
 def test_incoming_call_list_format(telnet):
     """INCOMING in call list also triggers incoming state."""
-    telnet._parse_output("Current call id=0 to sip:bob@example.com [INCOMING]\n")
+    telnet._parse_line("Current call id=0 to sip:bob@example.com [INCOMING]")
     assert telnet.call_state == CallState.INCOMING
 
 
@@ -145,7 +145,7 @@ def test_incoming_call_list_format(telnet):
 
 def test_stun_timeout_error(telnet):
     """STUN timeout emits network_error event."""
-    telnet._parse_output("PJNATH_ESTUNTIMEDOUT: STUN transaction has timed out\n")
+    telnet._parse_line("PJNATH_ESTUNTIMEDOUT: STUN transaction has timed out")
 
     events = _get_events(telnet)
     assert any(e[0] == "network_error" for e in events)
@@ -153,7 +153,7 @@ def test_stun_timeout_error(telnet):
 
 def test_stun_send_error(telnet):
     """Error sending STUN request emits network_error."""
-    telnet._parse_output("Error sending STUN request: Network unreachable\n")
+    telnet._parse_line("Error sending STUN request: Network unreachable")
 
     events = _get_events(telnet)
     assert any(e[0] == "network_error" for e in events)
@@ -161,7 +161,7 @@ def test_stun_send_error(telnet):
 
 def test_stun_error_suppressed_when_nominated(telnet):
     """STUN error with 'not nominated' is ignored (ICE negotiation noise)."""
-    telnet._parse_output("PJNATH_ESTUNTIMEDOUT: not nominated pair\n")
+    telnet._parse_line("PJNATH_ESTUNTIMEDOUT: not nominated pair")
 
     events = _get_events(telnet)
     assert not any(e[0] == "network_error" for e in events)
@@ -169,7 +169,7 @@ def test_stun_error_suppressed_when_nominated(telnet):
 
 def test_audio_device_error(telnet):
     """ALSA device error emits audio_error."""
-    telnet._parse_output("PJMEDIA_EAUD_SYSERR: Audio subsystem error\n")
+    telnet._parse_line("PJMEDIA_EAUD_SYSERR: Audio subsystem error")
 
     events = _get_events(telnet)
     assert any(e[0] == "audio_error" for e in events)
@@ -177,7 +177,7 @@ def test_audio_device_error(telnet):
 
 def test_sip_reason_code(telnet):
     """SIP reason line emits reason event with code and text."""
-    telnet._parse_output("[reason=486 (Busy Here)]\n")
+    telnet._parse_line("[reason=486 (Busy Here)]")
 
     events = _get_events(telnet)
     reason_events = [e for e in events if e[0] == "reason"]
@@ -189,7 +189,7 @@ def test_sip_reason_code(telnet):
 def test_connection_error_when_idle(telnet):
     """Connection timeout while idle emits connection_error."""
     telnet.current_contact = None
-    telnet._parse_output("Connection timed out\n")
+    telnet._parse_line("Connection timed out")
 
     events = _get_events(telnet)
     assert any(e[0] == "connection_error" for e in events)
@@ -198,7 +198,7 @@ def test_connection_error_when_idle(telnet):
 def test_connection_error_suppressed_during_call(telnet):
     """Connection timeout during active call is not emitted as connection_error."""
     telnet.current_contact = "alice@example.com"
-    telnet._parse_output("Connection timed out\n")
+    telnet._parse_line("Connection timed out")
 
     events = _get_events(telnet)
     assert not any(e[0] == "connection_error" for e in events)
@@ -242,6 +242,7 @@ def test_resolve_contact_lookup_from_file(telnet, tmp_data_dir):
 
 def test_empty_lines_ignored(telnet):
     """Empty lines and prompt lines produce no events."""
-    telnet._parse_output("\n\n  \nrtesip>\n")
+    for line in ["", "  ", "rtesip>"]:
+        telnet._parse_line(line)
     events = _get_events(telnet)
     assert len(events) == 0

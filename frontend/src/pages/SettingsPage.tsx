@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Power, RefreshCw, Save, Wifi, Search, Signal } from "lucide-react";
+import { RotateCcw, Power, RefreshCw, Save, Search, Signal } from "lucide-react";
 import type { SystemStatus } from "../types";
 import styles from "./SettingsPage.module.css";
 
@@ -69,14 +69,6 @@ const DEFAULT_SIP: SipConfig = {
   codecs: ["opus/48000/2", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1", "L16/48000/1"],
 };
 
-const ALL_CODECS = [
-  { id: "opus/48000/2", label: "Opus 48kHz Stereo" },
-  { id: "L16/48000/1", label: "L16 48kHz (Linear PCM)" },
-  { id: "G722/16000/1", label: "G.722 16kHz" },
-  { id: "PCMA/8000/1", label: "G.711 A-law (PCMA)" },
-  { id: "PCMU/8000/1", label: "G.711 μ-law (PCMU)" },
-];
-
 export function SettingsPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [sip, setSip] = useState<SipConfig>(DEFAULT_SIP);
@@ -134,16 +126,6 @@ export function SettingsPage() {
 
   const updateSip = (field: string, value: unknown) => {
     setSip((prev) => ({ ...prev, [field]: value }));
-    setSipDirty(true);
-  };
-
-  const toggleCodec = (codecId: string) => {
-    setSip((prev) => {
-      const codecs = prev.codecs.includes(codecId)
-        ? prev.codecs.filter((c) => c !== codecId)
-        : [...prev.codecs, codecId];
-      return { ...prev, codecs };
-    });
     setSipDirty(true);
   };
 

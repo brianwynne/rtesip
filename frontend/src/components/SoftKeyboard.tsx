@@ -27,7 +27,7 @@ const SIP_ROW = ["@", ".", "-", "_", ":", "+", "/"];
 
 const DEFAULT_DOMAINS = ["@sip.rtegroup.ie", "@sip.audio"];
 
-export function SoftKeyboard({ onKey, onBackspace, onClear, onSubmit, domains }: Props) {
+export function SoftKeyboard({ onKey, onBackspace, onSubmit, domains }: Props) {
   const sipDomains = domains ?? DEFAULT_DOMAINS;
   const [shifted, setShifted] = useState(false);
   const [showSymbols, setShowSymbols] = useState(false);

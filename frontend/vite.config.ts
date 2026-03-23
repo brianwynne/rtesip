@@ -1,9 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const backendPort = process.env.RTESIP_PORT || '80'
-const backendTarget = `http://localhost:${backendPort}`
-
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -13,11 +10,11 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: backendTarget,
+        target: 'http://localhost:80',
         changeOrigin: true,
       },
       '/ws': {
-        target: backendTarget.replace('http', 'ws'),
+        target: 'ws://localhost:80',
         ws: true,
       },
     },
