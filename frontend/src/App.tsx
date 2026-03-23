@@ -9,6 +9,7 @@ import { SipPage } from "./pages/SipPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useRingtone } from "./hooks/useRingtone";
+import { useTheme } from "./hooks/useTheme";
 import type { Contact } from "./types";
 import styles from "./App.module.css";
 
@@ -17,6 +18,7 @@ function App() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [ipAddress, setIpAddress] = useState("");
   const ws = useWebSocket();
+  const { theme, toggle: toggleTheme } = useTheme();
   useRingtone(ws.callState.state === "incoming");
 
   const fetchContacts = useCallback(() => {
@@ -64,6 +66,8 @@ function App() {
         sipReady={ws.sipReady}
         accounts={ws.accounts}
         ipAddress={ipAddress || window.location.hostname}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <main className={styles.content}>
         {page === "call" && (

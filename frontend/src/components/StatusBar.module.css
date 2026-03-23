@@ -5,7 +5,7 @@
   height: 2.2rem;
   padding: 0 0.8rem;
   background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
   flex-shrink: 0;
   gap: 0.8rem;
 }
@@ -107,6 +107,19 @@
   font-size: 0.75rem;
   font-family: var(--font-mono);
 }
+
+.themeToggle {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  color: var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.themeToggle:hover { background: var(--border); }
 
 .iconGreen { color: var(--green); }
 .iconRed { color: var(--red); }

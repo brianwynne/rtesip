@@ -9,12 +9,12 @@ interface Props {
   kioskMode?: boolean;
 }
 
-const allTabs: { id: Page; label: string; icon: typeof Phone; kiosk: boolean }[] = [
-  { id: "call", label: "Call", icon: Phone, kiosk: true },
-  { id: "audio", label: "Audio", icon: Sliders, kiosk: false },
-  { id: "sip", label: "SIP", icon: Radio, kiosk: false },
-  { id: "contacts", label: "Contacts", icon: Users, kiosk: true },
-  { id: "settings", label: "Settings", icon: Settings, kiosk: false },
+const allTabs: { id: Page; label: string; icon: typeof Phone; kiosk: boolean; color: string }[] = [
+  { id: "call", label: "Call", icon: Phone, kiosk: true, color: "var(--green)" },
+  { id: "audio", label: "Audio", icon: Sliders, kiosk: false, color: "var(--cyan)" },
+  { id: "sip", label: "SIP", icon: Radio, kiosk: false, color: "var(--accent)" },
+  { id: "contacts", label: "Contacts", icon: Users, kiosk: true, color: "var(--amber)" },
+  { id: "settings", label: "Settings", icon: Settings, kiosk: false, color: "var(--text-secondary)" },
 ];
 
 export function NavBar({ active, onChange, kioskMode }: Props) {
@@ -22,10 +22,11 @@ export function NavBar({ active, onChange, kioskMode }: Props) {
 
   return (
     <nav className={styles.nav}>
-      {tabs.map(({ id, label, icon: Icon }) => (
+      {tabs.map(({ id, label, icon: Icon, color }) => (
         <button
           key={id}
           className={`${styles.tab} ${active === id ? styles.active : ""}`}
+          style={active === id ? { color, "--tab-accent": color } as React.CSSProperties : undefined}
           onClick={() => onChange(id)}
         >
           <Icon size={18} />

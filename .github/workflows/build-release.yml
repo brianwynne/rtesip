@@ -123,29 +123,29 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME}"
 
-          # Create our custom stage inside pi-gen
-          STAGE="pi-gen/stage-sip-reporter"
-          mkdir -p "${STAGE}/00-install/files/opt/rtesip"
+          # Add as substage 09 inside stage2 (shares stage2's rootfs)
+          STAGE="pi-gen/stage2/09-sip-reporter"
+          mkdir -p "${STAGE}/files/opt/rtesip"
 
           # Copy application
-          cp -r src/ "${STAGE}/00-install/files/opt/rtesip/src/"
-          cp run.py "${STAGE}/00-install/files/opt/rtesip/"
-          cp requirements.txt "${STAGE}/00-install/files/opt/rtesip/"
-          mkdir -p "${STAGE}/00-install/files/opt/rtesip/frontend/dist"
-          cp -r frontend/dist/ "${STAGE}/00-install/files/opt/rtesip/frontend/dist/"
-          cp -r deploy/conf/ "${STAGE}/00-install/files/opt/rtesip/conf/"
-          echo "${VERSION}" > "${STAGE}/00-install/files/opt/rtesip/VERSION"
+          cp -r src/ "${STAGE}/files/opt/rtesip/src/"
+          cp run.py "${STAGE}/files/opt/rtesip/"
+          cp requirements.txt "${STAGE}/files/opt/rtesip/"
+          mkdir -p "${STAGE}/files/opt/rtesip/frontend/dist"
+          cp -r frontend/dist/ "${STAGE}/files/opt/rtesip/frontend/dist/"
+          cp -r deploy/conf/ "${STAGE}/files/opt/rtesip/conf/"
+          echo "${VERSION}" > "${STAGE}/files/opt/rtesip/VERSION"
 
           # Systemd service
-          mkdir -p "${STAGE}/00-install/files/etc/systemd/system"
-          cp deploy/systemd/rtesip.service "${STAGE}/00-install/files/etc/systemd/system/"
+          mkdir -p "${STAGE}/files/etc/systemd/system"
+          cp deploy/systemd/rtesip.service "${STAGE}/files/etc/systemd/system/"
 
           # ALSA config
-          mkdir -p "${STAGE}/00-install/files/etc"
-          cp deploy/conf/asound.conf "${STAGE}/00-install/files/etc/asound.conf"
+          mkdir -p "${STAGE}/files/etc"
+          cp deploy/conf/asound.conf "${STAGE}/files/etc/asound.conf"
 
           # Packages
-          cat > "${STAGE}/00-install/00-packages" << 'EOF'
+          cat > "${STAGE}/00-packages" << 'EOF'
           python3-venv
           python3-pip
           ufw
@@ -154,7 +154,7 @@ jobs:
           EOF
 
           # Run script
-          cat > "${STAGE}/00-install/01-run.sh" << 'SCRIPT'
+          cat > "${STAGE}/01-run.sh" << 'SCRIPT'
           #!/bin/bash -e
           on_chroot << CHEOF
           useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true
@@ -174,15 +174,12 @@ jobs:
           systemctl disable triggerhappy 2>/dev/null || true
           CHEOF
           SCRIPT
-          chmod +x "${STAGE}/00-install/01-run.sh"
+          chmod +x "${STAGE}/01-run.sh"
 
-          # Export marker
-          touch "${STAGE}/EXPORT_IMAGE"
-
-          # Skip image export on earlier stages
+          # Export stage2 image (which now includes our substage)
           touch pi-gen/stage0/SKIP_IMAGES
           touch pi-gen/stage1/SKIP_IMAGES
-          touch pi-gen/stage2/SKIP_IMAGES
+          touch pi-gen/stage2/EXPORT_IMAGE
 
           # Remove stages 3-5
           rm -rf pi-gen/stage3 pi-gen/stage4 pi-gen/stage5
@@ -200,7 +197,7 @@ jobs:
           KEYBOARD_LAYOUT="English (UK)"
           TIMEZONE_DEFAULT=Europe/Dublin
           WPA_COUNTRY=IE
-          STAGE_LIST="stage0 stage1 stage2 stage-sip-reporter"
+          STAGE_LIST="stage0 stage1 stage2"
           CONF
 
       - name: Build image

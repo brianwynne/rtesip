@@ -40,6 +40,59 @@
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --shadow: 0 0.1rem 0.6rem rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 0.2rem 1.5rem rgba(0, 0, 0, 0.4);
+
+  /* Fader knob (dark) */
+  --knob-top: #555;
+  --knob-mid: #3a3a3a;
+  --knob-bot: #222;
+  --knob-border: #555;
+  --knob-line: #888;
+  --knob-line-shadow: #666;
+}
+
+/* Light theme — broadcast equipment style
+   Cool blue-grey surfaces, dark meter wells, single accent hue.
+   Inspired by Lawo, Calrec, SSL, Comrex, Tieline interfaces. */
+[data-theme="light"] {
+  --bg-primary: #E9ECF2;
+  --bg-secondary: #DFE3EB;
+  --bg-card: #F5F6F9;
+  --bg-elevated: #FFFFFF;
+  --bg-input: #ECEEF4;
+  --border: #C8CDD8;
+  --border-focus: #2B5EA7;
+
+  --text-primary: #1B2030;
+  --text-secondary: #505872;
+  --text-muted: #838BA0;
+
+  --accent: #2B5EA7;
+  --accent-hover: #3A6FBB;
+  --accent-dim: rgba(43, 94, 167, 0.10);
+  --green: #1A8A45;
+  --green-dim: #E2F5EA;
+  --red: #C0392B;
+  --red-dim: #FBEAEA;
+  --amber: #B8860B;
+  --amber-dim: #FDF4DC;
+  --cyan: #0E7C96;
+
+  /* Meters: dark wells even in light theme (industry standard) */
+  --meter-bg: #1C2028;
+  --meter-green: #3DDC72;
+  --meter-yellow: #F0C830;
+  --meter-red: #E84545;
+
+  --shadow: 0 1px 4px rgba(27, 32, 48, 0.08), 0 0 1px rgba(27, 32, 48, 0.12);
+  --shadow-lg: 0 4px 16px rgba(27, 32, 48, 0.10), 0 0 1px rgba(27, 32, 48, 0.14);
+
+  /* Fader knobs: brushed aluminium */
+  --knob-top: #D4D8E0;
+  --knob-mid: #B8BEC8;
+  --knob-bot: #A0A8B4;
+  --knob-border: #C0C6D0;
+  --knob-line: #606878;
+  --knob-line-shadow: #8890A0;
 }
 
 * {

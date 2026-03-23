@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, Shield, ShieldOff } from "lucide-react";
+import { Wifi, WifiOff, Shield, ShieldOff, Sun, Moon } from "lucide-react";
 import { Logo } from "./Logo";
 import type { AccountStatus } from "../types";
 import styles from "./StatusBar.module.css";
@@ -8,9 +8,11 @@ interface Props {
   sipReady: boolean;
   accounts: Record<string, AccountStatus>;
   ipAddress?: string;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
 }
 
-export function StatusBar({ connected, sipReady, accounts, ipAddress }: Props) {
+export function StatusBar({ connected, sipReady, accounts, ipAddress, theme, onToggleTheme }: Props) {
   const accountList = Object.values(accounts);
 
   return (
@@ -40,8 +42,11 @@ export function StatusBar({ connected, sipReady, accounts, ipAddress }: Props) {
         )}
       </div>
 
-      {/* Right: connection indicators */}
+      {/* Right: theme toggle + connection indicators */}
       <div className={styles.right}>
+        <button className={styles.themeToggle} onClick={onToggleTheme} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
+          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
         <div className={styles.indicator} title={sipReady ? "TLS Active" : "No TLS"}>
           {sipReady ? (
             <Shield size={14} className={styles.iconGreen} />

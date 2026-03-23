@@ -2,7 +2,7 @@
   display: flex;
   height: 2.6rem;
   background: linear-gradient(0deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -28,17 +28,16 @@
 }
 
 .tab.active {
-  color: var(--accent);
-  background: var(--accent-dim);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tab.active::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 20%;
-  right: 20%;
+  left: 10%;
+  right: 10%;
   height: 2px;
-  background: var(--accent);
+  background: var(--tab-accent, var(--accent));
   border-radius: 0 0 2px 2px;
 }
