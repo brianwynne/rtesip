@@ -17,7 +17,20 @@ interface AudioSettings {
 }
 
 export function AudioPage() {
-  const [settings, setSettings] = useState<AudioSettings | null>(null);
+  const [settings, setSettings] = useState<AudioSettings>({
+    channels: 1,
+    bitrate: 72000,
+    input: "USB",
+    output: "USB",
+    input_routing: "lr",
+    output_routing: "lr",
+    capture_latency: 10,
+    playback_latency: 10,
+    period_size: 5,
+    auto_answer: false,
+    hardware_mixer: false,
+    phantom_power: false,
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -37,8 +50,6 @@ export function AudioPage() {
     if (res.ok) setSettings(await res.json());
     setSaving(false);
   };
-
-  if (!settings) return <div className={styles.page}><div className={styles.loading}>Loading...</div></div>;
 
   return (
     <div className={styles.page}>
