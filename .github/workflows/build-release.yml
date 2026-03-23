@@ -97,11 +97,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU for ARM64
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
-
       - name: Download frontend dist
         uses: actions/download-artifact@v4
         with:
@@ -192,7 +187,7 @@ jobs:
           release: bookworm
           verbose-output: true
           enable-noobs: false
-          extra-host-dependencies: qemu-user-static binfmt-support
+          pi-gen-version: arm64
           extra-host-modules: binfmt_misc
 
       - name: Compress image
