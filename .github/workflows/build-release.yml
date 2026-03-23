@@ -145,38 +145,32 @@ jobs:
           cp deploy/conf/asound.conf "${STAGE}/files/etc/asound.conf"
 
           # Packages
-          cat > "${STAGE}/00-packages" << 'ENDPKG'
-python3-venv
-python3-pip
-ufw
-alsa-utils
-chrony
-ENDPKG
+          printf '%s\n' "python3-venv" "python3-pip" "ufw" "alsa-utils" "chrony" > "${STAGE}/00-packages"
 
-          # Run script
-          cat > "${STAGE}/01-run.sh" << 'ENDSCRIPT'
-#!/bin/bash -e
-install -d "${ROOTFS_DIR}/opt/rtesip"
-rsync -a files/ "${ROOTFS_DIR}/opt/rtesip/" 2>/dev/null || true
-rsync -a files/etc/ "${ROOTFS_DIR}/etc/" 2>/dev/null || true
-on_chroot << 'ENDCHROOT'
-useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true
-mkdir -p /etc/rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
-chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
-echo "d /run/rtesip 0755 rtesip rtesip -" > /etc/tmpfiles.d/rtesip.conf
-python3 -m venv /opt/rtesip/.venv
-/opt/rtesip/.venv/bin/pip install --upgrade pip
-/opt/rtesip/.venv/bin/pip install -r /opt/rtesip/requirements.txt
-chown -R root:root /opt/rtesip
-chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip
-systemctl enable rtesip.service
-echo "sip-reporter" > /etc/hostname
-sed -i "s/raspberrypi/sip-reporter/g" /etc/hosts
-systemctl disable dphys-swapfile 2>/dev/null || true
-systemctl disable bluetooth 2>/dev/null || true
-systemctl disable triggerhappy 2>/dev/null || true
-ENDCHROOT
-ENDSCRIPT
+          # Run script — written via printf to avoid YAML heredoc issues
+          printf '%s\n' \
+            '#!/bin/bash -e' \
+            'install -d "${ROOTFS_DIR}/opt/rtesip"' \
+            'rsync -a files/ "${ROOTFS_DIR}/opt/rtesip/" 2>/dev/null || true' \
+            'rsync -a files/etc/ "${ROOTFS_DIR}/etc/" 2>/dev/null || true' \
+            'on_chroot << EOF' \
+            'useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true' \
+            'mkdir -p /etc/rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip' \
+            'chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip' \
+            'echo "d /run/rtesip 0755 rtesip rtesip -" > /etc/tmpfiles.d/rtesip.conf' \
+            'python3 -m venv /opt/rtesip/.venv' \
+            '/opt/rtesip/.venv/bin/pip install --upgrade pip' \
+            '/opt/rtesip/.venv/bin/pip install -r /opt/rtesip/requirements.txt' \
+            'chown -R root:root /opt/rtesip' \
+            'chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip' \
+            'systemctl enable rtesip.service' \
+            'echo "sip-reporter" > /etc/hostname' \
+            'sed -i "s/raspberrypi/sip-reporter/g" /etc/hosts' \
+            'systemctl disable dphys-swapfile 2>/dev/null || true' \
+            'systemctl disable bluetooth 2>/dev/null || true' \
+            'systemctl disable triggerhappy 2>/dev/null || true' \
+            'EOF' \
+            > "${STAGE}/01-run.sh"
           chmod +x "${STAGE}/01-run.sh"
 
           # Export stage2 image (which now includes our substage)
