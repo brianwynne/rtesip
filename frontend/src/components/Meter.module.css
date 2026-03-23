@@ -12,7 +12,7 @@
 }
 
 .trackVertical {
-  width: 0.7rem;
+  width: 1.2rem;
   height: 8rem;
   background: var(--meter-bg);
   border-radius: 0.2rem;
