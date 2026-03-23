@@ -1,0 +1,26 @@
+[Unit]
+Description=rtesip SIP Codec
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/rtesip
+ExecStart=/opt/rtesip/.venv/bin/python run.py
+Restart=always
+RestartSec=3
+
+# Hardening
+ProtectSystem=strict
+ReadWritePaths=/var/lib/rtesip /run/rtesip /boot
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+# RT priority for audio subprocess
+LimitRTPRIO=99
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
