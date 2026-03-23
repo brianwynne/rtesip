@@ -219,11 +219,11 @@ export function SipPage() {
         <div className={styles.formGrid}>
           <label className={styles.field}>
             <span>STUN Server</span>
-            <input type="text" value={global.stun} onChange={(e) => updateGlobal("stun", e.target.value)} placeholder="stun.example.com" />
+            <input type="text" value={global.stun} onChange={(e) => updateGlobal("stun", e.target.value)} placeholder="stun.l.google.com:19302" />
           </label>
           <label className={styles.field}>
             <span>STUN Server 2</span>
-            <input type="text" value={global.stun2} onChange={(e) => updateGlobal("stun2", e.target.value)} placeholder="stun2.example.com" />
+            <input type="text" value={global.stun2} onChange={(e) => updateGlobal("stun2", e.target.value)} placeholder="turn.rtegroup.ie" />
           </label>
           <label className={styles.field}>
             <span>Log Level</span>

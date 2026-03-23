@@ -37,8 +37,8 @@ DEFAULTS: dict[str, dict] = {
         "transport": "tls",
         "keying": 2,  # 0=none, 1=SDES, 2=SDES mandatory
         "reg_timeout": 600,
-        "stun": "",
-        "stun2": "",
+        "stun": "stun.l.google.com:19302",
+        "stun2": "turn.rtegroup.ie",
         "codecs": ["opus/48000/2", "L16/48000/1", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1"],
         "log_level": 3,
     },
