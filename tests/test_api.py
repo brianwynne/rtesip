@@ -141,7 +141,7 @@ def test_audio_settings_defaults(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["channels"] == 1
-    assert data["bitrate"] == 72000
+    assert data["bitrate"] == 64000
     assert data["input"] == "USB"
     assert data["auto_answer"] is False
 
