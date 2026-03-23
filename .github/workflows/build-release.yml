@@ -188,6 +188,9 @@ jobs:
           CHROOT_EOF
           chmod +x pi-gen-stage/00-sip-reporter/00-run-chroot.sh
 
+          # Mark this stage for image export
+          touch pi-gen-stage/00-sip-reporter/EXPORT_IMAGE
+
           # Packages to install
           cat > pi-gen-stage/00-sip-reporter/00-packages << 'PKG_EOF'
           python3-venv
@@ -203,7 +206,7 @@ jobs:
         id: pi-gen
         with:
           image-name: sip-reporter-${{ github.ref_name }}
-          stage-list: stage0 stage1 stage2
+          stage-list: stage0 stage1 stage2 ./pi-gen-stage/00-sip-reporter
           hostname: sip-reporter
           locale: en_IE.UTF-8
           keyboard-keymap: gb
