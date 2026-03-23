@@ -1,0 +1,88 @@
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meter.vertical {
+  flex-direction: column-reverse;
+  height: 120px;
+}
+
+.meter.horizontal {
+  flex-direction: row;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  min-width: 28px;
+  text-align: center;
+}
+
+.label.muted {
+  color: var(--red);
+}
+
+.track {
+  position: relative;
+  background: var(--meter-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.horizontal .track {
+  flex: 1;
+  height: 10px;
+}
+
+.vertical .track {
+  width: 20px;
+  flex: 1;
+}
+
+.fill {
+  position: absolute;
+  border-radius: 3px;
+  transition: width 0.08s linear, height 0.08s linear;
+}
+
+.horizontal .fill {
+  left: 0;
+  top: 0;
+  height: 100%;
+}
+
+.vertical .fill {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+.tick {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.horizontal .tick {
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+
+.vertical .tick {
+  left: 0;
+  height: 1px;
+  width: 100%;
+}
+
+.value {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: right;
+}

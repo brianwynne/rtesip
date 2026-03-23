@@ -1,0 +1,83 @@
+.page {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.heading {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.loading {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.field span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.field select, .field input[type="number"] {
+  width: 120px;
+  text-align: right;
+}
+
+.toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.saving {
+  text-align: center;
+  color: var(--accent);
+  font-size: 12px;
+  margin-top: 8px;
+}

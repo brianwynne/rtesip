@@ -1,0 +1,25 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.callSection {
+  flex: 1;
+  min-height: 0;
+}
+
+.audioSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .audioSection {
+    grid-template-columns: 1fr;
+  }
+}

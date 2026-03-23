@@ -1,0 +1,60 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+
+.product {
+  font-weight: 300;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.hostname {
+  margin-left: 12px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.iconGreen { color: var(--green); }
+.iconRed { color: var(--red); }
+.iconMuted { color: var(--text-muted); }
+.textGreen { color: var(--green); }
+.textRed { color: var(--red); }
