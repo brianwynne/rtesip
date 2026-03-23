@@ -45,7 +45,7 @@ export function AudioPage() {
     hardware_mixer: false,
     phantom_power: false,
   });
-  const [codecs, setCodecs] = useState<string[]>(["opus/48000/2", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1", "L16/48000/1"]);
+  const [codecs, setCodecs] = useState<string[]>(["opus/48000/2", "G722/16000/1"]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
