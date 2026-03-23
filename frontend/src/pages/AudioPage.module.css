@@ -1,43 +1,37 @@
 .page {
-  padding: 16px;
+  padding: 1rem;
   height: 100%;
   overflow-y: auto;
 }
 
 .heading {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 0.8rem;
   color: var(--text-primary);
-}
-
-.loading {
-  color: var(--text-muted);
-  text-align: center;
-  padding: 40px;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.8rem;
 }
 
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.6rem;
 }
 
 .cardTitle {
-  font-size: 12px;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 0.1rem;
   color: var(--text-secondary);
 }
 
@@ -45,17 +39,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 0.6rem;
 }
 
 .field span {
-  font-size: 13px;
+  font-size: 0.7rem;
   color: var(--text-secondary);
 }
 
 .field select, .field input[type="number"] {
-  width: 120px;
+  width: 7rem;
   text-align: right;
+  height: 2rem;
+  font-size: 0.7rem;
 }
 
 .toggle {
@@ -65,19 +61,57 @@
 }
 
 .toggle span {
-  font-size: 13px;
+  font-size: 0.7rem;
   color: var(--text-secondary);
 }
 
 .toggle input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: 1rem;
+  height: 1rem;
   accent-color: var(--accent);
 }
 
 .saving {
   text-align: center;
   color: var(--accent);
-  font-size: 12px;
-  margin-top: 8px;
+  font-size: 0.7rem;
+  margin-top: 0.4rem;
+}
+
+/* Codecs */
+.codecList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.codecItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.3rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.codecItem:hover { background: var(--bg-elevated); }
+
+.codecItem input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.codecName {
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.codecId {
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-left: auto;
 }

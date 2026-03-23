@@ -1,14 +1,14 @@
 .page {
-  padding: 16px;
+  padding: 1rem;
   height: 100%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.8rem;
 }
 
 .heading {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -16,52 +16,162 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
 }
 
 .cardTitle {
-  font-size: 12px;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 0.1rem;
   color: var(--text-secondary);
-  margin-bottom: 12px;
 }
 
+.card > .cardTitle {
+  margin-bottom: 0.8rem;
+}
+
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  background: var(--green);
+  color: #000;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  transition: all 0.15s;
+}
+.saveBtn:hover { background: #34d16f; }
+.saveBtn:disabled { opacity: 0.5; }
+
+/* Form grid */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.field span {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+}
+
+.field input, .field select {
+  height: 2rem;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+}
+
+/* Codecs */
+.codecSection {
+  margin-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+}
+
+.codecLabel {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.codecList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.codecItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius);
+  transition: background 0.1s;
+  cursor: pointer;
+}
+.codecItem:hover { background: var(--bg-elevated); }
+
+.codecItem input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.codecName {
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.codecId {
+  font-size: 0.55rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* Info grid */
 .infoGrid {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 6px 12px;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.3rem 0.8rem;
 }
 
 .infoLabel {
-  font-size: 12px;
+  font-size: 0.65rem;
   color: var(--text-muted);
 }
 
 .infoValue {
-  font-size: 12px;
+  font-size: 0.65rem;
   font-family: var(--font-mono);
   color: var(--text-primary);
 }
 
+/* Actions */
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
 }
 
 .actionBtn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
   border-radius: var(--radius);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 0.7rem;
   font-weight: 500;
   transition: all 0.15s;
 }

@@ -1,18 +1,86 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Power, RefreshCw } from "lucide-react";
+import { RotateCcw, Power, RefreshCw, Save } from "lucide-react";
 import type { SystemStatus } from "../types";
 import styles from "./SettingsPage.module.css";
 
+interface SipConfig {
+  username: string;
+  password: string;
+  registrar: string;
+  realm: string;
+  proxy: string;
+  proxy2: string;
+  transport: string;
+  keying: number;
+  reg_timeout: number;
+  stun: string;
+  stun2: string;
+  codecs: string[];
+}
+
+const DEFAULT_SIP: SipConfig = {
+  username: "",
+  password: "",
+  registrar: "",
+  realm: "",
+  proxy: "",
+  proxy2: "",
+  transport: "tls",
+  keying: 2,
+  reg_timeout: 600,
+  stun: "",
+  stun2: "",
+  codecs: ["opus/48000/2", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1", "L16/48000/1"],
+};
+
+const ALL_CODECS = [
+  { id: "opus/48000/2", label: "Opus 48kHz Stereo" },
+  { id: "L16/48000/1", label: "L16 48kHz (Linear PCM)" },
+  { id: "G722/16000/1", label: "G.722 16kHz" },
+  { id: "PCMA/8000/1", label: "G.711 A-law (PCMA)" },
+  { id: "PCMU/8000/1", label: "G.711 μ-law (PCMU)" },
+];
+
 export function SettingsPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
-  const [sipSettings, setSipSettings] = useState<Record<string, unknown> | null>(null);
+  const [sip, setSip] = useState<SipConfig>(DEFAULT_SIP);
   const [version, setVersion] = useState<Record<string, unknown> | null>(null);
+  const [sipDirty, setSipDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch("/api/system/status").then((r) => r.json()).then(setStatus).catch(() => {});
-    fetch("/api/sip/settings").then((r) => r.json()).then(setSipSettings).catch(() => {});
+    fetch("/api/sip/settings").then((r) => r.json()).then((data) => setSip({ ...DEFAULT_SIP, ...data })).catch(() => {});
     fetch("/api/update/version").then((r) => r.json()).then(setVersion).catch(() => {});
   }, []);
+
+  const updateSip = (field: string, value: unknown) => {
+    setSip((prev) => ({ ...prev, [field]: value }));
+    setSipDirty(true);
+  };
+
+  const toggleCodec = (codecId: string) => {
+    setSip((prev) => {
+      const codecs = prev.codecs.includes(codecId)
+        ? prev.codecs.filter((c) => c !== codecId)
+        : [...prev.codecs, codecId];
+      return { ...prev, codecs };
+    });
+    setSipDirty(true);
+  };
+
+  const saveSip = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/sip/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sip),
+      });
+      if (res.ok) setSipDirty(false);
+    } catch {}
+    setSaving(false);
+  };
 
   const formatUptime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -24,10 +92,78 @@ export function SettingsPage() {
     <div className={styles.page}>
       <h2 className={styles.heading}>Settings</h2>
 
+      {/* SIP Account */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>SIP Account</h3>
+          {sipDirty && (
+            <button className={styles.saveBtn} onClick={saveSip} disabled={saving}>
+              <Save size={12} />
+              <span>{saving ? "Saving..." : "Save & Apply"}</span>
+            </button>
+          )}
+        </div>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>
+            <span>Username</span>
+            <input type="text" value={sip.username} onChange={(e) => updateSip("username", e.target.value)} placeholder="user" />
+          </label>
+          <label className={styles.field}>
+            <span>Password</span>
+            <input type="password" value={sip.password} onChange={(e) => updateSip("password", e.target.value)} placeholder="••••••" />
+          </label>
+          <label className={styles.field}>
+            <span>Registrar</span>
+            <input type="text" value={sip.registrar} onChange={(e) => updateSip("registrar", e.target.value)} placeholder="proxy.sip.audio" />
+          </label>
+          <label className={styles.field}>
+            <span>Realm</span>
+            <input type="text" value={sip.realm} onChange={(e) => updateSip("realm", e.target.value)} placeholder="sip.audio" />
+          </label>
+          <label className={styles.field}>
+            <span>Proxy</span>
+            <input type="text" value={sip.proxy} onChange={(e) => updateSip("proxy", e.target.value)} placeholder="proxy.sip.audio" />
+          </label>
+          <label className={styles.field}>
+            <span>Proxy 2</span>
+            <input type="text" value={sip.proxy2} onChange={(e) => updateSip("proxy2", e.target.value)} placeholder="proxy2.sip.audio" />
+          </label>
+          <label className={styles.field}>
+            <span>Transport</span>
+            <select value={sip.transport} onChange={(e) => updateSip("transport", e.target.value)}>
+              <option value="tls">TLS</option>
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Encryption</span>
+            <select value={sip.keying} onChange={(e) => updateSip("keying", Number(e.target.value))}>
+              <option value={0}>None</option>
+              <option value={1}>SDES</option>
+              <option value={2}>SDES (mandatory)</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Reg Timeout</span>
+            <input type="number" value={sip.reg_timeout} onChange={(e) => updateSip("reg_timeout", Number(e.target.value))} min={60} max={3600} />
+          </label>
+          <label className={styles.field}>
+            <span>STUN Server</span>
+            <input type="text" value={sip.stun} onChange={(e) => updateSip("stun", e.target.value)} placeholder="stun.example.com" />
+          </label>
+          <label className={styles.field}>
+            <span>STUN Server 2</span>
+            <input type="text" value={sip.stun2} onChange={(e) => updateSip("stun2", e.target.value)} placeholder="stun2.example.com" />
+          </label>
+        </div>
+
+      </div>
+
       {/* System info */}
       <div className={styles.card}>
         <h3 className={styles.cardTitle}>System</h3>
-        {status && (
+        {status ? (
           <div className={styles.infoGrid}>
             <span className={styles.infoLabel}>Hostname</span>
             <span className={styles.infoValue}>{status.hostname}</span>
@@ -40,60 +176,37 @@ export function SettingsPage() {
             <span className={styles.infoLabel}>Model</span>
             <span className={styles.infoValue}>{status.model || "—"}</span>
           </div>
+        ) : (
+          <div className={styles.infoGrid}>
+            <span className={styles.infoLabel}>Status</span>
+            <span className={styles.infoValue}>Not connected</span>
+          </div>
         )}
       </div>
 
-      {/* Version */}
+      {/* Firmware */}
       <div className={styles.card}>
         <h3 className={styles.cardTitle}>Firmware</h3>
         <div className={styles.infoGrid}>
           <span className={styles.infoLabel}>Version</span>
-          <span className={styles.infoValue}>
-            {version ? String(version.version || "0.1.0") : "—"}
-          </span>
+          <span className={styles.infoValue}>{version ? String(version.version || "0.1.0") : "—"}</span>
           <span className={styles.infoLabel}>Partition</span>
-          <span className={styles.infoValue}>
-            {version ? String(version.partition || "A") : "—"}
-          </span>
+          <span className={styles.infoValue}>{version ? String(version.partition || "A") : "—"}</span>
         </div>
       </div>
 
-      {/* SIP Account */}
-      {sipSettings && (
-        <div className={styles.card}>
-          <h3 className={styles.cardTitle}>SIP Account</h3>
-          <div className={styles.infoGrid}>
-            <span className={styles.infoLabel}>Username</span>
-            <span className={styles.infoValue}>{String(sipSettings.username || "—")}</span>
-            <span className={styles.infoLabel}>Registrar</span>
-            <span className={styles.infoValue}>{String(sipSettings.registrar || "—")}</span>
-            <span className={styles.infoLabel}>Transport</span>
-            <span className={styles.infoValue}>{String(sipSettings.transport || "—").toUpperCase()}</span>
-          </div>
-        </div>
-      )}
-
       {/* Actions */}
       <div className={styles.actions}>
-        <button
-          className={styles.actionBtn}
-          onClick={() => { if (confirm("Restart services?")) fetch("/api/system/restart-services", { method: "POST" }); }}
-        >
-          <RefreshCw size={16} />
+        <button className={styles.actionBtn} onClick={() => { if (confirm("Restart services?")) fetch("/api/system/restart-services", { method: "POST" }); }}>
+          <RefreshCw size={14} />
           <span>Restart Services</span>
         </button>
-        <button
-          className={styles.actionBtn}
-          onClick={() => { if (confirm("Reboot device?")) fetch("/api/system/reboot", { method: "POST" }); }}
-        >
-          <Power size={16} />
+        <button className={styles.actionBtn} onClick={() => { if (confirm("Reboot device?")) fetch("/api/system/reboot", { method: "POST" }); }}>
+          <Power size={14} />
           <span>Reboot</span>
         </button>
-        <button
-          className={styles.actionBtnDanger}
-          onClick={() => { if (confirm("Factory reset? This will erase all settings.")) fetch("/api/system/factory-reset", { method: "POST" }); }}
-        >
-          <RotateCcw size={16} />
+        <button className={styles.actionBtnDanger} onClick={() => { if (confirm("Factory reset? This will erase all settings.")) fetch("/api/system/factory-reset", { method: "POST" }); }}>
+          <RotateCcw size={14} />
           <span>Factory Reset</span>
         </button>
       </div>

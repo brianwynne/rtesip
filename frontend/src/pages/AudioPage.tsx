@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import styles from "./AudioPage.module.css";
 
+const ALL_CODECS = [
+  { id: "opus/48000/2", label: "Opus 48kHz Stereo" },
+  { id: "L16/48000/1", label: "L16 48kHz (Linear PCM)" },
+  { id: "G722/16000/1", label: "G.722 16kHz" },
+  { id: "PCMA/8000/1", label: "G.711 A-law (PCMA)" },
+  { id: "PCMU/8000/1", label: "G.711 μ-law (PCMU)" },
+];
+
 interface AudioSettings {
   channels: number;
   bitrate: number;
@@ -31,12 +39,17 @@ export function AudioPage() {
     hardware_mixer: false,
     phantom_power: false,
   });
+  const [codecs, setCodecs] = useState<string[]>(["opus/48000/2", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1", "L16/48000/1"]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch("/api/audio/settings")
       .then((r) => r.json())
       .then(setSettings)
+      .catch(() => {});
+    fetch("/api/sip/settings")
+      .then((r) => r.json())
+      .then((data) => { if (data.codecs) setCodecs(data.codecs); })
       .catch(() => {});
   }, []);
 
@@ -146,6 +159,33 @@ export function AudioPage() {
               onChange={(e) => save({ phantom_power: e.target.checked })}
             />
           </label>
+        </div>
+
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle}>Codecs</h3>
+          <div className={styles.codecList}>
+            {ALL_CODECS.map((c) => (
+              <label key={c.id} className={styles.codecItem}>
+                <input
+                  type="checkbox"
+                  checked={codecs.includes(c.id)}
+                  onChange={() => {
+                    const updated = codecs.includes(c.id)
+                      ? codecs.filter((x) => x !== c.id)
+                      : [...codecs, c.id];
+                    setCodecs(updated);
+                    fetch("/api/sip/settings", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ codecs: updated }),
+                    }).catch(() => {});
+                  }}
+                />
+                <span className={styles.codecName}>{c.label}</span>
+                <span className={styles.codecId}>{c.id}</span>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 
