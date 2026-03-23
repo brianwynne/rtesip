@@ -1,9 +1,13 @@
 """System endpoints — status, network, display, AES67, WiFi, reboot, factory reset."""
 
+import logging
 import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 from src.config.settings import get_section, update_section, load, get_hardware_info
 from src.config.system import (
@@ -121,14 +125,22 @@ async def update_ntp(settings: dict):
 
 @router.post("/reboot")
 async def reboot():
-    subprocess.Popen(["shutdown", "-r", "+0", "rtesip reboot"])
-    return {"status": "rebooting"}
+    try:
+        subprocess.Popen(["shutdown", "-r", "+0", "rtesip reboot"])
+        return {"status": "rebooting"}
+    except Exception as e:
+        logger.error("Reboot failed: %s", e)
+        return JSONResponse(status_code=500, content={"error": f"Reboot failed: {e}"})
 
 
 @router.post("/restart-services")
 async def restart_services():
-    subprocess.run(["systemctl", "restart", "rtesip"], timeout=10)
-    return {"status": "restarting"}
+    try:
+        subprocess.run(["systemctl", "restart", "rtesip"], timeout=10)
+        return {"status": "restarting"}
+    except Exception as e:
+        logger.error("Service restart failed: %s", e)
+        return JSONResponse(status_code=500, content={"error": f"Service restart failed: {e}"})
 
 
 @router.post("/factory-reset")

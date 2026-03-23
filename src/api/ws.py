@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import secrets
+import subprocess
 from typing import Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -72,6 +73,8 @@ async def websocket_endpoint(ws: WebSocket):
             command = msg.get("command") or msg.get("action", "")
 
             # --- Auth (challenge-response with SHA256) ---
+            # TODO: Add rate limiting for production — limit auth attempts per IP
+            # to prevent brute-force attacks on the challenge-response flow.
             if ws not in authed_clients:
                 if command == "authRequest":
                     challenge = secrets.token_hex(16)
@@ -149,11 +152,9 @@ async def websocket_endpoint(ws: WebSocket):
             # --- Display control ---
             elif command == "display":
                 if msg.get("set") == "off":
-                    import subprocess
                     subprocess.run(["xset", "-display", ":0", "dpms", "force", "off"],
                                    capture_output=True, timeout=5)
                 elif msg.get("set") == "on":
-                    import subprocess
                     subprocess.run(["xset", "-display", ":0", "-dpms"],
                                    capture_output=True, timeout=5)
 
@@ -237,7 +238,11 @@ async def _broadcast_levels() -> None:
 
     # Send to hardware mixer if enabled
     if mixer_state.hardware_mixer:
-        pass  # TODO: send to volumeControl Unix socket
+        # Hardware mixer control will be connected when running on RPi hardware.
+        # This will use set_mixer_volume() from src.audio.mixer to drive ALSA
+        # controls directly. For now, volume changes are tracked in mixer_state
+        # and broadcast to WebSocket clients only.
+        logger.warning("Hardware mixer enabled but not connected — volume change not applied to hardware")
     else:
         # Software mixer via pjsua
         capture = mixer_state.capture_left / 100

@@ -3,6 +3,7 @@
 Talks to the Ravenna daemon's HTTP API on port 8081.
 """
 
+import json
 import logging
 import subprocess
 from typing import Optional
@@ -21,7 +22,6 @@ def _get_local_ip() -> str:
             ["ip", "-json", "address"],
             capture_output=True, text=True, timeout=5,
         )
-        import json
         interfaces = json.loads(result.stdout)
         for iface in interfaces:
             if iface["ifname"].startswith(("eth", "en")):
@@ -110,7 +110,6 @@ async def update_source(settings: dict) -> Optional[dict]:
                 source[key] = value
                 needs_update = True
         if needs_update:
-            import json
             await daemon_request("/api/source/0", "PUT", json.dumps(source))
         return source
     else:
@@ -130,7 +129,6 @@ async def update_source(settings: dict) -> Optional[dict]:
             "map": [0, 1],
         }
         new_source.update(settings)
-        import json
         await daemon_request("/api/source/0", "PUT", json.dumps(new_source))
         return new_source
 
@@ -155,7 +153,6 @@ async def update_sink(sink_id: str, remote_sources: list, channel_map: list = No
     # Remove existing sink and create new one
     await daemon_request("/api/sink/0", "DELETE")
 
-    import json
     sink_data = {
         "name": target["name"],
         "io": "Audio Device",

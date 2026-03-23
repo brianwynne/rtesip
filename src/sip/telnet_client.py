@@ -4,9 +4,12 @@ Connects to pjsua's telnet CLI and translates output into structured events.
 """
 
 import asyncio
+import json
 import logging
 import re
 from typing import Callable, Optional
+
+from src.config.settings import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +148,7 @@ class PjsuaTelnet:
 
             # Call state: CONFIRMED
             if re.search(r"Call [0-9] state changed to CONFIRMED$", data):
-                asyncio.ensure_future(self.send("call list"))
+                asyncio.create_task(self.send("call list"))
 
             elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]$", data):
                 self.call_state = CallState.CONNECTED
@@ -187,11 +190,11 @@ class PjsuaTelnet:
                 if status == 200:
                     if not self.sip_ready:
                         self.sip_ready = True
-                        asyncio.ensure_future(self.play_tone(1))
+                        asyncio.create_task(self.play_tone(1))
                     self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
                 elif status > 200:
                     if not self.sip_ready:
-                        asyncio.ensure_future(self.play_tone(2))
+                        asyncio.create_task(self.play_tone(2))
                     self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
 
             # Audio device error
@@ -227,7 +230,16 @@ class PjsuaTelnet:
             # Strip phone number prefix for PSTN
             if address.startswith("+") and "@" in address:
                 address = address.split("@")[0]
-            # TODO: contact list lookup
+            # Contact list lookup
+            contacts_file = DATA_DIR / "contacts.json"
+            if contacts_file.exists():
+                try:
+                    contacts = json.loads(contacts_file.read_text())
+                    for contact in contacts:
+                        if contact.get("address") == address or contact.get("uri") == address:
+                            return f"{contact['name']} <sip:{address}>"
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning("Failed to load contacts: %s", e)
             if display:
                 return f"{display} <sip:{address}>"
             return address
@@ -235,7 +247,7 @@ class PjsuaTelnet:
 
     def _emit_sync(self, event: str, data: dict) -> None:
         if self._on_event:
-            asyncio.ensure_future(self._on_event(event, data))
+            asyncio.create_task(self._on_event(event, data))
 
     async def _emit(self, event: str, data: dict) -> None:
         if self._on_event:

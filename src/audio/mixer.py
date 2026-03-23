@@ -6,6 +6,7 @@
 """
 
 import logging
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,7 +82,6 @@ def discover_mixers() -> dict:
 
     max_card = -1
     for line in aplay_out.splitlines():
-        import re
         m = re.match(r"^card (\d+):", line)
         if m:
             max_card = max(max_card, int(m.group(1)))

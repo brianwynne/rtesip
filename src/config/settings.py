@@ -4,8 +4,11 @@ Single config.json with sections, plus separate contacts.json.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path("/etc/rtesip")
 DATA_DIR = Path("/var/lib/rtesip")
@@ -147,6 +150,6 @@ def get_hardware_info() -> dict:
                 info["serial"] = line.split(":")[1].strip()
             elif line.startswith("Model"):
                 info["model"] = line.split(":")[1].strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Failed to read hardware info: %s", e)
     return info

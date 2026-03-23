@@ -3,7 +3,9 @@
 Provides direct functions called by the API routes to apply system settings.
 """
 
+import ipaddress
 import logging
+import re
 import subprocess
 from pathlib import Path
 
@@ -27,7 +29,6 @@ def apply_network_config() -> None:
 
     if network["mode"] == "static" and network.get("address"):
         # Calculate CIDR prefix from netmask
-        import ipaddress
         prefix = ipaddress.IPv4Network(f"0.0.0.0/{network['netmask']}", strict=False).prefixlen
         dhcpcd += f"\nstatic ip_address={network['address']}/{prefix}"
         dhcpcd += f"\nstatic routers={network['gateway']}"
@@ -179,7 +180,6 @@ def apply_boot_config() -> None:
     if not boot_config.exists():
         return
 
-    import re
     config = boot_config.read_text()
 
     # Clear auto-config section

@@ -95,7 +95,11 @@ def generate_config() -> str:
         lines.append(f"--registrar=sip:{registrar}")
         lines.append(f"--realm={realm}")
         lines.append(f"--username={username}")
-        lines.append(f'"--password={account.get("password", "")}"')
+        # Password wrapped in double quotes for pjsua config file format.
+        # Note: passwords containing double quotes will break pjsua parsing —
+        # this is a known pjsua config file format limitation.
+        password = account.get("password", "")
+        lines.append(f'"--password={password}"')
 
         # Proxies
         if account.get("proxy"):
