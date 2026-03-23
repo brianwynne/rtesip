@@ -4,7 +4,7 @@
   justify-content: space-between;
   height: 2.2rem;
   padding: 0 0.8rem;
-  background: var(--bg-secondary);
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   gap: 0.8rem;

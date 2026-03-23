@@ -1,7 +1,7 @@
 .nav {
   display: flex;
   height: 2.6rem;
-  background: var(--bg-secondary);
+  background: linear-gradient(0deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -29,6 +29,7 @@
 
 .tab.active {
   color: var(--accent);
+  background: var(--accent-dim);
 }
 
 .tab.active::before {

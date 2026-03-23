@@ -93,12 +93,9 @@ jobs:
   build-pi-image:
     needs: [test, build-frontend]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-
-      - name: Register QEMU for ARM64
-        run: docker run --rm --privileged tonistiigi/binfmt --install arm64
 
       - name: Download frontend dist
         uses: actions/download-artifact@v4
@@ -106,35 +103,43 @@ jobs:
           name: frontend-dist
           path: frontend/dist/
 
-      - name: Prepare custom pi-gen stage
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y coreutils quilt parted debootstrap zerofree zip \
+            dosfstools libarchive-tools libcap2-bin rsync grep xz-utils curl xxd \
+            file git kmod bc gpg pigz qemu-user-static binfmt-support
+
+      - name: Clone pi-gen
+        run: git clone --depth 1 --branch master https://github.com/RPi-Distro/pi-gen.git
+
+      - name: Prepare custom stage
         run: |
           VERSION="${GITHUB_REF_NAME}"
 
-          # Create stage directory with pi-gen naming convention
-          STAGE="custom-stage"
-          mkdir -p "${STAGE}/00-install-sip-reporter/files/opt/rtesip"
+          # Create our custom stage inside pi-gen
+          STAGE="pi-gen/stage-sip-reporter"
+          mkdir -p "${STAGE}/00-install/files/opt/rtesip"
 
           # Copy application
-          cp -r src/ "${STAGE}/00-install-sip-reporter/files/opt/rtesip/src/"
-          cp run.py "${STAGE}/00-install-sip-reporter/files/opt/rtesip/"
-          cp requirements.txt "${STAGE}/00-install-sip-reporter/files/opt/rtesip/"
-          mkdir -p "${STAGE}/00-install-sip-reporter/files/opt/rtesip/frontend/dist"
-          cp -r frontend/dist/ "${STAGE}/00-install-sip-reporter/files/opt/rtesip/frontend/dist/"
-          cp -r deploy/conf/ "${STAGE}/00-install-sip-reporter/files/opt/rtesip/conf/"
-          mkdir -p "${STAGE}/00-install-sip-reporter/files/opt/rtesip/boot/splash"
-          test -f boot/splash/splash.sh && cp boot/splash/splash.sh "${STAGE}/00-install-sip-reporter/files/opt/rtesip/boot/splash/" || true
-          echo "${VERSION}" > "${STAGE}/00-install-sip-reporter/files/opt/rtesip/VERSION"
+          cp -r src/ "${STAGE}/00-install/files/opt/rtesip/src/"
+          cp run.py "${STAGE}/00-install/files/opt/rtesip/"
+          cp requirements.txt "${STAGE}/00-install/files/opt/rtesip/"
+          mkdir -p "${STAGE}/00-install/files/opt/rtesip/frontend/dist"
+          cp -r frontend/dist/ "${STAGE}/00-install/files/opt/rtesip/frontend/dist/"
+          cp -r deploy/conf/ "${STAGE}/00-install/files/opt/rtesip/conf/"
+          echo "${VERSION}" > "${STAGE}/00-install/files/opt/rtesip/VERSION"
 
           # Systemd service
-          mkdir -p "${STAGE}/00-install-sip-reporter/files/etc/systemd/system"
-          cp deploy/systemd/rtesip.service "${STAGE}/00-install-sip-reporter/files/etc/systemd/system/"
+          mkdir -p "${STAGE}/00-install/files/etc/systemd/system"
+          cp deploy/systemd/rtesip.service "${STAGE}/00-install/files/etc/systemd/system/"
 
           # ALSA config
-          mkdir -p "${STAGE}/00-install-sip-reporter/files/etc"
-          cp deploy/conf/asound.conf "${STAGE}/00-install-sip-reporter/files/etc/asound.conf"
+          mkdir -p "${STAGE}/00-install/files/etc"
+          cp deploy/conf/asound.conf "${STAGE}/00-install/files/etc/asound.conf"
 
           # Packages
-          cat > "${STAGE}/00-install-sip-reporter/00-packages" << 'EOF'
+          cat > "${STAGE}/00-install/00-packages" << 'EOF'
           python3-venv
           python3-pip
           ufw
@@ -142,10 +147,10 @@ jobs:
           chrony
           EOF
 
-          # Install script (runs inside chroot)
-          cat > "${STAGE}/00-install-sip-reporter/01-run.sh" << 'SCRIPT'
+          # Run script
+          cat > "${STAGE}/00-install/01-run.sh" << 'SCRIPT'
           #!/bin/bash -e
-          on_chroot << 'CHEOF'
+          on_chroot << CHEOF
           useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true
           mkdir -p /etc/rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
           chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
@@ -157,48 +162,59 @@ jobs:
           chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip
           systemctl enable rtesip.service
           echo "sip-reporter" > /etc/hostname
-          sed -i 's/raspberrypi/sip-reporter/g' /etc/hosts
-          ufw --force enable
-          ufw default deny incoming
-          ufw default allow outgoing
-          ufw allow 22/tcp
-          ufw allow 80/tcp
-          ufw allow 52002/udp
+          sed -i "s/raspberrypi/sip-reporter/g" /etc/hosts
           systemctl disable dphys-swapfile 2>/dev/null || true
           systemctl disable bluetooth 2>/dev/null || true
           systemctl disable triggerhappy 2>/dev/null || true
           CHEOF
           SCRIPT
-          chmod +x "${STAGE}/00-install-sip-reporter/01-run.sh"
+          chmod +x "${STAGE}/00-install/01-run.sh"
 
-      - name: Build Pi image
-        uses: usimd/pi-gen-action@v1
-        id: pi-gen
-        with:
-          image-name: sip-reporter-${{ github.ref_name }}
-          stage-list: stage0 stage1 stage2 ./custom-stage
-          export-last-stage-only: true
-          hostname: sip-reporter
-          locale: en_IE.UTF-8
-          keyboard-keymap: gb
-          keyboard-layout: English (UK)
-          timezone: Europe/Dublin
-          username: pi
-          password: T3chn0l0gy
-          enable-ssh: 1
-          wpa-country: IE
-          release: bookworm
-          verbose-output: true
-          enable-noobs: false
-          pi-gen-version: master
+          # Export marker
+          touch "${STAGE}/EXPORT_IMAGE"
+
+          # Skip image export on earlier stages
+          touch pi-gen/stage0/SKIP_IMAGES
+          touch pi-gen/stage1/SKIP_IMAGES
+          touch pi-gen/stage2/SKIP_IMAGES
+
+          # Remove stages 3-5
+          rm -rf pi-gen/stage3 pi-gen/stage4 pi-gen/stage5
+
+          # Configure pi-gen
+          cat > pi-gen/config << CONF
+          IMG_NAME=sip-reporter-${VERSION}
+          RELEASE=bookworm
+          TARGET_HOSTNAME=sip-reporter
+          FIRST_USER_NAME=pi
+          FIRST_USER_PASS=T3chn0l0gy
+          ENABLE_SSH=1
+          LOCALE_DEFAULT=en_IE.UTF-8
+          KEYBOARD_KEYMAP=gb
+          KEYBOARD_LAYOUT="English (UK)"
+          TIMEZONE_DEFAULT=Europe/Dublin
+          WPA_COUNTRY=IE
+          STAGE_LIST="stage0 stage1 stage2 stage-sip-reporter"
+          CONF
+
+      - name: Build image
+        working-directory: pi-gen
+        run: sudo ./build.sh
 
       - name: Compress image
         run: |
-          IMAGE_PATH="${{ steps.pi-gen.outputs.image-path }}"
-          xz -T0 -9 "${IMAGE_PATH}"
-          XZ_PATH="${IMAGE_PATH}.xz"
-          echo "IMAGE_NAME=$(basename ${XZ_PATH})" >> "$GITHUB_ENV"
-          echo "IMAGE_PATH=${XZ_PATH}" >> "$GITHUB_ENV"
+          VERSION="${GITHUB_REF_NAME}"
+          IMAGE=$(find pi-gen/deploy -name "*.img" | head -1)
+          if [ -z "$IMAGE" ]; then
+            echo "No image found!"
+            ls -la pi-gen/deploy/ || true
+            exit 1
+          fi
+          xz -T0 -6 "${IMAGE}"
+          XZ_PATH="${IMAGE}.xz"
+          FINAL_NAME="sip-reporter-${VERSION}.img.xz"
+          mv "${XZ_PATH}" "${FINAL_NAME}"
+          echo "IMAGE_PATH=${FINAL_NAME}" >> "$GITHUB_ENV"
 
       - name: Upload Pi image to release
         uses: softprops/action-gh-release@v2

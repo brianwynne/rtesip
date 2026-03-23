@@ -1,5 +1,5 @@
 .display {
-  background: #050510;
+  background: linear-gradient(135deg, #0c0c1a 0%, #12122a 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 0.6rem 0.8rem;
@@ -48,7 +48,7 @@
   font-size: 1rem;
   font-weight: 600;
   font-family: var(--font-mono);
-  color: var(--text-secondary);
+  color: var(--cyan);
   letter-spacing: 0.05rem;
 }
 
