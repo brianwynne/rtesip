@@ -108,10 +108,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y coreutils quilt parted debootstrap zerofree zip \
             dosfstools libarchive-tools libcap2-bin rsync grep xz-utils curl xxd \
-            file git kmod bc gpg pigz qemu-user-binfmt binfmt-support arch-test
+            file git kmod bc gpg pigz qemu-user-static binfmt-support arch-test
 
       - name: Clone pi-gen
-        run: git clone --depth 1 --branch master https://github.com/RPi-Distro/pi-gen.git
+        run: git clone --depth 1 --branch bookworm https://github.com/RPi-Distro/pi-gen.git
+
+      - name: Patch pi-gen to accept qemu-user-static
+        run: |
+          # pi-gen checks for qemu-user-binfmt but qemu-user-static provides the same functionality
+          # with static binaries that work in chroots
+          sed -i 's/qemu-user-binfmt/qemu-user-static/g' pi-gen/depends
 
       - name: Prepare custom stage
         run: |
