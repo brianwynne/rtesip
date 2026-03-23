@@ -98,10 +98,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up QEMU for ARM64
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static binfmt-support
-          sudo update-binfmts --enable
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
 
       - name: Download frontend dist
         uses: actions/download-artifact@v4
@@ -192,7 +191,8 @@ jobs:
           wpa-country: IE
           release: bookworm
           verbose-output: true
-          docker-opts: --privileged
+          enable-noobs: false
+          setfcap: cap_net_bind_service+ep
 
       - name: Compress image
         run: |
