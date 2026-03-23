@@ -1,0 +1,115 @@
+.faderStrip {
+  display: flex;
+  gap: 2px;
+  touch-action: none;
+}
+
+/* Scale labels */
+.scale {
+  position: relative;
+  width: 20px;
+  height: 80px;
+}
+
+.scaleLabel {
+  position: absolute;
+  right: 0;
+  font-size: 7px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  transform: translateY(50%);
+  line-height: 1;
+}
+
+/* Track */
+.track {
+  position: relative;
+  width: 20px;
+  height: 80px;
+  cursor: pointer;
+}
+
+.groove {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  bottom: 2px;
+  width: 4px;
+  transform: translateX(-50%);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Tick marks */
+.tick {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  height: 1px;
+  background: var(--text-muted);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.tickMinor {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 1px;
+  background: var(--text-muted);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* Knob */
+.knob {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.knobCap {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom,
+    #555 0%,
+    #444 10%,
+    #3a3a3a 45%,
+    #333 55%,
+    #2a2a2a 90%,
+    #222 100%
+  );
+  border: 1px solid #555;
+  border-radius: 3px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.knobMuted .knobCap {
+  border-color: var(--red);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    0 0 4px rgba(239, 68, 68, 0.3);
+}
+
+.knobLine {
+  width: 14px;
+  height: 1px;
+  background: #888;
+  box-shadow: 0 3px 0 #666, 0 -3px 0 #666;
+  border-radius: 1px;
+}
+
+.knobMuted .knobLine {
+  background: var(--red);
+  box-shadow: 0 3px 0 var(--red), 0 -3px 0 var(--red);
+}

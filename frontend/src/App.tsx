@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "./components/StatusBar";
 import { NavBar, type Page } from "./components/NavBar";
 import { CallPage } from "./pages/CallPage";
@@ -12,7 +12,19 @@ import styles from "./App.module.css";
 function App() {
   const [page, setPage] = useState<Page>("call");
   const [contacts] = useState<Contact[]>([]);
+  const [ipAddress, setIpAddress] = useState("");
   const ws = useWebSocket();
+
+  useEffect(() => {
+    fetch("/api/system/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.hostname) setIpAddress(data.hostname);
+      })
+      .catch(() => {
+        setIpAddress(window.location.hostname);
+      });
+  }, []);
 
   return (
     <div className={styles.app}>
@@ -20,6 +32,7 @@ function App() {
         connected={ws.connected}
         sipReady={ws.sipReady}
         accounts={ws.accounts}
+        ipAddress={ipAddress || window.location.hostname}
       />
       <main className={styles.content}>
         {page === "call" && (
@@ -39,6 +52,8 @@ function App() {
             onMuteGain={() => ws.mute("gain")}
             onLinkVol={(l) => ws.toggleLink("vol", l)}
             onLinkGain={(l) => ws.toggleLink("gain", l)}
+            onSetVolLevel={ws.setVolLevel}
+            onSetGainLevel={ws.setGainLevel}
           />
         )}
         {page === "audio" && <AudioPage />}

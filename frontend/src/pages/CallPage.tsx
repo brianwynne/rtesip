@@ -19,11 +19,24 @@ interface Props {
   onMuteGain: () => void;
   onLinkVol: (linked: boolean) => void;
   onLinkGain: (linked: boolean) => void;
+  onSetVolLevel?: (ch: "l" | "r", level: number) => void;
+  onSetGainLevel?: (ch: "l" | "r", level: number) => void;
 }
 
 export function CallPage(props: Props) {
   return (
     <div className={styles.page}>
+      <Fader
+        type="capture"
+        leftLevel={props.volume.cl}
+        rightLevel={props.volume.cr}
+        linked={props.volume.clink}
+        onUp={props.onGainUp}
+        onDown={props.onGainDown}
+        onMute={props.onMuteGain}
+        onLink={props.onLinkGain}
+        onSetLevel={props.onSetGainLevel}
+      />
       <div className={styles.callSection}>
         <CallPanel
           callState={props.callState}
@@ -34,28 +47,17 @@ export function CallPage(props: Props) {
           contacts={props.contacts}
         />
       </div>
-      <div className={styles.audioSection}>
-        <Fader
-          type="capture"
-          leftLevel={props.volume.cl}
-          rightLevel={props.volume.cr}
-          linked={props.volume.clink}
-          onUp={props.onGainUp}
-          onDown={props.onGainDown}
-          onMute={props.onMuteGain}
-          onLink={props.onLinkGain}
-        />
-        <Fader
-          type="playback"
-          leftLevel={props.volume.pl}
-          rightLevel={props.volume.pr}
-          linked={props.volume.plink}
-          onUp={props.onVolUp}
-          onDown={props.onVolDown}
-          onMute={props.onMuteVol}
-          onLink={props.onLinkVol}
-        />
-      </div>
+      <Fader
+        type="playback"
+        leftLevel={props.volume.pl}
+        rightLevel={props.volume.pr}
+        linked={props.volume.plink}
+        onUp={props.onVolUp}
+        onDown={props.onVolDown}
+        onMute={props.onMuteVol}
+        onLink={props.onLinkVol}
+        onSetLevel={props.onSetVolLevel}
+      />
     </div>
   );
 }

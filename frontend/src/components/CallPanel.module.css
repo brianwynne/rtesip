@@ -1,204 +1,310 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  height: 100%;
 }
 
-/* Active call */
-.callActive {
+/* ── Active Call Display ── */
+.callDisplay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  text-align: center;
   animation: fadeIn 0.2s ease;
 }
 
-.callActive.incoming {
+.callDisplay.incoming {
   border-color: var(--amber);
-  background: linear-gradient(135deg, var(--amber-dim), var(--bg-card));
+  background: linear-gradient(180deg, var(--amber-dim) 0%, var(--bg-card) 60%);
 }
 
-.callActive.connected {
+.callDisplay.connected {
   border-color: var(--green);
-  background: linear-gradient(135deg, var(--green-dim), var(--bg-card));
+  background: linear-gradient(180deg, var(--green-dim) 0%, var(--bg-card) 60%);
 }
 
-.callActive.calling, .callActive.ringing {
+.callDisplay.calling, .callDisplay.ringing {
   border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(74, 108, 247, 0.1) 0%, var(--bg-card) 60%);
 }
 
-.callStateLabel {
-  font-size: 12px;
+.stateRing {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+}
+
+.ringInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringConnected { color: var(--green); }
+.ringIncoming { color: var(--amber); animation: pulse 1.5s ease infinite; }
+.ringCalling { color: var(--accent); animation: pulse 1.5s ease infinite; }
+
+.stateLabel {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--text-secondary);
+}
+
+.destination {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  text-align: center;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+/* ── Big Action Buttons ── */
+.callBtnRow {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.bigBtnGreen, .bigBtnRed, .bigBtnMuted {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 72px;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.15s;
+}
+
+.bigBtnGreen {
+  background: var(--green);
+  color: #000;
+}
+.bigBtnGreen:hover:not(:disabled) { background: #34d16f; transform: scale(1.02); }
+.bigBtnGreen:active { transform: scale(0.98); }
+.bigBtnGreen:disabled { opacity: 0.25; cursor: default; }
+
+.bigBtnRed {
+  background: var(--red);
+  color: #fff;
+}
+.bigBtnRed:hover { background: #f05555; transform: scale(1.02); }
+.bigBtnRed:active { transform: scale(0.98); }
+
+.bigBtnMuted {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.bigBtnMuted:hover { border-color: var(--text-muted); color: var(--text-primary); }
+
+/* ── Idle Panel ── */
+.idlePanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.idleStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 2px;
   color: var(--text-secondary);
-  margin-bottom: 8px;
 }
 
-.callDestination {
-  font-size: 20px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  margin-bottom: 20px;
-  word-break: break-all;
+.readyDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
 }
 
-.callActions {
+/* ── Quick Dial Grid ── */
+.quickGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+}
+
+.quickBtn {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 6px;
+  padding: 16px 12px;
+  min-height: 80px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  transition: all 0.15s;
+}
+.quickBtn:hover {
+  border-color: var(--green);
+  background: var(--bg-elevated);
+  transform: scale(1.02);
+}
+.quickBtn:active { transform: scale(0.98); }
+
+.quickIcon {
+  color: var(--green);
 }
 
-.answerBtn, .rejectBtn, .hangupBtn {
+.quickName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.quickAddr {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.emptyHint {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: var(--radius);
+  justify-content: center;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 24px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Dial Address Button ── */
+.keyboardBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
   transition: all 0.15s;
 }
-
-.answerBtn {
-  background: var(--green);
-  color: #000;
-}
-.answerBtn:hover { background: #34d16f; }
-
-.rejectBtn, .hangupBtn {
-  background: var(--red);
-  color: #fff;
-}
-.rejectBtn:hover, .hangupBtn:hover { background: #f05555; }
-
-/* Dial section */
-.dialSection {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dialRow {
-  display: flex;
-  gap: 8px;
-}
-
-.dialInput {
-  flex: 1;
-  height: 44px;
-  font-family: var(--font-mono);
-  font-size: 15px;
-}
-
-.dialBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius);
-  background: var(--green);
-  color: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.dialBtn:hover:not(:disabled) { background: #34d16f; }
-.dialBtn:disabled { opacity: 0.3; cursor: default; }
-
-.contactsBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-.contactsBtn:hover { background: var(--border); color: var(--text-primary); }
-
-/* Quick dial */
-.quickDial {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.quickDialBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  font-size: 13px;
-  transition: all 0.15s;
-}
-.quickDialBtn:hover {
+.keyboardBtn:hover {
   border-color: var(--accent);
   background: var(--bg-elevated);
 }
 
-/* Contact list */
-.contactList {
+/* ── Keyboard Panel ── */
+.keyboardPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.15s;
+  align-self: flex-start;
+}
+.backBtn:hover { color: var(--text-primary); }
+
+.addressDisplay {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.contactFilter {
-  width: 100%;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  padding: 10px 14px;
-  font-size: 13px;
-}
-
-.contactScroll {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.contactItem {
+  padding: 20px;
+  text-align: center;
+  min-height: 72px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
-  padding: 10px 14px;
-  background: transparent;
-  color: var(--text-primary);
-  text-align: left;
-  transition: background 0.1s;
-}
-.contactItem:hover { background: var(--bg-elevated); }
-
-.contactName {
-  font-size: 13px;
-  font-weight: 500;
+  justify-content: center;
+  gap: 4px;
+  cursor: text;
+  position: relative;
 }
 
-.contactAddr {
-  font-size: 12px;
+.hiddenInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: none;
+  pointer-events: none;
+}
+
+.addressPrefix {
+  font-size: 16px;
   font-family: var(--font-mono);
   color: var(--text-muted);
 }
 
-.noContacts {
-  padding: 20px;
+.addressText {
+  font-size: 20px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.addressInput {
+  height: 52px;
+  font-family: var(--font-mono);
+  font-size: 16px;
   text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
+  border-radius: var(--radius-lg);
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

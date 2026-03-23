@@ -1,0 +1,116 @@
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.domainRow {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.domainBtn {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(74, 108, 247, 0.15), rgba(74, 108, 247, 0.05));
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+  touch-action: manipulation;
+}
+.domainBtn:active {
+  background: var(--accent);
+  color: #fff;
+  transform: scale(0.97);
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.key {
+  height: 44px;
+  min-width: 30px;
+  flex: 1;
+  max-width: 44px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.08s;
+  touch-action: manipulation;
+}
+
+.key:active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  transform: scale(0.95);
+}
+
+.keyWide {
+  flex: 1.4;
+  max-width: 60px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.keyFlex {
+  flex: 3;
+  max-width: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.keySip {
+  background: var(--bg-card);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.keyAction {
+  flex: 1.4;
+  max-width: 60px;
+  color: var(--text-secondary);
+}
+
+.keyCall {
+  flex: 1.4;
+  max-width: 56px;
+  background: var(--green);
+  border-color: var(--green);
+  color: #000;
+}
+.keyCall:active {
+  background: #34d16f;
+  border-color: #34d16f;
+  color: #000;
+}
+
+.keyActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

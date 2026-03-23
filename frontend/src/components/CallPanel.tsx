@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
-import { Phone, PhoneOff, PhoneForwarded, X, Search } from "lucide-react";
+import { useState } from "react";
+import { Phone, PhoneOff, PhoneForwarded, X, Keyboard, ArrowLeft } from "lucide-react";
+import { SoftKeyboard } from "./SoftKeyboard";
 import type { CallState, Contact } from "../types";
 import styles from "./CallPanel.module.css";
 
@@ -14,145 +15,173 @@ interface Props {
 
 export function CallPanel({ callState, onCall, onHangup, onAnswer, onReject, contacts }: Props) {
   const [address, setAddress] = useState("");
-  const [showContacts, setShowContacts] = useState(false);
-  const [filter, setFilter] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"idle" | "keyboard">("idle");
 
-  const handleCall = () => {
-    if (address.trim()) {
-      onCall(address.trim());
+  const handleCall = (addr?: string) => {
+    const target = addr || address.trim();
+    if (target) {
+      onCall(target);
       setAddress("");
+      setMode("idle");
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleCall();
-  };
-
-  const filteredContacts = contacts.filter(
-    (c) =>
-      c.name.toLowerCase().includes(filter.toLowerCase()) ||
-      c.address.toLowerCase().includes(filter.toLowerCase())
-  );
-
+  const quickDials = contacts.filter((c) => c.quickDial);
   const isIdle = callState.state === "idle";
   const isIncoming = callState.state === "incoming";
   const isActive = !isIdle;
 
   return (
     <div className={styles.panel}>
-      {/* Active call display */}
+      {/* ── Active Call ── */}
       {isActive && (
-        <div className={`${styles.callActive} ${styles[callState.state]}`}>
-          <div className={styles.callStateLabel}>
-            {callState.state === "calling" && "Calling..."}
-            {callState.state === "ringing" && "Ringing..."}
-            {callState.state === "incoming" && "Incoming Call"}
-            {callState.state === "connected" && "Connected"}
+        <div className={`${styles.callDisplay} ${styles[callState.state]}`}>
+          <div className={styles.stateRing}>
+            <div className={`${styles.ringInner} ${callState.state === "connected" ? styles.ringConnected : callState.state === "incoming" ? styles.ringIncoming : styles.ringCalling}`}>
+              {callState.state === "connected" ? (
+                <Phone size={32} />
+              ) : callState.state === "incoming" ? (
+                <PhoneForwarded size={32} />
+              ) : (
+                <Phone size={32} />
+              )}
+            </div>
           </div>
-          <div className={styles.callDestination}>{callState.destination || "Unknown"}</div>
-          <div className={styles.callActions}>
-            {isIncoming && (
+          <div className={styles.stateLabel}>
+            {callState.state === "calling" && "Calling"}
+            {callState.state === "ringing" && "Ringing"}
+            {callState.state === "incoming" && "Incoming Call"}
+            {callState.state === "connected" && "On Air"}
+          </div>
+          <div className={styles.destination}>{callState.destination || "Unknown"}</div>
+
+          <div className={styles.callBtnRow}>
+            {isIncoming ? (
               <>
-                <button className={styles.answerBtn} onClick={onAnswer}>
-                  <Phone size={20} />
+                <button className={styles.bigBtnGreen} onClick={onAnswer}>
+                  <Phone size={24} />
                   <span>Accept</span>
                 </button>
-                <button className={styles.rejectBtn} onClick={onReject}>
-                  <X size={20} />
+                <button className={styles.bigBtnRed} onClick={onReject}>
+                  <X size={24} />
                   <span>Reject</span>
                 </button>
               </>
-            )}
-            {!isIncoming && (
-              <button className={styles.hangupBtn} onClick={onHangup}>
-                <PhoneOff size={20} />
-                <span>Hang Up</span>
+            ) : (
+              <button className={styles.bigBtnRed} onClick={onHangup}>
+                <PhoneOff size={24} />
+                <span>End Call</span>
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Dial pad */}
-      {isIdle && (
-        <div className={styles.dialSection}>
-          <div className={styles.dialRow}>
-            <input
-              ref={inputRef}
-              className={styles.dialInput}
-              type="text"
-              placeholder="Enter SIP address..."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoComplete="off"
-            />
-            <button
-              className={styles.dialBtn}
-              onClick={handleCall}
-              disabled={!address.trim()}
-            >
-              <Phone size={18} />
-            </button>
-            <button
-              className={styles.contactsBtn}
-              onClick={() => setShowContacts(!showContacts)}
-            >
-              <Search size={18} />
-            </button>
+      {/* ── Idle: Quick Dial View ── */}
+      {isIdle && mode === "idle" && (
+        <div className={styles.idlePanel}>
+          <div className={styles.idleStatus}>
+            <div className={styles.readyDot} />
+            <span>Ready</span>
           </div>
 
-          {/* Quick dial */}
-          {!showContacts && contacts.filter((c) => c.quickDial).length > 0 && (
-            <div className={styles.quickDial}>
-              {contacts
-                .filter((c) => c.quickDial)
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    className={styles.quickDialBtn}
-                    onClick={() => onCall(c.address)}
-                  >
-                    <PhoneForwarded size={14} />
-                    <span>{c.name}</span>
-                  </button>
-                ))}
+          {quickDials.length > 0 && (
+            <div className={styles.quickGrid}>
+              {quickDials.map((c) => (
+                <button
+                  key={c.id}
+                  className={styles.quickBtn}
+                  onClick={() => handleCall(c.address)}
+                >
+                  <PhoneForwarded size={20} className={styles.quickIcon} />
+                  <span className={styles.quickName}>{c.name}</span>
+                  <span className={styles.quickAddr}>{c.address}</span>
+                </button>
+              ))}
             </div>
           )}
 
-          {/* Contact list */}
-          {showContacts && (
-            <div className={styles.contactList}>
-              <input
-                className={styles.contactFilter}
-                type="text"
-                placeholder="Filter contacts..."
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                autoFocus
-              />
-              <div className={styles.contactScroll}>
-                {filteredContacts.map((c) => (
-                  <button
-                    key={c.id}
-                    className={styles.contactItem}
-                    onClick={() => {
-                      onCall(c.address);
-                      setShowContacts(false);
-                      setFilter("");
-                    }}
-                  >
-                    <span className={styles.contactName}>{c.name}</span>
-                    <span className={styles.contactAddr}>{c.address}</span>
-                  </button>
-                ))}
-                {filteredContacts.length === 0 && (
-                  <div className={styles.noContacts}>No contacts found</div>
-                )}
-              </div>
+          {contacts.length > 0 && quickDials.length === 0 && (
+            <div className={styles.quickGrid}>
+              {contacts.slice(0, 6).map((c) => (
+                <button
+                  key={c.id}
+                  className={styles.quickBtn}
+                  onClick={() => handleCall(c.address)}
+                >
+                  <PhoneForwarded size={20} className={styles.quickIcon} />
+                  <span className={styles.quickName}>{c.name}</span>
+                  <span className={styles.quickAddr}>{c.address}</span>
+                </button>
+              ))}
             </div>
           )}
+
+          {contacts.length === 0 && (
+            <div className={styles.emptyHint}>
+              Add contacts in the Contacts tab for quick dial buttons
+            </div>
+          )}
+
+          <button className={styles.keyboardBtn} onClick={() => setMode("keyboard")}>
+            <Keyboard size={20} />
+            <span>Dial Address</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Keyboard: Manual Address Entry ── */}
+      {isIdle && mode === "keyboard" && (
+        <div className={styles.keyboardPanel}>
+          <button className={styles.backBtn} onClick={() => { setMode("idle"); setAddress(""); }}>
+            <ArrowLeft size={18} />
+            <span>Back</span>
+          </button>
+
+          <div className={styles.addressDisplay} onClick={() => document.getElementById("addr-input")?.focus()}>
+            <span className={styles.addressPrefix}>sip:</span>
+            <span className={styles.addressText}>{address || "—"}</span>
+            <input
+              id="addr-input"
+              className={styles.hiddenInput}
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCall();
+                if (e.key === "Escape") { setMode("idle"); setAddress(""); }
+              }}
+              autoFocus
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+          </div>
+
+          <SoftKeyboard
+            onKey={(char) => setAddress((prev) => prev + char)}
+            onBackspace={() => setAddress((prev) => prev.slice(0, -1))}
+            onClear={() => setAddress("")}
+            onSubmit={() => handleCall()}
+          />
+
+          <div className={styles.callBtnRow}>
+            <button
+              className={styles.bigBtnGreen}
+              onClick={() => handleCall()}
+              disabled={!address.trim()}
+            >
+              <Phone size={24} />
+              <span>Call</span>
+            </button>
+            <button
+              className={styles.bigBtnMuted}
+              onClick={() => setAddress("")}
+            >
+              <X size={24} />
+              <span>Clear</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

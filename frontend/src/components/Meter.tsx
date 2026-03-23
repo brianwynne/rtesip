@@ -6,43 +6,82 @@ interface Props {
   maxLevel?: number;
   muted?: boolean;
   vertical?: boolean;
+  scalePosition?: "left" | "right" | "none";
 }
 
-export function Meter({ label, level, maxLevel = 150, muted, vertical }: Props) {
+const TICKS = [
+  { pct: 100, label: "+12" },
+  { pct: 87, label: "0" },
+  { pct: 67, label: "-12" },
+  { pct: 47, label: "-24" },
+  { pct: 27, label: "-36" },
+  { pct: 0, label: "-48" },
+];
+
+export function Meter({ label, level, maxLevel = 150, muted, vertical, scalePosition = "none" }: Props) {
   const pct = Math.min(100, (level / maxLevel) * 100);
 
-  // Broadcast-standard color thresholds
-  const getColor = (pct: number) => {
-    if (pct > 85) return "var(--meter-red)";
-    if (pct > 65) return "var(--meter-yellow)";
-    return "var(--meter-green)";
+  if (vertical) {
+    const scaleLeft = scalePosition === "left";
+    const scaleRight = scalePosition === "right";
+
+    return (
+      <div className={styles.vertical}>
+        <div className={styles.meterRow}>
+          {scaleLeft && (
+            <div className={styles.scale}>
+              {TICKS.map((t) => (
+                <div key={t.label} className={`${styles.tickLabel} ${styles.tickRight}`} style={{ bottom: `${t.pct}%` }}>
+                  {t.label}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className={styles.trackVertical}>
+            <div
+              className={styles.fillVertical}
+              style={{
+                height: `${pct}%`,
+                background: muted ? "var(--text-muted)" : undefined,
+              }}
+            />
+            {Array.from({ length: 24 }).map((_, i) => (
+              <div
+                key={i}
+                className={styles.segment}
+                style={{ bottom: `${(i / 24) * 100}%` }}
+              />
+            ))}
+          </div>
+          {scaleRight && (
+            <div className={styles.scale}>
+              {TICKS.map((t) => (
+                <div key={t.label} className={`${styles.tickLabel} ${styles.tickLeft}`} style={{ bottom: `${t.pct}%` }}>
+                  {t.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <span className={`${styles.chLabel} ${muted ? styles.chMuted : ""}`}>{label}</span>
+      </div>
+    );
+  }
+
+  // Horizontal fallback
+  const getGradient = () => {
+    if (muted) return "var(--text-muted)";
+    return `linear-gradient(to right, var(--meter-green) 0%, var(--meter-green) 60%, var(--meter-yellow) 80%, var(--meter-red) 100%)`;
   };
 
-  // Generate tick marks at standard broadcast levels
-  const ticks = vertical
-    ? [0, 20, 40, 60, 80, 100]
-    : [0, 25, 50, 75, 100];
-
   return (
-    <div className={`${styles.meter} ${vertical ? styles.vertical : styles.horizontal}`}>
-      <span className={`${styles.label} ${muted ? styles.muted : ""}`}>{label}</span>
-      <div className={styles.track}>
+    <div className={styles.horizontal}>
+      <span className={styles.chLabel}>{label}</span>
+      <div className={styles.trackHorizontal}>
         <div
-          className={styles.fill}
-          style={{
-            [vertical ? "height" : "width"]: `${pct}%`,
-            background: muted
-              ? "var(--text-muted)"
-              : `linear-gradient(${vertical ? "to top" : "to right"}, var(--meter-green), ${getColor(pct)})`,
-          }}
+          className={styles.fillHorizontal}
+          style={{ width: `${pct}%`, background: getGradient() }}
         />
-        {ticks.map((t) => (
-          <div
-            key={t}
-            className={styles.tick}
-            style={{ [vertical ? "bottom" : "left"]: `${t}%` }}
-          />
-        ))}
       </div>
       <span className={styles.value}>{level}%</span>
     </div>

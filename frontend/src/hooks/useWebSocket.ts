@@ -50,7 +50,6 @@ export function useWebSocket() {
 
       ws.onopen = () => {
         setConnected(true);
-        // Auto-auth with empty password (no password set = auto-accept)
         send({ command: "authRequest" });
       };
 
@@ -59,7 +58,6 @@ export function useWebSocket() {
 
         switch (msg.event) {
           case "challenge":
-            // No password — respond with hash of empty string + challenge
             crypto.subtle
               .digest("SHA-256", new TextEncoder().encode(String(msg.challenge)))
               .then((buf) => {
@@ -133,6 +131,88 @@ export function useWebSocket() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // --- Volume control with local-first state ---
+
+  const setLevel = useCallback((type: "vol" | "gain", channel: "l" | "r", level: number) => {
+    const clamped = Math.max(0, Math.min(150, level));
+    setVolume((prev) => {
+      const next = { ...prev };
+      if (type === "gain") {
+        if (channel === "l") next.cl = clamped;
+        if (channel === "r") next.cr = clamped;
+        if (prev.clink) { next.cl = clamped; next.cr = clamped; }
+      } else {
+        if (channel === "l") next.pl = clamped;
+        if (channel === "r") next.pr = clamped;
+        if (prev.plink) { next.pl = clamped; next.pr = clamped; }
+      }
+      return next;
+    });
+    send({ command: type === "vol" ? "vol" : "gain", channel, level: clamped });
+  }, [send]);
+
+  const adjustLevel = useCallback((type: "vol" | "gain", channel: "l" | "r", direction: "up" | "down") => {
+    setVolume((prev) => {
+      const next = { ...prev };
+      const delta = direction === "up" ? 10 : -10;
+      if (type === "gain") {
+        const newL = Math.max(0, Math.min(150, prev.cl + delta));
+        const newR = Math.max(0, Math.min(150, prev.cr + delta));
+        if (channel === "l" || prev.clink) next.cl = newL;
+        if (channel === "r" || prev.clink) next.cr = prev.clink ? newL : newR;
+      } else {
+        const newL = Math.max(0, Math.min(150, prev.pl + delta));
+        const newR = Math.max(0, Math.min(150, prev.pr + delta));
+        if (channel === "l" || prev.plink) next.pl = newL;
+        if (channel === "r" || prev.plink) next.pr = prev.plink ? newL : newR;
+      }
+      return next;
+    });
+    send({ command: type === "vol" ? "vol" : "gain", channel, direction });
+  }, [send]);
+
+  const muteToggle = useCallback((which: "vol" | "gain") => {
+    setVolume((prev) => {
+      const next = { ...prev };
+      if (which === "gain") {
+        if (prev.cl === 0 && prev.cr === 0) {
+          next.cl = 100; next.cr = 100;
+        } else {
+          next.cl = 0; next.cr = 0;
+        }
+      } else {
+        if (prev.pl === 0 && prev.pr === 0) {
+          next.pl = 100; next.pr = 100;
+        } else {
+          next.pl = 0; next.pr = 0;
+        }
+      }
+      return next;
+    });
+    send({ command: "mute", which });
+  }, [send]);
+
+  const toggleLink = useCallback((type: "vol" | "gain", linked: boolean) => {
+    setVolume((prev) => {
+      const next = { ...prev };
+      if (type === "gain") {
+        next.clink = linked;
+        if (linked) {
+          const avg = Math.round((prev.cl + prev.cr) / 20) * 10;
+          next.cl = avg; next.cr = avg;
+        }
+      } else {
+        next.plink = linked;
+        if (linked) {
+          const avg = Math.round((prev.pl + prev.pr) / 20) * 10;
+          next.pl = avg; next.pr = avg;
+        }
+      }
+      return next;
+    });
+    send({ command: type === "vol" ? "vol" : "gain", link: linked });
+  }, [send]);
+
   return {
     connected, authed, callState, accounts, volume, sipReady,
     send, authenticate,
@@ -140,12 +220,11 @@ export function useWebSocket() {
     hangup: () => send({ command: "hangup" }),
     answer: () => send({ command: "answer" }),
     reject: () => send({ command: "reject" }),
-    setVol: (channel: "l" | "r", direction: "up" | "down") =>
-      send({ command: "vol", channel, direction }),
-    setGain: (channel: "l" | "r", direction: "up" | "down") =>
-      send({ command: "gain", channel, direction }),
-    mute: (which: "vol" | "gain") => send({ command: "mute", which }),
-    toggleLink: (type: "vol" | "gain", linked: boolean) =>
-      send({ command: type === "vol" ? "vol" : "gain", link: linked }),
+    setVol: (channel: "l" | "r", direction: "up" | "down") => adjustLevel("vol", channel, direction),
+    setGain: (channel: "l" | "r", direction: "up" | "down") => adjustLevel("gain", channel, direction),
+    setVolLevel: (channel: "l" | "r", level: number) => setLevel("vol", channel, level),
+    setGainLevel: (channel: "l" | "r", level: number) => setLevel("gain", channel, level),
+    mute: muteToggle,
+    toggleLink,
   };
 }

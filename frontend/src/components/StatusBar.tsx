@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, Phone, PhoneOff, Shield, ShieldOff } from "lucide-react";
+import { Wifi, WifiOff, Shield, ShieldOff } from "lucide-react";
 import type { AccountStatus } from "../types";
 import styles from "./StatusBar.module.css";
 
@@ -6,33 +6,42 @@ interface Props {
   connected: boolean;
   sipReady: boolean;
   accounts: Record<string, AccountStatus>;
-  hostname?: string;
+  ipAddress?: string;
 }
 
-export function StatusBar({ connected, sipReady, accounts, hostname }: Props) {
-  const registeredCount = Object.values(accounts).filter((a) => a.registered).length;
-  const totalCount = Object.keys(accounts).length;
+export function StatusBar({ connected, sipReady, accounts, ipAddress }: Props) {
+  const accountList = Object.values(accounts);
 
   return (
     <div className={styles.bar}>
+      {/* Left: branding + IP */}
       <div className={styles.left}>
         <span className={styles.brand}>RTE</span>
         <span className={styles.product}>SIP</span>
-        {hostname && <span className={styles.hostname}>{hostname}</span>}
+        {ipAddress && (
+          <span className={styles.ip}>{ipAddress}</span>
+        )}
       </div>
-      <div className={styles.right}>
-        {totalCount > 0 && (
-          <div className={styles.indicator} title={`${registeredCount}/${totalCount} accounts registered`}>
-            {sipReady ? (
-              <Phone size={14} className={styles.iconGreen} />
-            ) : (
-              <PhoneOff size={14} className={styles.iconRed} />
-            )}
-            <span className={sipReady ? styles.textGreen : styles.textRed}>
-              {registeredCount}/{totalCount}
-            </span>
+
+      {/* Centre: SIP accounts with live status */}
+      <div className={styles.center}>
+        {accountList.length > 0 ? (
+          accountList.map((acc) => (
+            <div key={acc.id} className={styles.account}>
+              <span className={acc.registered ? styles.dotGreen : styles.dotRed} />
+              <span className={styles.accountId}>{acc.id}</span>
+            </div>
+          ))
+        ) : (
+          <div className={styles.account}>
+            <span className={styles.dotMuted} />
+            <span className={styles.accountNone}>No accounts</span>
           </div>
         )}
+      </div>
+
+      {/* Right: connection indicators */}
+      <div className={styles.right}>
         <div className={styles.indicator} title={sipReady ? "TLS Active" : "No TLS"}>
           {sipReady ? (
             <Shield size={14} className={styles.iconGreen} />
