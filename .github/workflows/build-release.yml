@@ -151,8 +151,8 @@ jobs:
           printf '%s\n' \
             '#!/bin/bash -e' \
             'install -d "${ROOTFS_DIR}/opt/rtesip"' \
-            'rsync -a files/ "${ROOTFS_DIR}/opt/rtesip/" 2>/dev/null || true' \
-            'rsync -a files/etc/ "${ROOTFS_DIR}/etc/" 2>/dev/null || true' \
+            'cp -a "${SUB_STAGE_DIR}/files/opt/rtesip/." "${ROOTFS_DIR}/opt/rtesip/"' \
+            'cp -a "${SUB_STAGE_DIR}/files/etc/." "${ROOTFS_DIR}/etc/" 2>/dev/null || true' \
             'on_chroot << EOF' \
             'useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true' \
             'mkdir -p /etc/rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip' \
