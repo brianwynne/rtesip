@@ -1,4 +1,5 @@
 import { Wifi, WifiOff, Shield, ShieldOff } from "lucide-react";
+import { Logo } from "./Logo";
 import type { AccountStatus } from "../types";
 import styles from "./StatusBar.module.css";
 
@@ -16,8 +17,7 @@ export function StatusBar({ connected, sipReady, accounts, ipAddress }: Props) {
     <div className={styles.bar}>
       {/* Left: branding + IP */}
       <div className={styles.left}>
-        <span className={styles.brand}>RTE</span>
-        <span className={styles.product}>SIP</span>
+        <Logo size="small" />
         {ipAddress && (
           <span className={styles.ip}>{ipAddress}</span>
         )}

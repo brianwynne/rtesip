@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
+import { Logo } from "./Logo";
 import styles from "./LoginScreen.module.css";
 
 interface Props {
@@ -18,10 +19,7 @@ export function LoginScreen({ onLogin, failed }: Props) {
   return (
     <div className={styles.screen}>
       <div className={styles.card}>
-        <div className={styles.logo}>
-          <span className={styles.brand}>RTE</span>
-          <span className={styles.product}>SIP</span>
-        </div>
+        <Logo size="large" />
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
             <Lock size={16} className={styles.inputIcon} />
