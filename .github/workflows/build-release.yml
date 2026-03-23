@@ -90,11 +90,30 @@ jobs:
         with:
           files: ${{ env.BUNDLE_NAME }}
 
-  build-pi-image:
+  # Pi image build — uses pi-gen action with custom stage
+  # This job is non-blocking; the release bundle is the primary artifact.
+  # The Pi image build requires iteration with real hardware.
+  # To build manually: flash Raspberry Pi OS Lite, then run deploy/install.sh
+  #
+  # build-pi-image:
+  #   needs: [test, build-frontend]
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 45
+  #   continue-on-error: true
+  #   NOTE: Pi-gen custom stage integration needs further work.
+  #   For now, use the release bundle + install.sh on a fresh Pi OS image.
+
+  build-pi-image-placeholder:
+    needs: [test, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Pi image build skipped — use release bundle + install.sh on Raspberry Pi OS Lite"
+
+  _build-pi-image-disabled:
+    if: false
     needs: [test, build-frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
