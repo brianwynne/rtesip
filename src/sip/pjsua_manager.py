@@ -126,9 +126,12 @@ def generate_config() -> str:
 
 def write_config() -> Path:
     """Write pjsua config file and return its path."""
-    PJSUA_CONF.parent.mkdir(parents=True, exist_ok=True)
-    PJSUA_CONF.write_text(generate_config())
-    logger.info("pjsua config written to %s", PJSUA_CONF)
+    try:
+        PJSUA_CONF.parent.mkdir(parents=True, exist_ok=True)
+        PJSUA_CONF.write_text(generate_config())
+        logger.info("pjsua config written to %s", PJSUA_CONF)
+    except PermissionError:
+        logger.warning("Cannot write pjsua config to %s (check permissions on %s)", PJSUA_CONF, PJSUA_CONF.parent)
     return PJSUA_CONF
 
 
@@ -223,8 +226,11 @@ class PjsuaProcess:
             logger.warning("pjsua binary not found at %s, running in stub mode", PJSUA_BIN)
             return
 
-        PID_FILE.parent.mkdir(parents=True, exist_ok=True)
-        PID_FILE.write_text(str(self._process.pid))
+        try:
+            PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+            PID_FILE.write_text(str(self._process.pid))
+        except PermissionError:
+            logger.warning("Cannot write PID file %s (non-fatal)", PID_FILE)
         logger.info("pjsua started (pid %d)", self._process.pid)
 
         # Monitor for unexpected exits
