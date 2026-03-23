@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "./components/StatusBar";
 import { LoginScreen } from "./components/LoginScreen";
 import { NavBar, type Page } from "./components/NavBar";
@@ -13,10 +13,27 @@ import styles from "./App.module.css";
 
 function App() {
   const [page, setPage] = useState<Page>("call");
-  const [contacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [ipAddress, setIpAddress] = useState("");
   const ws = useWebSocket();
   useRingtone(ws.callState.state === "incoming");
+
+  const fetchContacts = useCallback(() => {
+    fetch("/api/contacts/")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Contact[]) => setContacts(data))
+      .catch(() => setContacts([]));
+  }, []);
+
+  // Load contacts on mount
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
+
+  // Re-fetch contacts when switching to call tab (picks up edits from Contacts page)
+  useEffect(() => {
+    if (page === "call") fetchContacts();
+  }, [page, fetchContacts]);
 
   useEffect(() => {
     fetch("/api/system/status")
@@ -29,8 +46,13 @@ function App() {
       });
   }, []);
 
+  // Kiosk mode: local touchscreen only shows Call + Contacts (no Audio/Settings)
+  // Triggered by ?kiosk=1 in URL (set by Cage launcher) or local access
+  const isKiosk = new URLSearchParams(window.location.search).has("kiosk");
   const isDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  if (!ws.authed && !isDev) {
+
+  // Skip login on localhost (dev) and kiosk (local touchscreen)
+  if (!ws.authed && !isDev && !isKiosk) {
     return <LoginScreen onLogin={ws.authenticate} failed={ws.authFailed} />;
   }
 
@@ -69,7 +91,7 @@ function App() {
         {page === "contacts" && <ContactsPage />}
         {page === "settings" && <SettingsPage />}
       </main>
-      <NavBar active={page} onChange={setPage} />
+      <NavBar active={page} onChange={setPage} kioskMode={isKiosk} />
     </div>
   );
 }

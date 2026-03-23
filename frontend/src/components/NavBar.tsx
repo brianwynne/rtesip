@@ -6,16 +6,19 @@ export type Page = "call" | "audio" | "contacts" | "settings";
 interface Props {
   active: Page;
   onChange: (page: Page) => void;
+  kioskMode?: boolean;
 }
 
-const tabs: { id: Page; label: string; icon: typeof Phone }[] = [
-  { id: "call", label: "Call", icon: Phone },
-  { id: "audio", label: "Audio", icon: Sliders },
-  { id: "contacts", label: "Contacts", icon: Users },
-  { id: "settings", label: "Settings", icon: Settings },
+const allTabs: { id: Page; label: string; icon: typeof Phone; kiosk: boolean }[] = [
+  { id: "call", label: "Call", icon: Phone, kiosk: true },
+  { id: "audio", label: "Audio", icon: Sliders, kiosk: false },
+  { id: "contacts", label: "Contacts", icon: Users, kiosk: true },
+  { id: "settings", label: "Settings", icon: Settings, kiosk: false },
 ];
 
-export function NavBar({ active, onChange }: Props) {
+export function NavBar({ active, onChange, kioskMode }: Props) {
+  const tabs = kioskMode ? allTabs.filter((t) => t.kiosk) : allTabs;
+
   return (
     <nav className={styles.nav}>
       {tabs.map(({ id, label, icon: Icon }) => (
