@@ -302,11 +302,19 @@ async def _broadcast_levels() -> None:
 
     # Send to hardware mixer if enabled
     if mixer_state.hardware_mixer:
-        # Hardware mixer control will be connected when running on RPi hardware.
-        # This will use set_mixer_volume() from src.audio.mixer to drive ALSA
-        # controls directly. For now, volume changes are tracked in mixer_state
-        # and broadcast to WebSocket clients only.
-        logger.warning("Hardware mixer enabled but not connected — volume change not applied to hardware")
+        try:
+            from src.audio.mixer import discover_mixers, set_mixer_volume
+            mixers = discover_mixers()
+            set_mixer_volume(
+                mixers["capture_mixers"], mixers["capture_amps"],
+                mixer_state.capture_left, mixer_state.capture_right,
+            )
+            set_mixer_volume(
+                mixers["playback_mixers"], mixers["playback_amps"],
+                mixer_state.playback_left, mixer_state.playback_right,
+            )
+        except Exception as e:
+            logger.warning("Hardware mixer volume update failed: %s", e)
     else:
         # Software mixer via pjsua
         capture = mixer_state.capture_left / 100
