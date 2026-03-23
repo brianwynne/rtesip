@@ -160,19 +160,19 @@ export function SipPage() {
                   </label>
                   <label className={styles.field}>
                     <span>Registrar</span>
-                    <input type="text" value={acc.registrar} onChange={(e) => updateAccount(i, "registrar", e.target.value)} placeholder="proxy.server.com" />
+                    <input type="text" value={acc.registrar} onChange={(e) => updateAccount(i, "registrar", e.target.value)} placeholder="sip.rtegroup.ie" />
                   </label>
                   <label className={styles.field}>
                     <span>Realm</span>
-                    <input type="text" value={acc.realm} onChange={(e) => updateAccount(i, "realm", e.target.value)} placeholder="server.com" />
+                    <input type="text" value={acc.realm} onChange={(e) => updateAccount(i, "realm", e.target.value)} placeholder="sip.rtegroup.ie" />
                   </label>
                   <label className={styles.field}>
                     <span>Proxy</span>
-                    <input type="text" value={acc.proxy} onChange={(e) => updateAccount(i, "proxy", e.target.value)} placeholder="proxy.server.com" />
+                    <input type="text" value={acc.proxy} onChange={(e) => updateAccount(i, "proxy", e.target.value)} placeholder="sip.rtegroup.ie" />
                   </label>
                   <label className={styles.field}>
                     <span>Proxy 2</span>
-                    <input type="text" value={acc.proxy2} onChange={(e) => updateAccount(i, "proxy2", e.target.value)} placeholder="proxy2.server.com" />
+                    <input type="text" value={acc.proxy2} onChange={(e) => updateAccount(i, "proxy2", e.target.value)} placeholder="sip.rtegroup.ie" />
                   </label>
                   <label className={styles.field}>
                     <span>Transport</span>
