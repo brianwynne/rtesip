@@ -45,6 +45,19 @@ async def get_all_config():
     return load()
 
 
+@router.put("/config")
+async def update_config(sections: dict):
+    """Update one or more config sections (e.g. { security: {...} })."""
+    from src.config.system import apply_firewall_config
+    results = {}
+    for section, values in sections.items():
+        results[section] = update_section(section, values)
+    # Apply firewall if security was updated
+    if "security" in sections:
+        await asyncio.to_thread(apply_firewall_config)
+    return results
+
+
 # --- Network ---
 
 @router.get("/network")

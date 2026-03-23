@@ -311,6 +311,60 @@ def apply_boot_config() -> None:
     subprocess.run(["sync"], timeout=5)
 
 
+# --- Firewall ---
+
+def apply_firewall_config() -> None:
+    """Apply firewall settings — enable/disable ufw, configure trusted networks.
+
+    Reads security.firewall_enabled and security.trusted_networks from config.
+    """
+    security = get_section("security")
+    enabled = security.get("firewall_enabled", True)
+    trusted = security.get("trusted_networks", "")
+
+    try:
+        if enabled:
+            # Enable ufw
+            subprocess.run(["ufw", "--force", "enable"],
+                           capture_output=True, timeout=10)
+
+            # Reset to defaults
+            subprocess.run(["ufw", "default", "deny", "incoming"],
+                           capture_output=True, timeout=10)
+            subprocess.run(["ufw", "default", "allow", "outgoing"],
+                           capture_output=True, timeout=10)
+
+            # Always allow SSH and HTTP
+            subprocess.run(["ufw", "allow", "22/tcp"],
+                           capture_output=True, timeout=10)
+            subprocess.run(["ufw", "allow", "80/tcp"],
+                           capture_output=True, timeout=10)
+
+            # AES67 multicast
+            subprocess.run(["ufw", "allow", "52002/udp"],
+                           capture_output=True, timeout=10)
+
+            # Add trusted networks — allow all traffic from these CIDRs
+            for line in trusted.strip().split("\n"):
+                cidr = line.strip()
+                if cidr and re.match(r'^[0-9./]+$', cidr):
+                    subprocess.run(
+                        ["ufw", "allow", "from", cidr],
+                        capture_output=True, timeout=10,
+                    )
+                    logger.info("Firewall: trusted network %s", cidr)
+
+            logger.info("Firewall enabled with %d trusted networks",
+                        len([l for l in trusted.strip().split("\n") if l.strip()]))
+        else:
+            subprocess.run(["ufw", "--force", "disable"],
+                           capture_output=True, timeout=10)
+            logger.info("Firewall disabled")
+
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        logger.warning("Firewall configuration failed: %s", e)
+
+
 # --- Performance governor ---
 
 def apply_performance_governor() -> None:
