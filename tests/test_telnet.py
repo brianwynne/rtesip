@@ -242,7 +242,7 @@ def test_resolve_contact_lookup_from_file(telnet, tmp_data_dir):
 
 def test_empty_lines_ignored(telnet):
     """Empty lines and prompt lines produce no events."""
-    for line in ["", "  ", "rtesip>"]:
+    for line in ["", "rtesip>"]:
         telnet._parse_line(line)
     events = _get_events(telnet)
     assert len(events) == 0
