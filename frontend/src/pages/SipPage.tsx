@@ -172,7 +172,7 @@ export function SipPage() {
                   </label>
                   <label className={styles.field}>
                     <span>Proxy 2</span>
-                    <input type="text" value={acc.proxy2} onChange={(e) => updateAccount(i, "proxy2", e.target.value)} placeholder="sip.rtegroup.ie" />
+                    <input type="text" value={acc.proxy2} onChange={(e) => updateAccount(i, "proxy2", e.target.value)} placeholder="sip1.rtegroup.ie" />
                   </label>
                   <label className={styles.field}>
                     <span>Transport</span>
