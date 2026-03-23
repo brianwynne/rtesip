@@ -97,6 +97,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up QEMU for ARM64
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Download frontend dist
         uses: actions/download-artifact@v4
         with:
