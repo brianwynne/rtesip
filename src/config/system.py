@@ -368,10 +368,15 @@ def apply_firewall_config() -> None:
 # --- Performance governor ---
 
 def apply_performance_governor() -> None:
-    """Set CPU to performance mode."""
-    governor_path = Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
-    if governor_path.exists():
-        governor_path.write_text("performance")
+    """Set CPU to performance mode. Non-fatal if no permission (runs as non-root)."""
+    try:
+        for gov in Path("/sys/devices/system/cpu/").glob("cpu*/cpufreq/scaling_governor"):
+            gov.write_text("performance")
+        logger.info("CPU governor set to performance")
+    except PermissionError:
+        logger.info("CPU governor: no permission (set via rc.local or install script instead)")
+    except Exception as e:
+        logger.warning("CPU governor failed: %s", e)
 
 
 # --- Factory reset ---
