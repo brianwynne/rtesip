@@ -444,6 +444,39 @@ else
     warn "CLI script not found, skipping"
 fi
 
+# ── Install pjsua binary ─────────────────────────────────────
+info "Installing pjsua..."
+ARCH=$(dpkg --print-architecture)
+PJSUA_SRC=""
+if [ "$ARCH" = "armhf" ] && [ -f "$LOCAL_DIR/deploy/bin/pjsua-armhf" ]; then
+    PJSUA_SRC="$LOCAL_DIR/deploy/bin/pjsua-armhf"
+elif [ -f "$INSTALL_DIR/deploy/bin/pjsua-armhf" ] && [ "$ARCH" = "armhf" ]; then
+    PJSUA_SRC="$INSTALL_DIR/deploy/bin/pjsua-armhf"
+fi
+
+if [ -n "$PJSUA_SRC" ]; then
+    cp "$PJSUA_SRC" /usr/local/bin/pjsua
+    chmod +x /usr/local/bin/pjsua
+
+    # Install pjsua runtime dependencies
+    info "Installing pjsua dependencies..."
+    apt-get -qq install -y libasound2 libopus0 uuid-runtime 2>/dev/null || true
+
+    # libssl1.1 needed but not in Bookworm — install from Bullseye if missing
+    if ! ldconfig -p | grep -q "libssl.so.1.1"; then
+        info "Installing libssl1.1 compatibility..."
+        if [ "$ARCH" = "armhf" ]; then
+            curl -fsSL -o /tmp/libssl1.1.deb "http://archive.raspberrypi.com/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u2_armhf.deb" 2>/dev/null && \
+            dpkg -i /tmp/libssl1.1.deb 2>/dev/null && rm -f /tmp/libssl1.1.deb && \
+            ok "libssl1.1 installed" || warn "Could not install libssl1.1 — pjsua may not start"
+        fi
+    fi
+
+    ok "pjsua installed at /usr/local/bin/pjsua"
+else
+    warn "No pjsua binary found for architecture $ARCH — SIP calls will not work until pjsua is installed"
+fi
+
 # ── Set code directory ownership ─────────────────────────────
 info "Setting file ownership..."
 chown -R root:root "$INSTALL_DIR"
