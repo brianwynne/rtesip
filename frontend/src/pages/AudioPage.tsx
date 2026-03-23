@@ -30,7 +30,7 @@ interface AudioSettings {
 export function AudioPage() {
   const [settings, setSettings] = useState<AudioSettings>({
     channels: 1,
-    bitrate: 72000,
+    bitrate: 64000,
     input: "USB",
     output: "USB",
     input_routing: "lr",

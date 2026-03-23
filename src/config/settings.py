@@ -44,7 +44,7 @@ DEFAULTS: dict[str, dict] = {
     },
     "audio": {
         "channels": 1,
-        "bitrate": 72000,
+        "bitrate": 64000,
         "input": "USB",
         "output": "USB",
         "input_routing": "lr",
