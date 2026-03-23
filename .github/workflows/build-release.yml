@@ -190,6 +190,7 @@ jobs:
           release: bookworm
           verbose-output: true
           enable-noobs: false
+          pi-gen-version: master
 
       - name: Compress image
         run: |
