@@ -9,7 +9,7 @@ export function ContactsPage() {
 
   const load = () => {
     fetch("/api/contacts/")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then(setContacts)
       .catch(() => {});
   };
@@ -17,28 +17,40 @@ export function ContactsPage() {
   useEffect(load, []);
 
   const addContact = async () => {
-    const res = await fetch("/api/contacts/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...draft, quickDial: false }),
-    });
-    if (res.ok) {
-      load();
-      setDraft({ name: "", address: "", type: "sip" });
+    try {
+      const res = await fetch("/api/contacts/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...draft, quickDial: false }),
+      });
+      if (res.ok) {
+        load();
+        setDraft({ name: "", address: "", type: "sip" });
+      }
+    } catch {
+      // network error
     }
   };
 
   const deleteContact = async (id: number) => {
-    await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+    try {
+      await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+    } catch {
+      // network error
+    }
     load();
   };
 
   const toggleQuickDial = async (contact: Contact) => {
-    await fetch(`/api/contacts/${contact.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...contact, quickDial: !contact.quickDial }),
-    });
+    try {
+      await fetch(`/api/contacts/${contact.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...contact, quickDial: !contact.quickDial }),
+      });
+    } catch {
+      // network error
+    }
     load();
   };
 

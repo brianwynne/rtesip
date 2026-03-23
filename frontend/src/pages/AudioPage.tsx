@@ -44,24 +44,29 @@ export function AudioPage() {
 
   useEffect(() => {
     fetch("/api/audio/settings")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then(setSettings)
       .catch(() => {});
     fetch("/api/sip/settings")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => { if (data.codecs) setCodecs(data.codecs); })
       .catch(() => {});
   }, []);
 
   const save = async (updates: Partial<AudioSettings>) => {
     setSaving(true);
-    const res = await fetch("/api/audio/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    });
-    if (res.ok) setSettings(await res.json());
-    setSaving(false);
+    try {
+      const res = await fetch("/api/audio/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) setSettings(await res.json());
+    } catch {
+      // network error — ignore
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

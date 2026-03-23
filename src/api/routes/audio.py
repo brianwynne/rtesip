@@ -1,7 +1,8 @@
 """Audio control endpoints — volume, devices, AES67."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from src.api.auth import require_api_key
 from src.audio.mixer import get_volume, discover_mixers, list_devices
 from src.audio.devices import discover_devices
 from src.audio.aes67 import (
@@ -10,7 +11,7 @@ from src.audio.aes67 import (
 )
 from src.config.settings import get_section, update_section
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 @router.get("/volume")

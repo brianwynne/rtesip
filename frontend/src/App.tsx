@@ -37,7 +37,7 @@ function App() {
 
   useEffect(() => {
     fetch("/api/system/status")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => {
         if (data.hostname) setIpAddress(data.hostname);
       })

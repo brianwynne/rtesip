@@ -5,6 +5,8 @@ Single config.json with sections, plus separate contacts.json.
 
 import json
 import logging
+import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path("/etc/rtesip")
 DATA_DIR = Path("/var/lib/rtesip")
+
+_config_lock = threading.Lock()
 
 DEFAULTS: dict[str, dict] = {
     "base": {
@@ -108,22 +112,38 @@ def _config_path() -> Path:
 def load() -> dict[str, Any]:
     """Load config, merging saved values over defaults."""
     path = _config_path()
-    if path.exists():
-        with open(path) as f:
-            saved = json.load(f)
-        # Merge defaults for any missing keys
-        merged = {}
-        for section, defaults in DEFAULTS.items():
-            merged[section] = {**defaults, **(saved.get(section, {}))}
-        return merged
-    return {k: dict(v) for k, v in DEFAULTS.items()}
+    with _config_lock:
+        if path.exists():
+            try:
+                with open(path) as f:
+                    saved = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error("Corrupt config file %s: %s — falling back to defaults", path, e)
+                corrupt = path.with_suffix(".corrupt")
+                try:
+                    path.rename(corrupt)
+                    logger.info("Renamed corrupt config to %s", corrupt)
+                except OSError as rename_err:
+                    logger.error("Failed to rename corrupt config: %s", rename_err)
+                return {k: dict(v) for k, v in DEFAULTS.items()}
+            # Merge defaults for any missing keys
+            merged = {}
+            for section, defaults in DEFAULTS.items():
+                merged[section] = {**defaults, **(saved.get(section, {}))}
+            return merged
+        return {k: dict(v) for k, v in DEFAULTS.items()}
 
 
 def save(config: dict[str, Any]) -> None:
     path = _config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(config, f, indent=2)
+    tmp_path = path.with_suffix(".tmp")
+    with _config_lock:
+        with open(tmp_path, "w") as f:
+            json.dump(config, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
 
 
 def get_section(section: str) -> dict[str, Any]:

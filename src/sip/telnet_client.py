@@ -34,6 +34,9 @@ class PjsuaTelnet:
         self._connected = False
         self._read_task: Optional[asyncio.Task] = None
 
+        # Read buffer for line splitting
+        self._buffer = ""
+
         # State
         self.call_state = CallState.IDLE
         self.current_contact: Optional[str] = None
@@ -132,93 +135,95 @@ class PjsuaTelnet:
                     self._connected = False
                     await self._emit("backend_disconnected", {})
                     break
-                self._parse_output(data.decode("utf-8", errors="replace"))
+                self._buffer += data.decode("utf-8", errors="replace")
+                # Process only complete lines; keep partial trailing data in buffer
+                while "\n" in self._buffer:
+                    line, self._buffer = self._buffer.split("\n", 1)
+                    self._parse_line(line.strip())
         except asyncio.CancelledError:
             pass
         except Exception as e:
             logger.error("Read loop error: %s", e)
             self._connected = False
 
-    def _parse_output(self, buffer: str) -> None:
-        """Parse pjsua telnet output into structured events."""
-        for line in buffer.split("\n"):
-            data = line.strip()
-            if not data or data == "rtesip>":
-                continue
+    def _parse_line(self, data: str) -> None:
+        """Parse a single line of pjsua telnet output into a structured event."""
+        if not data or data == "rtesip>":
+            return
 
-            # Call state: CONFIRMED
-            if re.search(r"Call [0-9] state changed to CONFIRMED$", data):
-                asyncio.create_task(self.send("call list"))
+        # Call state: CONFIRMED
+        if re.search(r"Call [0-9] state changed to CONFIRMED$", data):
+            asyncio.create_task(self.send("call list"))
 
-            elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]$", data):
-                self.call_state = CallState.CONNECTED
-                self._emit_sync("connected", {"destination": self.current_contact})
+        elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]$", data):
+            self.call_state = CallState.CONNECTED
+            self._emit_sync("connected", {"destination": self.current_contact})
 
-            # Call state: DISCONNECTED
-            elif m := re.search(r"\[DISCONNCTD\] t\: ([^;]+)", data):
-                self.call_state = CallState.IDLE
-                self._emit_sync("ended", {"destination": m.group(1)})
-                self.current_contact = None
+        # Call state: DISCONNECTED
+        elif m := re.search(r"\[DISCONNCTD\] t\: ([^;]+)", data):
+            self.call_state = CallState.IDLE
+            self._emit_sync("ended", {"destination": m.group(1)})
+            self.current_contact = None
 
-            # Incoming call
-            elif (m := re.search(r"From\: (.+)", data)) or \
-                 (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]$", data)):
-                self.call_state = CallState.INCOMING
-                contact = self._resolve_contact(m.group(1))
-                self.current_contact = contact
-                self._emit_sync("incoming", {"destination": contact})
+        # Incoming call
+        elif (m := re.search(r"From\: (.+)", data)) or \
+             (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]$", data)):
+            self.call_state = CallState.INCOMING
+            contact = self._resolve_contact(m.group(1))
+            self.current_contact = contact
+            self._emit_sync("incoming", {"destination": contact})
 
-            # Call state: CALLING
-            elif re.search(r"Call [0-9] state changed to CALLING$", data) or \
-                 re.search(r"Current call id\=[0-9] to .+ \[CALLING\]$", data):
-                self.call_state = CallState.CALLING
-                self._emit_sync("calling", {"destination": self.current_contact})
+        # Call state: CALLING
+        elif re.search(r"Call [0-9] state changed to CALLING$", data) or \
+             re.search(r"Current call id\=[0-9] to .+ \[CALLING\]$", data):
+            self.call_state = CallState.CALLING
+            self._emit_sync("calling", {"destination": self.current_contact})
 
-            # Call state: RINGING (180)
-            elif re.search(r"Call [0-9] state changed to EARLY \(180 Ringing\)$", data) or \
-                 re.search(r"Current call id\=[0-9] to .+ \[EARLY\]$", data):
-                self.call_state = CallState.RINGING
-                self._emit_sync("ringing", {"destination": self.current_contact or ""})
+        # Call state: RINGING (180)
+        elif re.search(r"Call [0-9] state changed to EARLY \(180 Ringing\)$", data) or \
+             re.search(r"Current call id\=[0-9] to .+ \[EARLY\]$", data):
+            self.call_state = CallState.RINGING
+            self._emit_sync("ringing", {"destination": self.current_contact or ""})
 
-            # Registration status
-            elif (m := re.search(r"\[ [0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or \
-                 (m := re.search(r"sip\:([^\:]+)\: registration.+status\=([0-9]{1,3}) \([A-z]+\)", data)):
-                account_id = m.group(1)
-                status = int(m.group(2))
-                self.active_accounts[account_id] = (status == 200)
+        # Registration status
+        elif (m := re.search(r"\[ [0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or \
+             (m := re.search(r"sip\:([^\:]+)\: registration.+status\=([0-9]{1,3}) \([A-z]+\)", data)):
+            account_id = m.group(1)
+            status = int(m.group(2))
+            self.active_accounts[account_id] = (status == 200)
 
-                if status == 200:
-                    if not self.sip_ready:
-                        self.sip_ready = True
-                        asyncio.create_task(self.play_tone(1))
-                    self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
-                elif status > 200:
-                    if not self.sip_ready:
-                        asyncio.create_task(self.play_tone(2))
-                    self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
+            if status == 200:
+                if not self.sip_ready:
+                    self.sip_ready = True
+                    asyncio.create_task(self.play_tone(1))
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
+            elif status > 200:
+                if not self.sip_ready:
+                    asyncio.create_task(self.play_tone(2))
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
 
-            # Audio device error
-            elif "PJMEDIA_EAUD_SYSERR" in data:
-                self._emit_sync("audio_error", {"error": "device_error"})
+        # Audio device error
+        elif "PJMEDIA_EAUD_SYSERR" in data:
+            self._emit_sync("audio_error", {"error": "device_error"})
 
-            # STUN/network errors
-            elif any(err in data for err in ["PJNATH_ESTUNTIMEDOUT", "Error sending STUN request", "PJ_ERESOLVE"]):
-                if "not nominated" not in data and "REGISTER" not in data and "registration" not in data:
-                    self._emit_sync("network_error", {"error": data})
+        # STUN/network errors
+        elif any(err in data for err in ["PJNATH_ESTUNTIMEDOUT", "Error sending STUN request", "PJ_ERESOLVE"]):
+            if "not nominated" not in data and "REGISTER" not in data and "registration" not in data:
+                self._emit_sync("network_error", {"error": data})
 
-            # Connection errors
-            elif ("Connection timed out" in data or "Connection refused" in data) and not self.current_contact:
-                self._emit_sync("connection_error", {"error": data})
+        # Connection errors
+        elif ("Connection timed out" in data or "Connection refused" in data) and not self.current_contact:
+            self._emit_sync("connection_error", {"error": data})
 
-            # SIP error reason
-            elif m := re.search(r"\[reason\=([0-9]{3}) \((.+)\)\]$", data):
-                self._emit_sync("reason", {"code": int(m.group(1)), "verbose": m.group(2)})
+        # SIP error reason
+        elif m := re.search(r"\[reason\=([0-9]{3}) \((.+)\)\]$", data):
+            self._emit_sync("reason", {"code": int(m.group(1)), "verbose": m.group(2)})
 
-            # Debug/other output
-            else:
-                clean = data.replace("\x07", "")
-                if clean:
-                    self._emit_sync("debug", {"data": clean})
+        # Debug/other output
+        else:
+            clean = data.replace("\x07", "")
+            if clean:
+                self._emit_sync("debug", {"data": clean})
 
     def _resolve_contact(self, raw: str) -> str:
         """Parse SIP From header into display name."""

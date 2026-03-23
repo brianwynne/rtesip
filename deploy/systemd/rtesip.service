@@ -2,21 +2,33 @@
 Description=rtesip SIP Codec
 After=network-online.target
 Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
-User=root
+User=rtesip
+Group=rtesip
 WorkingDirectory=/opt/rtesip
 ExecStart=/opt/rtesip/.venv/bin/python run.py
 Restart=always
 RestartSec=3
+TimeoutStopSec=15
+WatchdogSec=30
+EnvironmentFile=-/etc/rtesip/env
 
 # Hardening
 ProtectSystem=strict
-ReadWritePaths=/var/lib/rtesip /run/rtesip /boot
+ReadWritePaths=/var/lib/rtesip /run/rtesip /boot /var/log/rtesip
 NoNewPrivileges=true
 ProtectHome=true
 PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Capabilities for port 80 and RT audio
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SYS_NICE
 
 # RT priority for audio subprocess
 LimitRTPRIO=99

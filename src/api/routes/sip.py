@@ -1,11 +1,12 @@
 """SIP account and call control endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from src.api.auth import require_api_key
 from src.config.settings import get_section, update_section
 from src.sip.pjsua_manager import pjsua
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 @router.get("/accounts")

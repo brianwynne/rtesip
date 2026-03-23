@@ -5,7 +5,11 @@ Requires: pip install pillow
 Output: /opt/rtesip/boot/splash/logo.png (800x480 for 7", also works on 3")
 """
 
+import argparse
+import math
+import os
 import sys
+
 try:
     from PIL import Image, ImageDraw, ImageFont
 except ImportError:
@@ -44,7 +48,6 @@ draw.rounded_rectangle(
 
 # Mic stand arc
 for angle_offset in range(-30, 31):
-    import math
     a = math.radians(angle_offset + 270)
     r = 30
     x = cx - 50 + r * math.cos(a)
@@ -82,9 +85,22 @@ text_y = cy - 36
 draw.text((text_x, text_y), "SIP", fill=ACCENT, font=font_large)
 draw.text((text_x + sip_w + 12, text_y), "Reporter", fill=GREY, font=font_light)
 
-# Version text at bottom
-draw.text((WIDTH // 2 - 40, HEIGHT - 40), "v0.1.0", fill=(85, 85, 104), font=font_small)
+# Determine version: CLI arg > VERSION file > fallback
+parser = argparse.ArgumentParser(description="Generate boot splash image")
+parser.add_argument("output", nargs="?", default="logo.png", help="Output PNG path")
+parser.add_argument("--version", default=None, help="Version string (e.g. v1.0.0)")
+args = parser.parse_args()
 
-output = sys.argv[1] if len(sys.argv) > 1 else "logo.png"
-img.save(output)
-print(f"Splash image saved to {output}")
+version = args.version
+if not version:
+    version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "VERSION")
+    if os.path.isfile(version_file):
+        version = open(version_file).read().strip()
+    else:
+        version = "v0.1.0"
+
+# Version text at bottom
+draw.text((WIDTH // 2 - 40, HEIGHT - 40), version, fill=(85, 85, 104), font=font_small)
+
+img.save(args.output)
+print(f"Splash image saved to {args.output}")

@@ -167,6 +167,7 @@ class PjsuaProcess:
         self._process: Optional[asyncio.subprocess.Process] = None
         self._monitor_task: Optional[asyncio.Task] = None
         self._stopping = False
+        self._lock = asyncio.Lock()
 
     @property
     def running(self) -> bool:
@@ -177,6 +178,10 @@ class PjsuaProcess:
         return self._process.pid if self.running else None
 
     async def start(self) -> None:
+        async with self._lock:
+            await self._start_unlocked()
+
+    async def _start_unlocked(self) -> None:
         if self.running:
             logger.warning("pjsua already running (pid %d)", self._process.pid)
             return
@@ -197,8 +202,8 @@ class PjsuaProcess:
         try:
             self._process = await asyncio.create_subprocess_exec(
                 *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
         except FileNotFoundError:
             # Development mode — pjsua not installed
@@ -213,6 +218,10 @@ class PjsuaProcess:
         self._monitor_task = asyncio.create_task(self._monitor())
 
     async def stop(self) -> None:
+        async with self._lock:
+            await self._stop_unlocked()
+
+    async def _stop_unlocked(self) -> None:
         if not self.running:
             return
 
@@ -234,8 +243,9 @@ class PjsuaProcess:
 
     async def restart(self) -> None:
         """Restart pjsua process."""
-        await self.stop()
-        await self.start()
+        async with self._lock:
+            await self._stop_unlocked()
+            await self._start_unlocked()
 
     async def _monitor(self) -> None:
         """Restart pjsua if it exits unexpectedly (sleep 2s, then restart)."""

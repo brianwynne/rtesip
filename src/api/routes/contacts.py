@@ -1,13 +1,15 @@
 """Contacts / speed dial management."""
 
 import json
+import os
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.auth import require_api_key
 from src.config.settings import DATA_DIR
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 CONTACTS_FILE = DATA_DIR / "contacts.json"
 
@@ -20,7 +22,12 @@ def _load_contacts() -> list[dict]:
 
 def _save_contacts(contacts: list[dict]) -> None:
     CONTACTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CONTACTS_FILE.write_text(json.dumps(contacts, indent=2))
+    tmp_path = CONTACTS_FILE.with_suffix(".tmp")
+    with open(tmp_path, "w") as f:
+        json.dump(contacts, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, CONTACTS_FILE)
 
 
 @router.get("/")

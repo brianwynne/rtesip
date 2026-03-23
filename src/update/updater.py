@@ -1,5 +1,6 @@
 """Push-based A/B update system — receives update via API, verifies, applies."""
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -40,19 +41,28 @@ def verify_image(image_path: Path, expected_sha256: str) -> bool:
     return True
 
 
-def write_to_partition(image_path: Path, partition: str) -> bool:
+async def write_to_partition(image_path: Path, partition: str) -> bool:
     """Write update image to the inactive partition."""
     device = PARTITIONS[partition]
     logger.info("Writing %s to %s (%s)", image_path, partition, device)
     try:
-        subprocess.run(
-            ["dd", f"if={image_path}", f"of={device}", "bs=4M", "status=progress"],
-            check=True,
-            timeout=600,
+        proc = await asyncio.create_subprocess_exec(
+            "dd", f"if={image_path}", f"of={device}", "bs=4M", "status=progress",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
-        subprocess.run(["sync"], check=True)
+        returncode = await asyncio.wait_for(proc.wait(), timeout=600)
+        if returncode != 0:
+            logger.error("dd exited with code %d", returncode)
+            return False
+        sync_proc = await asyncio.create_subprocess_exec("sync")
+        await sync_proc.wait()
         return True
-    except subprocess.CalledProcessError as e:
+    except asyncio.TimeoutError:
+        logger.error("write_to_partition timed out after 600s")
+        proc.kill()
+        return False
+    except Exception as e:
         logger.error("Failed to write partition: %s", e)
         return False
 
@@ -93,7 +103,7 @@ async def apply_update(image_path: Path, version: str, sha256: str) -> dict:
 
     target = get_inactive_partition()
 
-    if not write_to_partition(image_path, target):
+    if not await write_to_partition(image_path, target):
         return {"success": False, "error": f"Failed to write to partition {target}"}
 
     if not switch_boot_partition(target, version):

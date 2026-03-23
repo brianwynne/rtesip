@@ -22,6 +22,9 @@ export function useRingtone(ringing: boolean) {
       ctxRef.current = new AudioContext();
     }
     const ctx = ctxRef.current;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
 
     const playBurst = () => {
       // Double pulse: two short tones with a gap, like a UK/IE phone ring
@@ -56,6 +59,10 @@ export function useRingtone(ringing: boolean) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
+      }
+      if (ctxRef.current) {
+        ctxRef.current.close().catch(() => {});
+        ctxRef.current = null;
       }
     };
   }, [ringing]);

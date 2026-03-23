@@ -439,15 +439,18 @@ ok "Ownership set"
 info "Setting CPU performance governor..."
 GOVERNOR_PATH="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 if [[ -f "$GOVERNOR_PATH" ]]; then
-    echo "performance" > "$GOVERNOR_PATH" 2>/dev/null || true
+    # Set performance governor on all CPUs
+    for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+        echo "performance" > "$gov" 2>/dev/null || true
+    done
 
     # Make it persistent via /etc/rc.local if not already there
     if [[ -f /etc/rc.local ]]; then
         if ! grep -q "scaling_governor" /etc/rc.local; then
-            sed -i '/^exit 0/i echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor' /etc/rc.local
+            sed -i '/^exit 0/i for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$gov" 2>/dev/null || true; done' /etc/rc.local
         fi
     fi
-    ok "CPU governor set to performance"
+    ok "CPU governor set to performance (all CPUs)"
 else
     info "CPU frequency scaling not available (VM or container) — skipping."
 fi

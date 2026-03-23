@@ -34,7 +34,7 @@ async def broadcast(event: str, data: dict, authed_only: bool = True) -> None:
     message = json.dumps({"event": event, **data})
     target = authed_clients if authed_only else clients
     disconnected = set()
-    for ws in target:
+    for ws in list(target):
         try:
             await ws.send_text(message)
         except Exception:
@@ -51,12 +51,16 @@ async def on_pjsua_event(event: str, data: dict) -> None:
 
 
 async def connect_telnet() -> None:
-    """Connect to pjsua telnet CLI with retry."""
+    """Connect to pjsua telnet CLI with retry and reconnection on disconnect."""
     telnet.on_event(on_pjsua_event)
     while True:
         if await telnet.connect():
-            break
-        logger.info("Waiting for pjsua CLI...")
+            # Wait for the read task to finish (i.e. disconnection)
+            if telnet._read_task:
+                await telnet._read_task
+            logger.info("pjsua CLI disconnected, reconnecting...")
+        else:
+            logger.info("Waiting for pjsua CLI...")
         await asyncio.sleep(2)
 
 

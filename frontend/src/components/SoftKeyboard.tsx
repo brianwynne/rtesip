@@ -40,14 +40,14 @@ export function SoftKeyboard({ onKey, onBackspace, onClear, onSubmit, domains }:
   };
 
   // Prevent buttons stealing focus from the hidden input
-  const prevent = (e: React.MouseEvent) => e.preventDefault();
+  const prevent = (e: React.PointerEvent | React.MouseEvent) => e.preventDefault();
 
   return (
     <div className={styles.keyboard}>
       {/* Domain shortcuts */}
       <div className={styles.domainRow}>
         {sipDomains.map((d) => (
-          <button key={d} className={styles.domainBtn} onMouseDown={prevent} onClick={() => onKey(d)}>
+          <button key={d} className={styles.domainBtn} onPointerDown={prevent} onClick={() => onKey(d)}>
             {d}
           </button>
         ))}
@@ -56,7 +56,7 @@ export function SoftKeyboard({ onKey, onBackspace, onClear, onSubmit, domains }:
       {/* Number row */}
       <div className={styles.row}>
         {NUM_ROW.map((k) => (
-          <button key={k} className={styles.key} onMouseDown={prevent} onClick={() => handleKey(k)}>
+          <button key={k} className={styles.key} onPointerDown={prevent} onClick={() => handleKey(k)}>
             {k}
           </button>
         ))}
@@ -67,19 +67,19 @@ export function SoftKeyboard({ onKey, onBackspace, onClear, onSubmit, domains }:
           {/* SIP symbols */}
           <div className={styles.row}>
             {SIP_ROW.map((k) => (
-              <button key={k} className={styles.key} onMouseDown={prevent} onClick={() => handleKey(k)}>
+              <button key={k} className={styles.key} onPointerDown={prevent} onClick={() => handleKey(k)}>
                 {k}
               </button>
             ))}
           </div>
           <div className={styles.row}>
-            <button className={`${styles.key} ${styles.keyWide}`} onMouseDown={prevent} onClick={() => setShowSymbols(false)}>
+            <button className={`${styles.key} ${styles.keyWide}`} onPointerDown={prevent} onClick={() => setShowSymbols(false)}>
               ABC
             </button>
-            <button className={`${styles.key} ${styles.keyFlex}`} onMouseDown={prevent} onClick={() => handleKey(" ")}>
+            <button className={`${styles.key} ${styles.keyFlex}`} onPointerDown={prevent} onClick={() => handleKey(" ")}>
               space
             </button>
-            <button className={`${styles.key} ${styles.keyAction}`} onMouseDown={prevent} onClick={onBackspace}>
+            <button className={`${styles.key} ${styles.keyAction}`} onPointerDown={prevent} onClick={onBackspace}>
               <Delete size={18} />
             </button>
           </div>
@@ -92,19 +92,19 @@ export function SoftKeyboard({ onKey, onBackspace, onClear, onSubmit, domains }:
               {i === 2 && (
                 <button
                   className={`${styles.key} ${styles.keyWide} ${shifted ? styles.keyActive : ""}`}
-                  onMouseDown={prevent}
+                  onPointerDown={prevent}
                   onClick={() => setShifted(!shifted)}
                 >
                   &#8679;
                 </button>
               )}
               {row.map((k) => (
-                <button key={k} className={styles.key} onMouseDown={prevent} onClick={() => handleKey(k)}>
+                <button key={k} className={styles.key} onPointerDown={prevent} onClick={() => handleKey(k)}>
                   {k}
                 </button>
               ))}
               {i === 2 && (
-                <button className={`${styles.key} ${styles.keyWide}`} onMouseDown={prevent} onClick={onBackspace}>
+                <button className={`${styles.key} ${styles.keyWide}`} onPointerDown={prevent} onClick={onBackspace}>
                   <Delete size={18} />
                 </button>
               )}
@@ -113,19 +113,19 @@ export function SoftKeyboard({ onKey, onBackspace, onClear, onSubmit, domains }:
 
           {/* Bottom row */}
           <div className={styles.row}>
-            <button className={`${styles.key} ${styles.keyWide}`} onMouseDown={prevent} onClick={() => setShowSymbols(true)}>
+            <button className={`${styles.key} ${styles.keyWide}`} onPointerDown={prevent} onClick={() => setShowSymbols(true)}>
               @._
             </button>
-            <button className={`${styles.key} ${styles.keySip}`} onMouseDown={prevent} onClick={() => handleKey("@")}>
+            <button className={`${styles.key} ${styles.keySip}`} onPointerDown={prevent} onClick={() => handleKey("@")}>
               @
             </button>
-            <button className={`${styles.key} ${styles.keyFlex}`} onMouseDown={prevent} onClick={() => handleKey(".")}>
+            <button className={`${styles.key} ${styles.keyFlex}`} onPointerDown={prevent} onClick={() => handleKey(".")}>
               .
             </button>
-            <button className={`${styles.key} ${styles.keySip}`} onMouseDown={prevent} onClick={() => handleKey("-")}>
+            <button className={`${styles.key} ${styles.keySip}`} onPointerDown={prevent} onClick={() => handleKey("-")}>
               -
             </button>
-            <button className={`${styles.key} ${styles.keyCall}`} onMouseDown={prevent} onClick={onSubmit}>
+            <button className={`${styles.key} ${styles.keyCall}`} onPointerDown={prevent} onClick={onSubmit}>
               <CornerDownLeft size={18} />
             </button>
           </div>

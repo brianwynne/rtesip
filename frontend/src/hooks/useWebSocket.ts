@@ -3,6 +3,33 @@ import type { CallState, VolumeState, AccountStatus, WsMessage } from "../types"
 
 const WS_URL = `ws://${window.location.host}/ws`;
 
+/** djb2 hash — non-cryptographic fallback for HTTP (no crypto.subtle) */
+function djb2Hash(str: string): string {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+async function hashChallenge(pw: string, challenge: string): Promise<string> {
+  const input = pw + challenge;
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    try {
+      const buf = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(input),
+      );
+      return Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    } catch {
+      // fall through to djb2
+    }
+  }
+  return djb2Hash(input);
+}
+
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<number>();
@@ -49,19 +76,22 @@ export function useWebSocket() {
       };
 
       ws.onmessage = (e) => {
-        const msg: WsMessage = JSON.parse(e.data);
+        let msg: WsMessage;
+        try {
+          msg = JSON.parse(e.data);
+        } catch {
+          console.warn("WS: failed to parse message", e.data);
+          return;
+        }
 
         switch (msg.event) {
           case "challenge": {
             const pw = pendingPassword.current || "";
-            crypto.subtle
-              .digest("SHA-256", new TextEncoder().encode(pw + String(msg.challenge)))
-              .then((buf) => {
-                const hash = Array.from(new Uint8Array(buf))
-                  .map((b) => b.toString(16).padStart(2, "0"))
-                  .join("");
+            hashChallenge(pw, String(msg.challenge))
+              .then((hash) => {
                 send({ command: "challengeResponse", response: hash });
-              });
+              })
+              .catch((err) => console.error("Hash challenge failed", err));
             break;
           }
 
@@ -133,6 +163,9 @@ export function useWebSocket() {
 
   // --- Volume control with local-first state ---
 
+  const preMuteGain = useRef<{ l: number; r: number }>({ l: 100, r: 100 });
+  const preMuteVol = useRef<{ l: number; r: number }>({ l: 100, r: 100 });
+
   const setLevel = useCallback((type: "vol" | "gain", channel: "l" | "r", level: number) => {
     const clamped = Math.max(0, Math.min(150, level));
     setVolume((prev) => {
@@ -176,14 +209,16 @@ export function useWebSocket() {
       const next = { ...prev };
       if (which === "gain") {
         if (prev.cl === 0 && prev.cr === 0) {
-          next.cl = 100; next.cr = 100;
+          next.cl = preMuteGain.current.l; next.cr = preMuteGain.current.r;
         } else {
+          preMuteGain.current = { l: prev.cl, r: prev.cr };
           next.cl = 0; next.cr = 0;
         }
       } else {
         if (prev.pl === 0 && prev.pr === 0) {
-          next.pl = 100; next.pr = 100;
+          next.pl = preMuteVol.current.l; next.pr = preMuteVol.current.r;
         } else {
+          preMuteVol.current = { l: prev.pl, r: prev.pr };
           next.pl = 0; next.pr = 0;
         }
       }

@@ -13,6 +13,22 @@ from src.config.settings import get_section, update_section, DATA_DIR
 
 logger = logging.getLogger(__name__)
 
+_HOSTNAME_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$")
+
+
+def _sanitize_quoted(value: str) -> str:
+    """Strip characters that could escape wpa_supplicant quoted strings."""
+    return value.replace('"', '').replace('\\', '').replace('\n', '').replace('\r', '')
+
+
+def _validate_hostname(name: str) -> str:
+    """Validate and return a safe hostname, or fall back to 'rtesip'."""
+    name = name.strip()
+    if _HOSTNAME_RE.match(name):
+        return name
+    logger.warning("Invalid hostname '%s', falling back to 'rtesip'", name)
+    return "rtesip"
+
 
 # --- Network ---
 
@@ -40,8 +56,9 @@ def apply_network_config() -> None:
     Path("/etc/dhcpcd.conf").write_text(dhcpcd)
 
     if network.get("hostname"):
-        Path("/etc/hostname").write_text(network["hostname"])
-        subprocess.run(["hostname", network["hostname"]], timeout=5)
+        hostname = _validate_hostname(network["hostname"])
+        Path("/etc/hostname").write_text(hostname)
+        subprocess.run(["hostname", hostname], timeout=5)
 
     subprocess.run(["systemctl", "restart", "dhcpcd"], timeout=30)
 
@@ -57,15 +74,17 @@ def apply_wifi_config() -> None:
 
     if wifi.get("enabled") and wifi.get("ssid"):
         interface = wifi.get("interface", "wlan0")
+        ssid = _sanitize_quoted(wifi["ssid"])
+        psk = _sanitize_quoted(wifi.get("psk", ""))
         conf = (
             f"ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev\n"
             f"country={wifi.get('country', 'ie').lower()}\n"
             f"update_config=1\n"
             f"network={{\n"
-            f"  ssid=\"{wifi['ssid']}\"\n"
+            f"  ssid=\"{ssid}\"\n"
             f"  scan_ssid=1\n"
             f"  key_mgmt=WPA-PSK\n"
-            f"  psk=\"{wifi['psk']}\"\n"
+            f"  psk=\"{psk}\"\n"
             f"}}\n"
         )
         wpa_path = Path(f"/etc/wpa_supplicant/wpa_supplicant-{interface}.conf")
@@ -79,14 +98,16 @@ def apply_8021x_config() -> None:
     wifi = get_section("wifi")
 
     if wifi.get("enable_8021x"):
+        identity = _sanitize_quoted(wifi.get("8021x_user", ""))
+        password = _sanitize_quoted(wifi.get("8021x_password", ""))
         conf = (
             f"ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n"
             f"ap_scan=0\n"
             f"network={{\n"
             f"  key_mgmt=IEEE8021X\n"
             f"  eap=PEAP\n"
-            f"  identity=\"{wifi['8021x_user']}\"\n"
-            f"  password=\"{wifi['8021x_password']}\"\n"
+            f"  identity=\"{identity}\"\n"
+            f"  password=\"{password}\"\n"
         )
         if wifi.get("8021x_peaplabel1"):
             conf += "  phase1=\"peaplabel=1\"\n"

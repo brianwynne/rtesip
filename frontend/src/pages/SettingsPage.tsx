@@ -62,12 +62,13 @@ export function SettingsPage() {
   const [securityDirty, setSecurityDirty] = useState(false);
   const [sipDirty, setSipDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/system/status").then((r) => r.json()).then(setStatus).catch(() => {});
-    fetch("/api/sip/settings").then((r) => r.json()).then((data) => setSip({ ...DEFAULT_SIP, ...data })).catch(() => {});
-    fetch("/api/update/version").then((r) => r.json()).then(setVersion).catch(() => {});
-    fetch("/api/system/config").then((r) => r.json()).then((data) => {
+    fetch("/api/system/status").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then(setStatus).catch(() => {});
+    fetch("/api/sip/settings").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then((data) => setSip({ ...DEFAULT_SIP, ...data })).catch(() => {});
+    fetch("/api/update/version").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then(setVersion).catch(() => {});
+    fetch("/api/system/config").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then((data) => {
       if (data.security) setSecurity({ ...DEFAULT_SECURITY, ...data.security });
     }).catch(() => {});
   }, []);
@@ -187,8 +188,21 @@ export function SettingsPage() {
               setSaving(true);
               const payload: Record<string, unknown> = { ...security };
               if (newPassword) {
-                const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(newPassword));
-                payload.gui_password_hash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+                try {
+                  if (typeof crypto !== "undefined" && crypto.subtle) {
+                    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(newPassword));
+                    payload.gui_password_hash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+                  } else {
+                    // djb2 fallback for HTTP deployments
+                    let h = 5381;
+                    for (let i = 0; i < newPassword.length; i++) h = ((h << 5) + h + newPassword.charCodeAt(i)) >>> 0;
+                    payload.gui_password_hash = h.toString(16).padStart(8, "0");
+                  }
+                } catch {
+                  console.error("Failed to hash password");
+                  setSaving(false);
+                  return;
+                }
               }
               try {
                 await fetch("/api/system/config", {
@@ -282,17 +296,38 @@ export function SettingsPage() {
 
       {/* Actions */}
       <div className={styles.actions}>
-        <button className={styles.actionBtn} onClick={() => { if (confirm("Restart services?")) fetch("/api/system/restart-services", { method: "POST" }); }}>
+        <button className={styles.actionBtn} onClick={() => {
+          if (confirmAction === "restart") {
+            fetch("/api/system/restart-services", { method: "POST" }).catch(() => {});
+            setConfirmAction(null);
+          } else {
+            setConfirmAction("restart");
+          }
+        }}>
           <RefreshCw size={14} />
-          <span>Restart Services</span>
+          <span>{confirmAction === "restart" ? "Confirm?" : "Restart Services"}</span>
         </button>
-        <button className={styles.actionBtn} onClick={() => { if (confirm("Reboot device?")) fetch("/api/system/reboot", { method: "POST" }); }}>
+        <button className={styles.actionBtn} onClick={() => {
+          if (confirmAction === "reboot") {
+            fetch("/api/system/reboot", { method: "POST" }).catch(() => {});
+            setConfirmAction(null);
+          } else {
+            setConfirmAction("reboot");
+          }
+        }}>
           <Power size={14} />
-          <span>Reboot</span>
+          <span>{confirmAction === "reboot" ? "Confirm?" : "Reboot"}</span>
         </button>
-        <button className={styles.actionBtnDanger} onClick={() => { if (confirm("Factory reset? This will erase all settings.")) fetch("/api/system/factory-reset", { method: "POST" }); }}>
+        <button className={styles.actionBtnDanger} onClick={() => {
+          if (confirmAction === "factory") {
+            fetch("/api/system/factory-reset", { method: "POST" }).catch(() => {});
+            setConfirmAction(null);
+          } else {
+            setConfirmAction("factory");
+          }
+        }}>
           <RotateCcw size={14} />
-          <span>Factory Reset</span>
+          <span>{confirmAction === "factory" ? "Confirm?" : "Factory Reset"}</span>
         </button>
       </div>
     </div>
