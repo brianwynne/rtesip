@@ -430,6 +430,20 @@ fi
 systemctl daemon-reload
 ok "Systemd service installed"
 
+# ── Install CLI ──────────────────────────────────────────────
+info "Installing CLI..."
+if [ -f "$LOCAL_DIR/deploy/sip-reporter-cli.sh" ]; then
+    cp "$LOCAL_DIR/deploy/sip-reporter-cli.sh" /usr/local/bin/sip-reporter
+    chmod +x /usr/local/bin/sip-reporter
+    ok "CLI installed at /usr/local/bin/sip-reporter"
+elif [ -f "$INSTALL_DIR/deploy/sip-reporter-cli.sh" ]; then
+    cp "$INSTALL_DIR/deploy/sip-reporter-cli.sh" /usr/local/bin/sip-reporter
+    chmod +x /usr/local/bin/sip-reporter
+    ok "CLI installed at /usr/local/bin/sip-reporter"
+else
+    warn "CLI script not found, skipping"
+fi
+
 # ── Set code directory ownership ─────────────────────────────
 info "Setting file ownership..."
 chown -R root:root "$INSTALL_DIR"
