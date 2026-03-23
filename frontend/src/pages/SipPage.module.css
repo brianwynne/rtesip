@@ -1,0 +1,205 @@
+.page {
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heading {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  background: var(--green);
+  color: #000;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  transition: all 0.15s;
+}
+.saveBtn:hover { background: #34d16f; }
+.saveBtn:disabled { opacity: 0.5; }
+
+/* Account list */
+.accountList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.accountCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.accountHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background 0.1s;
+}
+.accountHeader:hover { background: var(--bg-elevated); }
+
+.accountSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.accountIndex {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.accountName {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountTransport {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.15rem;
+}
+
+.iconGreen { color: var(--green); }
+.iconMuted { color: var(--text-muted); }
+
+.accountBody {
+  padding: 0.6rem 0.8rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Form grid */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.field span {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+}
+
+.field input, .field select {
+  height: 1.8rem;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+}
+
+.fieldWithUnit {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.fieldWithUnit input {
+  flex: 1;
+}
+
+.unit {
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.removeBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  background: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-size: 0.6rem;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: all 0.15s;
+}
+.removeBtn:hover { background: var(--red-dim); }
+
+/* Add button */
+.addBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 2.4rem;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.addBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Global card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.8rem;
+}
+
+.cardTitle {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.6rem;
+}

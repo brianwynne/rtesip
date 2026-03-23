@@ -1,7 +1,7 @@
-import { Phone, Sliders, Settings, Users } from "lucide-react";
+import { Phone, Sliders, Settings, Users, Radio } from "lucide-react";
 import styles from "./NavBar.module.css";
 
-export type Page = "call" | "audio" | "contacts" | "settings";
+export type Page = "call" | "audio" | "sip" | "contacts" | "settings";
 
 interface Props {
   active: Page;
@@ -12,6 +12,7 @@ interface Props {
 const allTabs: { id: Page; label: string; icon: typeof Phone; kiosk: boolean }[] = [
   { id: "call", label: "Call", icon: Phone, kiosk: true },
   { id: "audio", label: "Audio", icon: Sliders, kiosk: false },
+  { id: "sip", label: "SIP", icon: Radio, kiosk: false },
   { id: "contacts", label: "Contacts", icon: Users, kiosk: true },
   { id: "settings", label: "Settings", icon: Settings, kiosk: false },
 ];

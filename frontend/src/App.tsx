@@ -5,6 +5,7 @@ import { NavBar, type Page } from "./components/NavBar";
 import { CallPage } from "./pages/CallPage";
 import { AudioPage } from "./pages/AudioPage";
 import { ContactsPage } from "./pages/ContactsPage";
+import { SipPage } from "./pages/SipPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useRingtone } from "./hooks/useRingtone";
@@ -89,6 +90,7 @@ function App() {
           />
         )}
         {page === "audio" && <AudioPage />}
+        {page === "sip" && <SipPage />}
         {page === "contacts" && <ContactsPage />}
         {page === "settings" && <SettingsPage />}
       </main>

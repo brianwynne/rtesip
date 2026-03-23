@@ -39,39 +39,9 @@ const DEFAULT_SECURITY: SecurityConfig = {
   gui_password_hash: "",
 };
 
-interface SipConfig {
-  username: string;
-  password: string;
-  registrar: string;
-  realm: string;
-  proxy: string;
-  proxy2: string;
-  transport: string;
-  keying: number;
-  reg_timeout: number;
-  stun: string;
-  stun2: string;
-  codecs: string[];
-}
-
-const DEFAULT_SIP: SipConfig = {
-  username: "",
-  password: "",
-  registrar: "",
-  realm: "",
-  proxy: "",
-  proxy2: "",
-  transport: "tls",
-  keying: 2,
-  reg_timeout: 600,
-  stun: "",
-  stun2: "",
-  codecs: ["opus/48000/2", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1", "L16/48000/1"],
-};
 
 export function SettingsPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
-  const [sip, setSip] = useState<SipConfig>(DEFAULT_SIP);
   const [version, setVersion] = useState<Record<string, unknown> | null>(null);
   const [security, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
   const [wifi, setWifi] = useState<WifiConfig>(DEFAULT_WIFI);
@@ -80,13 +50,11 @@ export function SettingsPage() {
   const [wifiDirty, setWifiDirty] = useState(false);
   const [wifiNetworks, setWifiNetworks] = useState<Array<{ ssid: string; signal: number; security: string }>>([]);
   const [scanning, setScanning] = useState(false);
-  const [sipDirty, setSipDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/system/status").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then(setStatus).catch(() => {});
-    fetch("/api/sip/settings").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then((data) => setSip({ ...DEFAULT_SIP, ...data })).catch(() => {});
     fetch("/api/update/version").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then(setVersion).catch(() => {});
     fetch("/api/system/config").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then((data) => {
       if (data.security) setSecurity({ ...DEFAULT_SECURITY, ...data.security });
@@ -124,23 +92,6 @@ export function SettingsPage() {
     setSaving(false);
   };
 
-  const updateSip = (field: string, value: unknown) => {
-    setSip((prev) => ({ ...prev, [field]: value }));
-    setSipDirty(true);
-  };
-
-  const saveSip = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/sip/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sip),
-      });
-      if (res.ok) setSipDirty(false);
-    } catch {}
-    setSaving(false);
-  };
 
   const formatUptime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -151,74 +102,6 @@ export function SettingsPage() {
   return (
     <div className={styles.page}>
       <h2 className={styles.heading}>Settings</h2>
-
-      {/* SIP Account */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h3 className={styles.cardTitle}>SIP Account</h3>
-          {sipDirty && (
-            <button className={styles.saveBtn} onClick={saveSip} disabled={saving}>
-              <Save size={12} />
-              <span>{saving ? "Saving..." : "Save & Apply"}</span>
-            </button>
-          )}
-        </div>
-        <div className={styles.formGrid}>
-          <label className={styles.field}>
-            <span>Username</span>
-            <input type="text" value={sip.username} onChange={(e) => updateSip("username", e.target.value)} placeholder="user" />
-          </label>
-          <label className={styles.field}>
-            <span>Password</span>
-            <input type="password" value={sip.password} onChange={(e) => updateSip("password", e.target.value)} placeholder="••••••" />
-          </label>
-          <label className={styles.field}>
-            <span>Registrar</span>
-            <input type="text" value={sip.registrar} onChange={(e) => updateSip("registrar", e.target.value)} placeholder="proxy.sip.audio" />
-          </label>
-          <label className={styles.field}>
-            <span>Realm</span>
-            <input type="text" value={sip.realm} onChange={(e) => updateSip("realm", e.target.value)} placeholder="sip.audio" />
-          </label>
-          <label className={styles.field}>
-            <span>Proxy</span>
-            <input type="text" value={sip.proxy} onChange={(e) => updateSip("proxy", e.target.value)} placeholder="proxy.sip.audio" />
-          </label>
-          <label className={styles.field}>
-            <span>Proxy 2</span>
-            <input type="text" value={sip.proxy2} onChange={(e) => updateSip("proxy2", e.target.value)} placeholder="proxy2.sip.audio" />
-          </label>
-          <label className={styles.field}>
-            <span>Transport</span>
-            <select value={sip.transport} onChange={(e) => updateSip("transport", e.target.value)}>
-              <option value="tls">TLS</option>
-              <option value="tcp">TCP</option>
-              <option value="udp">UDP</option>
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span>Encryption</span>
-            <select value={sip.keying} onChange={(e) => updateSip("keying", Number(e.target.value))}>
-              <option value={0}>None</option>
-              <option value={1}>SDES</option>
-              <option value={2}>SDES (mandatory)</option>
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span>Reg Timeout</span>
-            <input type="number" value={sip.reg_timeout} onChange={(e) => updateSip("reg_timeout", Number(e.target.value))} min={60} max={3600} />
-          </label>
-          <label className={styles.field}>
-            <span>STUN Server</span>
-            <input type="text" value={sip.stun} onChange={(e) => updateSip("stun", e.target.value)} placeholder="stun.example.com" />
-          </label>
-          <label className={styles.field}>
-            <span>STUN Server 2</span>
-            <input type="text" value={sip.stun2} onChange={(e) => updateSip("stun2", e.target.value)} placeholder="stun2.example.com" />
-          </label>
-        </div>
-
-      </div>
 
       {/* Security */}
       <div className={styles.card}>
