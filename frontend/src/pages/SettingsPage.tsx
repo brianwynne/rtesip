@@ -1,7 +1,31 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Power, RefreshCw, Save, Shield } from "lucide-react";
+import { RotateCcw, Power, RefreshCw, Save, Wifi } from "lucide-react";
 import type { SystemStatus } from "../types";
 import styles from "./SettingsPage.module.css";
+
+interface WifiConfig {
+  enabled: boolean;
+  ssid: string;
+  psk: string;
+  interface: string;
+  country: string;
+  enable_8021x: boolean;
+  "8021x_user": string;
+  "8021x_password": string;
+  "8021x_peaplabel1": boolean;
+}
+
+const DEFAULT_WIFI: WifiConfig = {
+  enabled: false,
+  ssid: "",
+  psk: "",
+  interface: "wlan0",
+  country: "ie",
+  enable_8021x: false,
+  "8021x_user": "",
+  "8021x_password": "",
+  "8021x_peaplabel1": false,
+};
 
 interface SecurityConfig {
   firewall_enabled: boolean;
@@ -58,8 +82,10 @@ export function SettingsPage() {
   const [sip, setSip] = useState<SipConfig>(DEFAULT_SIP);
   const [version, setVersion] = useState<Record<string, unknown> | null>(null);
   const [security, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
+  const [wifi, setWifi] = useState<WifiConfig>(DEFAULT_WIFI);
   const [newPassword, setNewPassword] = useState("");
   const [securityDirty, setSecurityDirty] = useState(false);
+  const [wifiDirty, setWifiDirty] = useState(false);
   const [sipDirty, setSipDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
@@ -70,8 +96,27 @@ export function SettingsPage() {
     fetch("/api/update/version").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then(setVersion).catch(() => {});
     fetch("/api/system/config").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then((data) => {
       if (data.security) setSecurity({ ...DEFAULT_SECURITY, ...data.security });
+      if (data.wifi) setWifi({ ...DEFAULT_WIFI, ...data.wifi });
     }).catch(() => {});
   }, []);
+
+  const updateWifi = (field: string, value: unknown) => {
+    setWifi((prev) => ({ ...prev, [field]: value }));
+    setWifiDirty(true);
+  };
+
+  const saveWifi = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/system/wifi", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(wifi),
+      });
+      setWifiDirty(false);
+    } catch {}
+    setSaving(false);
+  };
 
   const updateSip = (field: string, value: unknown) => {
     setSip((prev) => ({ ...prev, [field]: value }));
@@ -257,6 +302,95 @@ export function SettingsPage() {
             placeholder={"192.168.0.0/16\n172.16.0.0/12\n10.0.0.0/8"}
           />
         </div>
+      </div>
+
+      {/* WiFi */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>WiFi</h3>
+          {wifiDirty && (
+            <button className={styles.saveBtn} onClick={saveWifi} disabled={saving}>
+              <Save size={12} />
+              <span>{saving ? "Saving..." : "Save & Apply"}</span>
+            </button>
+          )}
+        </div>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>
+            <span>WiFi</span>
+            <select value={wifi.enabled ? "on" : "off"} onChange={(e) => updateWifi("enabled", e.target.value === "on")}>
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Interface</span>
+            <select value={wifi.interface} onChange={(e) => updateWifi("interface", e.target.value)}>
+              <option value="wlan0">wlan0</option>
+              <option value="wlan1">wlan1</option>
+            </select>
+          </label>
+          {wifi.enabled && (
+            <>
+              <label className={styles.field}>
+                <span>SSID</span>
+                <input type="text" value={wifi.ssid} onChange={(e) => updateWifi("ssid", e.target.value)} placeholder="Network name" />
+              </label>
+              <label className={styles.field}>
+                <span>Password</span>
+                <input type="password" value={wifi.psk} onChange={(e) => updateWifi("psk", e.target.value)} placeholder="WiFi password" />
+              </label>
+              <label className={styles.field}>
+                <span>Country</span>
+                <select value={wifi.country} onChange={(e) => updateWifi("country", e.target.value)}>
+                  <option value="ie">Ireland</option>
+                  <option value="gb">United Kingdom</option>
+                  <option value="us">United States</option>
+                  <option value="de">Germany</option>
+                  <option value="fr">France</option>
+                  <option value="nl">Netherlands</option>
+                  <option value="es">Spain</option>
+                  <option value="it">Italy</option>
+                  <option value="au">Australia</option>
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+
+        {/* 802.1X Wired Auth */}
+        {wifi.enabled && (
+          <div className={styles.subSection}>
+            <label className={styles.toggle}>
+              <span>802.1X Wired Auth</span>
+              <input
+                type="checkbox"
+                checked={wifi.enable_8021x}
+                onChange={(e) => updateWifi("enable_8021x", e.target.checked)}
+              />
+            </label>
+            {wifi.enable_8021x && (
+              <div className={styles.formGrid}>
+                <label className={styles.field}>
+                  <span>Username</span>
+                  <input type="text" value={wifi["8021x_user"]} onChange={(e) => updateWifi("8021x_user", e.target.value)} placeholder="802.1X identity" />
+                </label>
+                <label className={styles.field}>
+                  <span>Password</span>
+                  <input type="password" value={wifi["8021x_password"]} onChange={(e) => updateWifi("8021x_password", e.target.value)} placeholder="802.1X password" />
+                </label>
+                <label className={styles.toggle}>
+                  <span>PEAP Label 1</span>
+                  <input
+                    type="checkbox"
+                    checked={wifi["8021x_peaplabel1"]}
+                    onChange={(e) => updateWifi("8021x_peaplabel1", e.target.checked)}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* System info */}

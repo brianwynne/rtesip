@@ -82,6 +82,37 @@
   font-family: var(--font-mono);
 }
 
+/* Sub-section (e.g. 802.1X inside WiFi) */
+.subSection {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Toggle */
+.toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle span {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+}
+
+.toggle input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
 /* Codecs */
 .codecSection {
   margin-top: 0.8rem;
