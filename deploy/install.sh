@@ -226,16 +226,14 @@ done
 [[ -n "$PYTHON" ]] || fatal "Python 3.10+ is required. Install it and try again."
 ok "Python: $($PYTHON --version)"
 
-# Ensure python3-venv is available
-if ! $PYTHON -m venv --help &>/dev/null; then
-    info "Installing python3-venv..."
-    apt-get update -qq
-    apt-get install -y -qq python3-venv > /dev/null 2>&1 \
-        || apt-get install -y -qq python3.12-venv > /dev/null 2>&1 \
-        || apt-get install -y -qq python3.11-venv > /dev/null 2>&1 \
-        || fatal "Could not install python3-venv. Install it manually and retry."
-    ok "python3-venv installed"
-fi
+# Ensure python3-venv and build tools are available
+info "Installing Python build dependencies..."
+apt-get update -qq
+apt-get install -y -qq python3-venv python3-dev build-essential > /dev/null 2>&1 \
+    || apt-get install -y -qq python3.12-venv python3.12-dev build-essential > /dev/null 2>&1 \
+    || apt-get install -y -qq python3.11-venv python3.11-dev build-essential > /dev/null 2>&1 \
+    || fatal "Could not install python3-venv/dev. Install manually and retry."
+ok "Python build dependencies installed"
 
 # ── Verify source structure ──────────────────────────────────
 info "Using source from: $LOCAL_DIR"
