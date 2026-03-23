@@ -19,7 +19,10 @@ interface AudioSettings {
   capture_latency: number;
   playback_latency: number;
   period_size: number;
+  capture_volume: number;
+  playback_volume: number;
   auto_answer: boolean;
+  mic_monitor: boolean;
   hardware_mixer: boolean;
   phantom_power: boolean;
 }
@@ -35,7 +38,10 @@ export function AudioPage() {
     capture_latency: 10,
     playback_latency: 10,
     period_size: 5,
+    capture_volume: 100,
+    playback_volume: 100,
     auto_answer: false,
+    mic_monitor: false,
     hardware_mixer: false,
     phantom_power: false,
   });
@@ -63,7 +69,7 @@ export function AudioPage() {
       });
       if (res.ok) setSettings(await res.json());
     } catch {
-      // network error — ignore
+      // network error
     } finally {
       setSaving(false);
     }
@@ -74,8 +80,19 @@ export function AudioPage() {
       <h2 className={styles.heading}>Audio Configuration</h2>
 
       <div className={styles.grid}>
+        {/* General */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>General</h3>
+          <label className={styles.field}>
+            <span>Auto Answer</span>
+            <select
+              value={settings.auto_answer ? "on" : "off"}
+              onChange={(e) => save({ auto_answer: e.target.value === "on" })}
+            >
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+          </label>
           <label className={styles.field}>
             <span>Channels</span>
             <select
@@ -87,73 +104,164 @@ export function AudioPage() {
             </select>
           </label>
           <label className={styles.field}>
-            <span>Bitrate</span>
+            <span>Opus Bandwidth</span>
+            <div className={styles.fieldWithUnit}>
+              <select
+                value={settings.bitrate}
+                onChange={(e) => save({ bitrate: Number(e.target.value) })}
+              >
+                <option value={32000}>32</option>
+                <option value={48000}>48</option>
+                <option value={64000}>64</option>
+                <option value={72000}>72</option>
+                <option value={96000}>96</option>
+                <option value={128000}>128</option>
+                <option value={192000}>192</option>
+                <option value={256000}>256</option>
+              </select>
+              <span className={styles.unit}>kbps</span>
+            </div>
+          </label>
+          <label className={styles.field}>
+            <span>Buffer Period Size</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.period_size}
+                min={1}
+                max={50}
+                onChange={(e) => save({ period_size: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>ms</span>
+            </div>
+          </label>
+        </div>
+
+        {/* Output */}
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle}>Output</h3>
+          <label className={styles.field}>
+            <span>Output Device</span>
             <select
-              value={settings.bitrate}
-              onChange={(e) => save({ bitrate: Number(e.target.value) })}
+              value={settings.output}
+              onChange={(e) => save({ output: e.target.value })}
             >
-              <option value={32000}>32 kbps</option>
-              <option value={48000}>48 kbps</option>
-              <option value={64000}>64 kbps</option>
-              <option value={72000}>72 kbps</option>
-              <option value={96000}>96 kbps</option>
-              <option value={128000}>128 kbps</option>
-              <option value={192000}>192 kbps</option>
-              <option value={256000}>256 kbps</option>
+              <option value="USB">First USB Device</option>
+              <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
+              <option value="plughw:CARD=AES67,DEV=0">AES67</option>
             </select>
           </label>
-          <label className={styles.toggle}>
-            <span>Auto Answer</span>
-            <input
-              type="checkbox"
-              checked={settings.auto_answer}
-              onChange={(e) => save({ auto_answer: e.target.checked })}
-            />
+          <label className={styles.field}>
+            <span>Routing</span>
+            <select
+              value={settings.output_routing}
+              onChange={(e) => save({ output_routing: e.target.value })}
+            >
+              <option value="lr">LR (Stereo)</option>
+              <option value="ll">LL (Left only)</option>
+              <option value="rr">RR (Right only)</option>
+              <option value="rl">RL (Swap)</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Output Latency</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.playback_latency}
+                min={2}
+                max={200}
+                onChange={(e) => save({ playback_latency: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>ms</span>
+            </div>
+          </label>
+          <label className={styles.field}>
+            <span>System Volume</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.playback_volume}
+                min={0}
+                max={150}
+                onChange={(e) => save({ playback_volume: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>% 0-150%</span>
+            </div>
           </label>
         </div>
 
+        {/* Input */}
         <div className={styles.card}>
-          <h3 className={styles.cardTitle}>Latency</h3>
+          <h3 className={styles.cardTitle}>Input</h3>
           <label className={styles.field}>
-            <span>Capture (ms)</span>
-            <input
-              type="number"
-              value={settings.capture_latency}
-              min={2}
-              max={200}
-              onChange={(e) => save({ capture_latency: Number(e.target.value) })}
-            />
+            <span>Input Device</span>
+            <select
+              value={settings.input}
+              onChange={(e) => save({ input: e.target.value })}
+            >
+              <option value="USB">First USB Device</option>
+              <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
+              <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+            </select>
           </label>
           <label className={styles.field}>
-            <span>Playback (ms)</span>
-            <input
-              type="number"
-              value={settings.playback_latency}
-              min={2}
-              max={200}
-              onChange={(e) => save({ playback_latency: Number(e.target.value) })}
-            />
+            <span>Routing</span>
+            <select
+              value={settings.input_routing}
+              onChange={(e) => save({ input_routing: e.target.value })}
+            >
+              <option value="lr">LR (Stereo)</option>
+              <option value="ll">LL (Left only)</option>
+              <option value="rr">RR (Right only)</option>
+              <option value="rl">RL (Swap)</option>
+            </select>
           </label>
           <label className={styles.field}>
-            <span>Period Size</span>
-            <input
-              type="number"
-              value={settings.period_size}
-              min={1}
-              max={50}
-              onChange={(e) => save({ period_size: Number(e.target.value) })}
-            />
+            <span>Capture Latency</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.capture_latency}
+                min={2}
+                max={200}
+                onChange={(e) => save({ capture_latency: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>ms</span>
+            </div>
+          </label>
+          <label className={styles.field}>
+            <span>Input Gain</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.capture_volume}
+                min={0}
+                max={150}
+                onChange={(e) => save({ capture_volume: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>% 0-150%</span>
+            </div>
           </label>
         </div>
 
+        {/* Hardware */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Hardware</h3>
           <label className={styles.toggle}>
-            <span>Hardware Mixer</span>
+            <span>Hardware Mixing</span>
             <input
               type="checkbox"
               checked={settings.hardware_mixer}
               onChange={(e) => save({ hardware_mixer: e.target.checked })}
+            />
+          </label>
+          <label className={styles.toggle}>
+            <span>Mic Monitoring</span>
+            <input
+              type="checkbox"
+              checked={settings.mic_monitor}
+              onChange={(e) => save({ mic_monitor: e.target.checked })}
             />
           </label>
           <label className={styles.toggle}>
@@ -164,8 +272,12 @@ export function AudioPage() {
               onChange={(e) => save({ phantom_power: e.target.checked })}
             />
           </label>
+          {settings.mic_monitor && (
+            <div className={styles.hint}>Optimise latency before using mic monitoring.</div>
+          )}
         </div>
 
+        {/* Codecs */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Codecs</h3>
           <div className={styles.codecList}>

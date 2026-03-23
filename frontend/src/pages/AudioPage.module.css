@@ -71,6 +71,33 @@
   accent-color: var(--accent);
 }
 
+.fieldWithUnit {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.fieldWithUnit select, .fieldWithUnit input[type="number"] {
+  width: 5rem;
+  text-align: right;
+  height: 2rem;
+  font-size: 0.7rem;
+}
+
+.unit {
+  font-size: 0.55rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 0.6rem;
+  color: var(--amber);
+  font-style: italic;
+  padding: 0.3rem 0;
+}
+
 .saving {
   text-align: center;
   color: var(--accent);
