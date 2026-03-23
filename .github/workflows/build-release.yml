@@ -201,18 +201,19 @@ jobs:
         run: |
           # Clone pi-gen
           git clone --depth 1 https://github.com/RPi-Distro/pi-gen.git pi-gen-build
-          # Copy our custom stage into pi-gen as stage3
-          cp -r pi-gen-stage/00-sip-reporter pi-gen-build/stage-sip-reporter
-          # Skip stages we don't need exported
-          touch pi-gen-build/stage0/SKIP pi-gen-build/stage1/SKIP pi-gen-build/stage2/SKIP_IMAGES
-          touch pi-gen-build/stage-sip-reporter/EXPORT_IMAGE
+          # Remove stock stage3-5 and replace stage3 with our custom stage
+          rm -rf pi-gen-build/stage3 pi-gen-build/stage4 pi-gen-build/stage5
+          cp -r pi-gen-stage/00-sip-reporter pi-gen-build/stage3
+          # Only export the final stage image
+          touch pi-gen-build/stage0/SKIP_IMAGES pi-gen-build/stage1/SKIP_IMAGES pi-gen-build/stage2/SKIP_IMAGES
+          touch pi-gen-build/stage3/EXPORT_IMAGE
 
       - name: Build Pi image
         uses: usimd/pi-gen-action@v1
         id: pi-gen
         with:
           image-name: sip-reporter-${{ github.ref_name }}
-          stage-list: stage0 stage1 stage2 stage-sip-reporter
+          stage-list: stage0 stage1 stage2 stage3
           pi-gen-dir: pi-gen-build
           hostname: sip-reporter
           locale: en_IE.UTF-8
