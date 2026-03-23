@@ -8,6 +8,8 @@ export function useWebSocket() {
   const reconnectTimer = useRef<number>();
   const [connected, setConnected] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [authFailed, setAuthFailed] = useState(false);
+  const pendingPassword = useRef<string | null>(null);
 
   const [callState, setCallState] = useState<CallState>({ state: "idle" });
   const [accounts, setAccounts] = useState<Record<string, AccountStatus>>({});
@@ -24,23 +26,13 @@ export function useWebSocket() {
   }, []);
 
   const authenticate = useCallback((password: string) => {
-    send({ command: "authRequest" });
-    const handler = (e: MessageEvent) => {
-      const msg: WsMessage = JSON.parse(e.data);
-      if (msg.event === "challenge") {
-        const challenge = msg.challenge as string;
-        crypto.subtle
-          .digest("SHA-256", new TextEncoder().encode(password + challenge))
-          .then((buf) => {
-            const hash = Array.from(new Uint8Array(buf))
-              .map((b) => b.toString(16).padStart(2, "0"))
-              .join("");
-            send({ command: "challengeResponse", response: hash });
-          });
-        wsRef.current?.removeEventListener("message", handler);
-      }
-    };
-    wsRef.current?.addEventListener("message", handler);
+    pendingPassword.current = password;
+    setAuthFailed(false);
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      send({ command: "authRequest" });
+    } else {
+      setAuthFailed(true);
+    }
   }, [send]);
 
   useEffect(() => {
@@ -50,16 +42,20 @@ export function useWebSocket() {
 
       ws.onopen = () => {
         setConnected(true);
-        send({ command: "authRequest" });
+        // If we have a pending password, start auth. Otherwise wait for user login.
+        if (pendingPassword.current !== null) {
+          send({ command: "authRequest" });
+        }
       };
 
       ws.onmessage = (e) => {
         const msg: WsMessage = JSON.parse(e.data);
 
         switch (msg.event) {
-          case "challenge":
+          case "challenge": {
+            const pw = pendingPassword.current || "";
             crypto.subtle
-              .digest("SHA-256", new TextEncoder().encode(String(msg.challenge)))
+              .digest("SHA-256", new TextEncoder().encode(pw + String(msg.challenge)))
               .then((buf) => {
                 const hash = Array.from(new Uint8Array(buf))
                   .map((b) => b.toString(16).padStart(2, "0"))
@@ -67,9 +63,11 @@ export function useWebSocket() {
                 send({ command: "challengeResponse", response: hash });
               });
             break;
+          }
 
           case "state":
             setAuthed(true);
+            setAuthFailed(false);
             setSipReady(msg.sip_ready as boolean);
             if (msg.call_state) {
               setCallState({
@@ -81,6 +79,8 @@ export function useWebSocket() {
 
           case "notAuthed":
             setAuthed(false);
+            setAuthFailed(true);
+            pendingPassword.current = null;
             break;
 
           case "levels":
@@ -214,7 +214,7 @@ export function useWebSocket() {
   }, [send]);
 
   return {
-    connected, authed, callState, accounts, volume, sipReady,
+    connected, authed, authFailed, callState, accounts, volume, sipReady,
     send, authenticate,
     call: (address: string) => send({ command: "call", address }),
     hangup: () => send({ command: "hangup" }),

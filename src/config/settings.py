@@ -88,7 +88,7 @@ DEFAULTS: dict[str, dict] = {
     "security": {
         "firewall_enabled": True,
         "trusted_networks": "192.168.0.0/16\n172.16.0.0/12\n10.0.0.0/8",
-        "gui_password_hash": "",
+        "gui_password_hash": "2866f742b67e89b6772a01b5f31e3aa1ed9b39e28b312455a98a7f2ae9bb6a3b",
     },
     "system": {
         "timezone": "Europe/Dublin",

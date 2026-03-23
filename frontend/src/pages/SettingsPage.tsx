@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Power, RefreshCw, Save } from "lucide-react";
+import { RotateCcw, Power, RefreshCw, Save, Shield } from "lucide-react";
 import type { SystemStatus } from "../types";
 import styles from "./SettingsPage.module.css";
+
+interface SecurityConfig {
+  firewall_enabled: boolean;
+  trusted_networks: string;
+  gui_password_hash: string;
+}
+
+const DEFAULT_SECURITY: SecurityConfig = {
+  firewall_enabled: true,
+  trusted_networks: "192.168.0.0/16\n172.16.0.0/12\n10.0.0.0/8",
+  gui_password_hash: "",
+};
 
 interface SipConfig {
   username: string;
@@ -45,6 +57,9 @@ export function SettingsPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [sip, setSip] = useState<SipConfig>(DEFAULT_SIP);
   const [version, setVersion] = useState<Record<string, unknown> | null>(null);
+  const [security, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
+  const [newPassword, setNewPassword] = useState("");
+  const [securityDirty, setSecurityDirty] = useState(false);
   const [sipDirty, setSipDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -52,6 +67,9 @@ export function SettingsPage() {
     fetch("/api/system/status").then((r) => r.json()).then(setStatus).catch(() => {});
     fetch("/api/sip/settings").then((r) => r.json()).then((data) => setSip({ ...DEFAULT_SIP, ...data })).catch(() => {});
     fetch("/api/update/version").then((r) => r.json()).then(setVersion).catch(() => {});
+    fetch("/api/system/config").then((r) => r.json()).then((data) => {
+      if (data.security) setSecurity({ ...DEFAULT_SECURITY, ...data.security });
+    }).catch(() => {});
   }, []);
 
   const updateSip = (field: string, value: unknown) => {
@@ -158,6 +176,73 @@ export function SettingsPage() {
           </label>
         </div>
 
+      </div>
+
+      {/* Security */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>Security</h3>
+          {securityDirty && (
+            <button className={styles.saveBtn} onClick={async () => {
+              setSaving(true);
+              const payload: Record<string, unknown> = { ...security };
+              if (newPassword) {
+                const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(newPassword));
+                payload.gui_password_hash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+              }
+              try {
+                await fetch("/api/system/config", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ security: payload }),
+                });
+                setSecurityDirty(false);
+                setNewPassword("");
+              } catch {}
+              setSaving(false);
+            }} disabled={saving}>
+              <Save size={12} />
+              <span>{saving ? "Saving..." : "Save"}</span>
+            </button>
+          )}
+        </div>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>
+            <span>GUI Password</span>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => { setNewPassword(e.target.value); setSecurityDirty(true); }}
+              placeholder="Enter new password"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Firewall</span>
+            <select
+              value={security.firewall_enabled ? "enabled" : "disabled"}
+              onChange={(e) => {
+                setSecurity((prev) => ({ ...prev, firewall_enabled: e.target.value === "enabled" }));
+                setSecurityDirty(true);
+              }}
+            >
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+        </div>
+        <div className={styles.textareaGroup}>
+          <span className={styles.textareaLabel}>Trusted Networks</span>
+          <textarea
+            className={styles.textarea}
+            value={security.trusted_networks}
+            onChange={(e) => {
+              setSecurity((prev) => ({ ...prev, trusted_networks: e.target.value }));
+              setSecurityDirty(true);
+            }}
+            rows={4}
+            placeholder={"192.168.0.0/16\n172.16.0.0/12\n10.0.0.0/8"}
+          />
+        </div>
       </div>
 
       {/* System info */}

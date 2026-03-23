@@ -188,14 +188,15 @@
   width: 2rem;
   height: 2rem;
   border-radius: var(--radius);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
+  background: var(--red-dim);
+  color: var(--red);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: 1px solid var(--red);
 }
-.overlayClose:hover { color: var(--text-primary); background: var(--border); }
+.overlayClose:hover { background: var(--red); color: #fff; }
 
 
 .addressDisplay {

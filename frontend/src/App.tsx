@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { StatusBar } from "./components/StatusBar";
+import { LoginScreen } from "./components/LoginScreen";
 import { NavBar, type Page } from "./components/NavBar";
 import { CallPage } from "./pages/CallPage";
 import { AudioPage } from "./pages/AudioPage";
@@ -27,6 +28,11 @@ function App() {
         setIpAddress(window.location.hostname);
       });
   }, []);
+
+  const isDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (!ws.authed && !isDev) {
+    return <LoginScreen onLogin={ws.authenticate} failed={ws.authFailed} />;
+  }
 
   return (
     <div className={styles.app}>
