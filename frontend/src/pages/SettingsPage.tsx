@@ -27,6 +27,26 @@ const DEFAULT_WIFI: WifiConfig = {
   "8021x_peaplabel1": false,
 };
 
+interface NetworkConfig {
+  mode: string;
+  hostname: string;
+  address: string;
+  netmask: string;
+  gateway: string;
+  dns1: string;
+  dns2: string;
+}
+
+const DEFAULT_NETWORK: NetworkConfig = {
+  mode: "dhcp",
+  hostname: "sip-reporter",
+  address: "",
+  netmask: "",
+  gateway: "",
+  dns1: "",
+  dns2: "",
+};
+
 interface SecurityConfig {
   firewall_enabled: boolean;
   trusted_networks: string;
@@ -45,6 +65,8 @@ export function SettingsPage() {
   const [version, setVersion] = useState<Record<string, unknown> | null>(null);
   const [security, setSecurity] = useState<SecurityConfig>(DEFAULT_SECURITY);
   const [wifi, setWifi] = useState<WifiConfig>(DEFAULT_WIFI);
+  const [network, setNetwork] = useState<NetworkConfig>(DEFAULT_NETWORK);
+  const [networkDirty, setNetworkDirty] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [securityDirty, setSecurityDirty] = useState(false);
   const [wifiDirty, setWifiDirty] = useState(false);
@@ -59,8 +81,27 @@ export function SettingsPage() {
     fetch("/api/system/config").then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); }).then((data) => {
       if (data.security) setSecurity({ ...DEFAULT_SECURITY, ...data.security });
       if (data.wifi) setWifi({ ...DEFAULT_WIFI, ...data.wifi });
+      if (data.network) setNetwork({ ...DEFAULT_NETWORK, ...data.network });
     }).catch(() => {});
   }, []);
+
+  const updateNetwork = (field: string, value: unknown) => {
+    setNetwork((prev) => ({ ...prev, [field]: value }));
+    setNetworkDirty(true);
+  };
+
+  const saveNetwork = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/system/network", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(network),
+      });
+      setNetworkDirty(false);
+    } catch {}
+    setSaving(false);
+  };
 
   const updateWifi = (field: string, value: unknown) => {
     setWifi((prev) => ({ ...prev, [field]: value }));
@@ -292,6 +333,56 @@ export function SettingsPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Network */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>Network</h3>
+          {networkDirty && (
+            <button className={styles.saveBtn} onClick={saveNetwork} disabled={saving}>
+              <Save size={12} />
+              <span>{saving ? "Saving..." : "Save & Apply"}</span>
+            </button>
+          )}
+        </div>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>
+            <span>Hostname</span>
+            <input type="text" value={network.hostname} onChange={(e) => updateNetwork("hostname", e.target.value)} placeholder="sip-reporter" />
+          </label>
+          <label className={styles.field}>
+            <span>Mode</span>
+            <select value={network.mode} onChange={(e) => updateNetwork("mode", e.target.value)}>
+              <option value="dhcp">DHCP</option>
+              <option value="static">Static IP</option>
+            </select>
+          </label>
+          {network.mode === "static" && (
+            <>
+              <label className={styles.field}>
+                <span>IP Address</span>
+                <input type="text" value={network.address} onChange={(e) => updateNetwork("address", e.target.value)} placeholder="192.168.1.100" />
+              </label>
+              <label className={styles.field}>
+                <span>Netmask</span>
+                <input type="text" value={network.netmask} onChange={(e) => updateNetwork("netmask", e.target.value)} placeholder="255.255.255.0" />
+              </label>
+              <label className={styles.field}>
+                <span>Gateway</span>
+                <input type="text" value={network.gateway} onChange={(e) => updateNetwork("gateway", e.target.value)} placeholder="192.168.1.1" />
+              </label>
+              <label className={styles.field}>
+                <span>DNS 1</span>
+                <input type="text" value={network.dns1} onChange={(e) => updateNetwork("dns1", e.target.value)} placeholder="8.8.8.8" />
+              </label>
+              <label className={styles.field}>
+                <span>DNS 2</span>
+                <input type="text" value={network.dns2} onChange={(e) => updateNetwork("dns2", e.target.value)} placeholder="8.8.4.4" />
+              </label>
+            </>
+          )}
+        </div>
       </div>
 
       {/* System info */}
