@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Power, RefreshCw, Save, Wifi } from "lucide-react";
+import { RotateCcw, Power, RefreshCw, Save, Wifi, Search, Signal } from "lucide-react";
 import type { SystemStatus } from "../types";
 import styles from "./SettingsPage.module.css";
 
@@ -86,6 +86,8 @@ export function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [securityDirty, setSecurityDirty] = useState(false);
   const [wifiDirty, setWifiDirty] = useState(false);
+  const [wifiNetworks, setWifiNetworks] = useState<Array<{ ssid: string; signal: number; security: string }>>([]);
+  const [scanning, setScanning] = useState(false);
   const [sipDirty, setSipDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
@@ -103,6 +105,18 @@ export function SettingsPage() {
   const updateWifi = (field: string, value: unknown) => {
     setWifi((prev) => ({ ...prev, [field]: value }));
     setWifiDirty(true);
+  };
+
+  const scanWifi = async () => {
+    setScanning(true);
+    try {
+      const res = await fetch("/api/system/wifi/scan");
+      if (res.ok) {
+        const data = await res.json();
+        setWifiNetworks(data.networks || []);
+      }
+    } catch {}
+    setScanning(false);
   };
 
   const saveWifi = async () => {
@@ -334,8 +348,30 @@ export function SettingsPage() {
             <>
               <label className={styles.field}>
                 <span>SSID</span>
-                <input type="text" value={wifi.ssid} onChange={(e) => updateWifi("ssid", e.target.value)} placeholder="Network name" />
+                <div className={styles.ssidRow}>
+                  <input type="text" value={wifi.ssid} onChange={(e) => updateWifi("ssid", e.target.value)} placeholder="Network name" />
+                  <button className={styles.scanBtn} onClick={scanWifi} disabled={scanning} title="Scan for networks">
+                    <Search size={12} />
+                  </button>
+                </div>
               </label>
+              {wifiNetworks.length > 0 && (
+                <div className={styles.networkList}>
+                  {wifiNetworks.map((n) => (
+                    <button
+                      key={n.ssid}
+                      className={`${styles.networkItem} ${wifi.ssid === n.ssid ? styles.networkSelected : ""}`}
+                      onClick={() => { updateWifi("ssid", n.ssid); setWifiNetworks([]); }}
+                    >
+                      <Signal size={12} className={n.signal > -50 ? styles.signalStrong : n.signal > -70 ? styles.signalMedium : styles.signalWeak} />
+                      <span className={styles.networkSsid}>{n.ssid}</span>
+                      <span className={styles.networkSecurity}>{n.security}</span>
+                      <span className={styles.networkSignal}>{n.signal}dBm</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {scanning && <div className={styles.scanStatus}>Scanning...</div>}
               <label className={styles.field}>
                 <span>Password</span>
                 <input type="password" value={wifi.psk} onChange={(e) => updateWifi("psk", e.target.value)} placeholder="WiFi password" />

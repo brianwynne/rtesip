@@ -82,6 +82,103 @@
   font-family: var(--font-mono);
 }
 
+/* WiFi SSID scan */
+.ssidRow {
+  display: flex;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.ssidRow input {
+  flex: 1;
+}
+
+.scanBtn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.scanBtn:hover { border-color: var(--accent); color: var(--accent); }
+.scanBtn:disabled { opacity: 0.4; }
+
+.networkList {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 10rem;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.2rem;
+}
+
+.networkItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.65rem;
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s;
+}
+.networkItem:hover { background: var(--bg-elevated); }
+
+.networkSelected {
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+}
+
+.networkSsid {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.networkSecurity {
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 0.1rem 0.25rem;
+  border-radius: 0.15rem;
+}
+
+.networkSignal {
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  min-width: 3rem;
+  text-align: right;
+}
+
+.signalStrong { color: var(--green); }
+.signalMedium { color: var(--amber); }
+.signalWeak { color: var(--red); }
+
+.scanStatus {
+  grid-column: 1 / -1;
+  font-size: 0.6rem;
+  color: var(--accent);
+  text-align: center;
+  padding: 0.3rem;
+}
+
 /* Sub-section (e.g. 802.1X inside WiFi) */
 .subSection {
   margin-top: 0.6rem;

@@ -91,6 +91,72 @@ def apply_wifi_config() -> None:
         wpa_path.write_text(conf)
 
 
+# --- WiFi Scan ---
+
+def scan_wifi_networks(interface: str = "wlan0", timeout: int = 10) -> list[dict]:
+    """Scan for available WiFi networks using wpa_cli.
+
+    Returns list of dicts with ssid, bssid, signal, frequency, flags.
+    Same approach as the original scanWiFi block — launches wpa_supplicant
+    with a scan config if needed, runs scan, parses results.
+    """
+    networks = []
+
+    # Ensure interface is up
+    subprocess.run(["ip", "link", "set", interface, "up"],
+                   capture_output=True, timeout=5)
+
+    # Trigger scan
+    try:
+        subprocess.run(
+            ["wpa_cli", "-i", interface, "scan"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        logger.warning("WiFi scan trigger failed: %s", e)
+        return networks
+
+    # Wait for scan results (poll up to timeout seconds)
+    import time
+    best_results = []
+    for _ in range(timeout):
+        time.sleep(1)
+        try:
+            result = subprocess.run(
+                ["wpa_cli", "-i", interface, "scan_results"],
+                capture_output=True, text=True, timeout=5,
+            )
+            lines = result.stdout.strip().split("\n")
+            # First line is header: bssid / frequency / signal / flags / ssid
+            if len(lines) > len(best_results):
+                best_results = lines
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            break
+
+    # Parse results (skip header line)
+    seen_ssids = set()
+    for line in best_results[1:]:
+        parts = line.split("\t")
+        if len(parts) >= 5:
+            ssid = parts[4].strip()
+            if not ssid or ssid in seen_ssids or "\x00" in ssid:
+                continue
+            seen_ssids.add(ssid)
+            networks.append({
+                "bssid": parts[0],
+                "frequency": int(parts[1]) if parts[1].isdigit() else 0,
+                "signal": int(parts[2]) if parts[2].lstrip("-").isdigit() else 0,
+                "flags": parts[3],
+                "ssid": ssid,
+                "security": "WPA" if "WPA" in parts[3] else "Open",
+            })
+
+    # Sort by signal strength (strongest first)
+    networks.sort(key=lambda n: n["signal"], reverse=True)
+    logger.info("WiFi scan found %d networks", len(networks))
+    return networks
+
+
 # --- 802.1X ---
 
 def apply_8021x_config() -> None:

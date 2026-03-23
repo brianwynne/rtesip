@@ -66,6 +66,14 @@ async def get_wifi():
     return get_section("wifi")
 
 
+@router.get("/wifi/scan")
+async def wifi_scan():
+    """Scan for available WiFi networks."""
+    from src.config.system import scan_wifi_networks
+    networks = await asyncio.to_thread(scan_wifi_networks)
+    return {"networks": networks}
+
+
 @router.put("/wifi")
 async def update_wifi(settings: dict):
     result = update_section("wifi", settings)
