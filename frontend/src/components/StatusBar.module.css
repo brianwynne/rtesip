@@ -2,51 +2,49 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 44px;
-  padding: 0 12px;
+  height: 2.2rem;
+  padding: 0 0.8rem;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  gap: 12px;
+  gap: 0.8rem;
 }
 
-/* Left: brand + IP */
 .left {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0.15rem;
   flex-shrink: 0;
 }
 
 .brand {
   font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 1px;
+  font-size: 1rem;
+  letter-spacing: 0.06rem;
   color: var(--accent);
 }
 
 .product {
   font-weight: 300;
-  font-size: 15px;
-  letter-spacing: 1px;
+  font-size: 1rem;
+  letter-spacing: 0.06rem;
   color: var(--text-secondary);
 }
 
 .ip {
-  margin-left: 10px;
-  font-size: 11px;
+  margin-left: 0.6rem;
+  font-size: 0.7rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   background: var(--bg-elevated);
-  padding: 2px 8px;
-  border-radius: 3px;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.2rem;
 }
 
-/* Centre: SIP account status */
 .center {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 0.8rem;
   flex: 1;
   justify-content: center;
   overflow: hidden;
@@ -55,25 +53,25 @@
 .account {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.3rem;
   flex-shrink: 0;
 }
 
 .dotGreen, .dotRed, .dotMuted {
-  width: 7px;
-  height: 7px;
+  width: 0.45rem;
+  height: 0.45rem;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .dotGreen {
   background: var(--green);
-  box-shadow: 0 0 6px var(--green);
+  box-shadow: 0 0 0.4rem var(--green);
 }
 
 .dotRed {
   background: var(--red);
-  box-shadow: 0 0 6px var(--red);
+  box-shadow: 0 0 0.4rem var(--red);
 }
 
 .dotMuted {
@@ -81,33 +79,32 @@
 }
 
 .accountId {
-  font-size: 11px;
+  font-size: 0.7rem;
   font-family: var(--font-mono);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
+  max-width: 12rem;
 }
 
 .accountNone {
-  font-size: 11px;
+  font-size: 0.7rem;
   color: var(--text-muted);
 }
 
-/* Right: indicators */
 .right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.8rem;
   flex-shrink: 0;
 }
 
 .indicator {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 0.25rem;
+  font-size: 0.75rem;
   font-family: var(--font-mono);
 }
 

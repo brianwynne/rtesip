@@ -21,6 +21,7 @@ interface Props {
   onLinkGain: (linked: boolean) => void;
   onSetVolLevel?: (ch: "l" | "r", level: number) => void;
   onSetGainLevel?: (ch: "l" | "r", level: number) => void;
+  sipReady: boolean;
 }
 
 export function CallPage(props: Props) {
@@ -40,6 +41,7 @@ export function CallPage(props: Props) {
       <div className={styles.callSection}>
         <CallPanel
           callState={props.callState}
+          sipReady={props.sipReady}
           onCall={props.onCall}
           onHangup={props.onHangup}
           onAnswer={props.onAnswer}

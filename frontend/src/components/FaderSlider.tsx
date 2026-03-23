@@ -58,7 +58,7 @@ export function FaderSlider({ level, maxLevel = 150, muted, onChange }: Props) {
   }, []);
 
   const pct = Math.min(100, (localLevel / maxLevel) * 100);
-  const knobBottom = `calc(${pct}% - 10px)`;
+  const knobBottom = `calc(${pct}% - 0.7rem)`;
 
   return (
     <div className={styles.faderStrip}>

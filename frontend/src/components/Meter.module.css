@@ -1,22 +1,21 @@
-/* ── Vertical Meter (broadcast standard) ── */
 .vertical {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 0.5rem;
 }
 
 .meterRow {
   display: flex;
-  gap: 2px;
+  gap: 0.15rem;
   align-items: stretch;
 }
 
 .trackVertical {
-  width: 10px;
-  height: 80px;
+  width: 0.7rem;
+  height: 8rem;
   background: var(--meter-bg);
-  border-radius: 3px;
+  border-radius: 0.2rem;
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -27,7 +26,7 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  border-radius: 2px;
+  border-radius: 0.15rem;
   background: linear-gradient(to top,
     var(--meter-green) 0%,
     var(--meter-green) 55%,
@@ -46,16 +45,15 @@
   opacity: 0.5;
 }
 
-/* Scale */
 .scale {
   position: relative;
-  width: 22px;
-  height: 80px;
+  width: 1.6rem;
+  height: 8rem;
 }
 
 .tickLabel {
   position: absolute;
-  font-size: 7px;
+  font-size: 0.5rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   transform: translateY(50%);
@@ -74,28 +72,28 @@
 }
 
 .chLabel {
-  font-size: 10px;
+  font-size: 0.6rem;
   font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 1px;
+  letter-spacing: 0.05rem;
 }
 
 .chMuted {
   color: var(--red);
 }
 
-/* ── Horizontal Meter (fallback) ── */
+/* Horizontal fallback */
 .horizontal {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .trackHorizontal {
   flex: 1;
-  height: 10px;
+  height: 0.6rem;
   background: var(--meter-bg);
-  border-radius: 3px;
+  border-radius: 0.2rem;
   overflow: hidden;
   position: relative;
 }
@@ -105,14 +103,14 @@
   left: 0;
   top: 0;
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.08s linear;
+  border-radius: 0.2rem;
+  transition: none;
 }
 
 .value {
-  font-size: 11px;
+  font-size: 0.7rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
-  min-width: 36px;
+  min-width: 2.5rem;
   text-align: right;
 }

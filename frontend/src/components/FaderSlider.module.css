@@ -1,52 +1,49 @@
 .faderStrip {
   display: flex;
-  gap: 2px;
+  gap: 0.1rem;
   touch-action: none;
 }
 
-/* Scale labels */
 .scale {
   position: relative;
-  width: 20px;
-  height: 80px;
+  width: 1.4rem;
+  height: 6rem;
 }
 
 .scaleLabel {
   position: absolute;
   right: 0;
-  font-size: 7px;
+  font-size: 0.45rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   transform: translateY(50%);
   line-height: 1;
 }
 
-/* Track */
 .track {
   position: relative;
-  width: 20px;
-  height: 80px;
+  width: 1.4rem;
+  height: 6rem;
   cursor: pointer;
 }
 
 .groove {
   position: absolute;
   left: 50%;
-  top: 2px;
-  bottom: 2px;
-  width: 4px;
+  top: 0.15rem;
+  bottom: 0.15rem;
+  width: 0.25rem;
   transform: translateX(-50%);
   background: var(--bg-primary);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: 0.1rem;
   pointer-events: none;
 }
 
-/* Tick marks */
 .tick {
   position: absolute;
-  left: 1px;
-  right: 1px;
+  left: 0.05rem;
+  right: 0.05rem;
   height: 1px;
   background: var(--text-muted);
   opacity: 0.4;
@@ -55,21 +52,20 @@
 
 .tickMinor {
   position: absolute;
-  left: 4px;
-  right: 4px;
+  left: 0.25rem;
+  right: 0.25rem;
   height: 1px;
   background: var(--text-muted);
   opacity: 0.2;
   pointer-events: none;
 }
 
-/* Knob */
 .knob {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 26px;
-  height: 20px;
+  width: 1.8rem;
+  height: 1.4rem;
   pointer-events: none;
 }
 
@@ -85,10 +81,10 @@
     #222 100%
   );
   border: 1px solid #555;
-  border-radius: 3px;
+  border-radius: 0.2rem;
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 0.05rem 0.2rem rgba(0, 0, 0, 0.6),
+    inset 0 0.05rem 0 rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,19 +93,19 @@
 .knobMuted .knobCap {
   border-color: var(--red);
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.6),
-    0 0 4px rgba(239, 68, 68, 0.3);
+    0 0.05rem 0.2rem rgba(0, 0, 0, 0.6),
+    0 0 0.25rem rgba(239, 68, 68, 0.3);
 }
 
 .knobLine {
-  width: 14px;
+  width: 0.9rem;
   height: 1px;
   background: #888;
-  box-shadow: 0 3px 0 #666, 0 -3px 0 #666;
+  box-shadow: 0 0.18rem 0 #666, 0 -0.18rem 0 #666;
   border-radius: 1px;
 }
 
 .knobMuted .knobLine {
   background: var(--red);
-  box-shadow: 0 3px 0 var(--red), 0 -3px 0 var(--red);
+  box-shadow: 0 0.18rem 0 var(--red), 0 -0.18rem 0 var(--red);
 }

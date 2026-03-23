@@ -6,6 +6,7 @@ import { AudioPage } from "./pages/AudioPage";
 import { ContactsPage } from "./pages/ContactsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useRingtone } from "./hooks/useRingtone";
 import type { Contact } from "./types";
 import styles from "./App.module.css";
 
@@ -14,6 +15,7 @@ function App() {
   const [contacts] = useState<Contact[]>([]);
   const [ipAddress, setIpAddress] = useState("");
   const ws = useWebSocket();
+  useRingtone(ws.callState.state === "incoming");
 
   useEffect(() => {
     fetch("/api/system/status")
@@ -54,6 +56,7 @@ function App() {
             onLinkGain={(l) => ws.toggleLink("gain", l)}
             onSetVolLevel={ws.setVolLevel}
             onSetGainLevel={ws.setGainLevel}
+            sipReady={ws.sipReady}
           />
         )}
         {page === "audio" && <AudioPage />}
