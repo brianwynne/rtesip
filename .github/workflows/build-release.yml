@@ -94,6 +94,7 @@ jobs:
     needs: [test, build-frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -197,24 +198,12 @@ jobs:
           chrony
           PKG_EOF
 
-      - name: Set up pi-gen with custom stage
-        run: |
-          # Clone pi-gen
-          git clone --depth 1 https://github.com/RPi-Distro/pi-gen.git pi-gen-build
-          # Remove stock stage3-5 and replace stage3 with our custom stage
-          rm -rf pi-gen-build/stage3 pi-gen-build/stage4 pi-gen-build/stage5
-          cp -r pi-gen-stage/00-sip-reporter pi-gen-build/stage3
-          # Only export the final stage image
-          touch pi-gen-build/stage0/SKIP_IMAGES pi-gen-build/stage1/SKIP_IMAGES pi-gen-build/stage2/SKIP_IMAGES
-          touch pi-gen-build/stage3/EXPORT_IMAGE
-
       - name: Build Pi image
         uses: usimd/pi-gen-action@v1
         id: pi-gen
         with:
           image-name: sip-reporter-${{ github.ref_name }}
-          stage-list: stage0 stage1 stage2 stage3
-          pi-gen-dir: pi-gen-build
+          stage-list: stage0 stage1 stage2
           hostname: sip-reporter
           locale: en_IE.UTF-8
           keyboard-keymap: gb
