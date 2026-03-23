@@ -272,6 +272,10 @@ class PjsuaProcess:
         if self._stopping:
             return
         code = self._process.returncode
+        if code == 127:
+            logger.error("pjsua binary not found — install pjsua and restart the service")
+            self._process = None
+            return
         logger.warning("pjsua exited (code %d), restarting in 2s", code)
         self._process = None
         await asyncio.sleep(2)

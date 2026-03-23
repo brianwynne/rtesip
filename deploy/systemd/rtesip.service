@@ -14,7 +14,7 @@ ExecStart=/opt/rtesip/.venv/bin/python run.py
 Restart=always
 RestartSec=3
 TimeoutStopSec=15
-WatchdogSec=30
+# WatchdogSec=30  # TODO: implement sd_notify watchdog pings
 EnvironmentFile=-/etc/rtesip/env
 
 # Hardening
