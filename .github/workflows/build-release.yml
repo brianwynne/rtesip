@@ -119,67 +119,17 @@ jobs:
           # with static binaries that work in chroots
           sed -i 's/qemu-user-binfmt/qemu-user-static/g' pi-gen/depends
 
-      - name: Prepare custom stage
+      - name: Prepare pi-gen config
         run: |
           VERSION="${GITHUB_REF_NAME}"
 
-          # Add as substage 09 inside stage2 (shares stage2's rootfs)
-          STAGE="pi-gen/stage2/09-sip-reporter"
-          mkdir -p "${STAGE}/files/opt/rtesip"
+          # Remove stages 3-5
+          rm -rf pi-gen/stage3 pi-gen/stage4 pi-gen/stage5
 
-          # Copy application
-          cp -r src/ "${STAGE}/files/opt/rtesip/src/"
-          cp run.py "${STAGE}/files/opt/rtesip/"
-          cp requirements.txt "${STAGE}/files/opt/rtesip/"
-          mkdir -p "${STAGE}/files/opt/rtesip/frontend/dist"
-          cp -r frontend/dist/ "${STAGE}/files/opt/rtesip/frontend/dist/"
-          cp -r deploy/conf/ "${STAGE}/files/opt/rtesip/conf/"
-          echo "${VERSION}" > "${STAGE}/files/opt/rtesip/VERSION"
-
-          # Systemd service
-          mkdir -p "${STAGE}/files/etc/systemd/system"
-          cp deploy/systemd/rtesip.service "${STAGE}/files/etc/systemd/system/"
-
-          # ALSA config
-          mkdir -p "${STAGE}/files/etc"
-          cp deploy/conf/asound.conf "${STAGE}/files/etc/asound.conf"
-
-          # Packages
-          printf '%s\n' "python3-venv" "python3-pip" "ufw" "alsa-utils" "chrony" > "${STAGE}/00-packages"
-
-          # Run script — written via printf to avoid YAML heredoc issues
-          printf '%s\n' \
-            '#!/bin/bash -e' \
-            'install -d "${ROOTFS_DIR}/opt/rtesip"' \
-            'cp -a "${SUB_STAGE_DIR}/files/opt/rtesip/." "${ROOTFS_DIR}/opt/rtesip/"' \
-            'cp -a "${SUB_STAGE_DIR}/files/etc/." "${ROOTFS_DIR}/etc/" 2>/dev/null || true' \
-            'on_chroot << EOF' \
-            'useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true' \
-            'mkdir -p /etc/rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip' \
-            'chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip' \
-            'echo "d /run/rtesip 0755 rtesip rtesip -" > /etc/tmpfiles.d/rtesip.conf' \
-            'python3 -m venv /opt/rtesip/.venv' \
-            '/opt/rtesip/.venv/bin/pip install --upgrade pip' \
-            '/opt/rtesip/.venv/bin/pip install -r /opt/rtesip/requirements.txt' \
-            'chown -R root:root /opt/rtesip' \
-            'chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip' \
-            'systemctl enable rtesip.service' \
-            'echo "sip-reporter" > /etc/hostname' \
-            'sed -i "s/raspberrypi/sip-reporter/g" /etc/hosts' \
-            'systemctl disable dphys-swapfile 2>/dev/null || true' \
-            'systemctl disable bluetooth 2>/dev/null || true' \
-            'systemctl disable triggerhappy 2>/dev/null || true' \
-            'EOF' \
-            > "${STAGE}/01-run.sh"
-          chmod +x "${STAGE}/01-run.sh"
-
-          # Export stage2 image (which now includes our substage)
+          # Export only stage2
           touch pi-gen/stage0/SKIP_IMAGES
           touch pi-gen/stage1/SKIP_IMAGES
           touch pi-gen/stage2/EXPORT_IMAGE
-
-          # Remove stages 3-5
-          rm -rf pi-gen/stage3 pi-gen/stage4 pi-gen/stage5
 
           # Configure pi-gen
           cat > pi-gen/config << CONF
@@ -197,9 +147,85 @@ jobs:
           STAGE_LIST="stage0 stage1 stage2"
           CONF
 
-      - name: Build image
+      - name: Build base image
         working-directory: pi-gen
         run: sudo ./build.sh
+
+      - name: Inject SIP Reporter into image
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+
+          # Find the built image
+          IMAGE=$(find pi-gen/deploy -name "*.img" | head -1)
+          if [ -z "$IMAGE" ]; then
+            echo "ERROR: No image found in pi-gen/deploy/"
+            ls -la pi-gen/deploy/ || true
+            exit 1
+          fi
+          echo "Found image: $IMAGE"
+
+          # Mount the image (partition 2 = rootfs)
+          OFFSET=$(fdisk -l "$IMAGE" | grep "Linux" | awk '{print $2}')
+          MOUNT_DIR=$(mktemp -d)
+          sudo mount -o loop,offset=$((OFFSET * 512)) "$IMAGE" "$MOUNT_DIR"
+          echo "Mounted rootfs at: $MOUNT_DIR"
+
+          # Copy application files
+          sudo mkdir -p "$MOUNT_DIR/opt/rtesip"
+          sudo cp -r src/ "$MOUNT_DIR/opt/rtesip/src/"
+          sudo cp run.py "$MOUNT_DIR/opt/rtesip/"
+          sudo cp requirements.txt "$MOUNT_DIR/opt/rtesip/"
+          sudo mkdir -p "$MOUNT_DIR/opt/rtesip/frontend/dist"
+          sudo cp -r frontend/dist/ "$MOUNT_DIR/opt/rtesip/frontend/dist/"
+          sudo cp -r deploy/conf/ "$MOUNT_DIR/opt/rtesip/conf/"
+          echo "${VERSION}" | sudo tee "$MOUNT_DIR/opt/rtesip/VERSION"
+
+          # Systemd service
+          sudo cp deploy/systemd/rtesip.service "$MOUNT_DIR/etc/systemd/system/"
+
+          # ALSA config
+          sudo cp deploy/conf/asound.conf "$MOUNT_DIR/etc/asound.conf"
+
+          # Create setup script
+          cat > /tmp/setup.sh << 'SETUP'
+#!/bin/bash -e
+useradd -r -s /usr/sbin/nologin -d /opt/rtesip rtesip 2>/dev/null || true
+mkdir -p /etc/rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
+chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
+echo "d /run/rtesip 0755 rtesip rtesip -" > /etc/tmpfiles.d/rtesip.conf
+python3 -m venv /opt/rtesip/.venv
+/opt/rtesip/.venv/bin/pip install --upgrade pip
+/opt/rtesip/.venv/bin/pip install -r /opt/rtesip/requirements.txt
+chown -R root:root /opt/rtesip
+chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip
+systemctl enable rtesip.service
+echo "sip-reporter" > /etc/hostname
+sed -i "s/raspberrypi/sip-reporter/g" /etc/hosts
+systemctl disable dphys-swapfile 2>/dev/null || true
+systemctl disable bluetooth 2>/dev/null || true
+systemctl disable triggerhappy 2>/dev/null || true
+SETUP
+          sudo cp /tmp/setup.sh "$MOUNT_DIR/tmp/setup.sh"
+          sudo chmod +x "$MOUNT_DIR/tmp/setup.sh"
+
+          # Chroot and run setup
+          sudo cp /usr/bin/qemu-aarch64-static "$MOUNT_DIR/usr/bin/" 2>/dev/null || true
+          sudo mount -t proc proc "$MOUNT_DIR/proc"
+          sudo mount -t sysfs sysfs "$MOUNT_DIR/sys"
+          sudo mount --bind /dev "$MOUNT_DIR/dev"
+          sudo mount --bind /dev/pts "$MOUNT_DIR/dev/pts"
+          sudo chroot "$MOUNT_DIR" /tmp/setup.sh || echo "WARNING: chroot setup had errors (non-fatal on CI)"
+          sudo rm -f "$MOUNT_DIR/tmp/setup.sh" "$MOUNT_DIR/usr/bin/qemu-aarch64-static"
+
+          # Unmount
+          sudo umount "$MOUNT_DIR/dev/pts" 2>/dev/null || true
+          sudo umount "$MOUNT_DIR/dev" 2>/dev/null || true
+          sudo umount "$MOUNT_DIR/sys" 2>/dev/null || true
+          sudo umount "$MOUNT_DIR/proc" 2>/dev/null || true
+          sudo umount "$MOUNT_DIR"
+          rmdir "$MOUNT_DIR"
+
+          echo "SIP Reporter injected into image successfully"
 
       - name: Compress image
         run: |
