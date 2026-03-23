@@ -1,5 +1,5 @@
 .display {
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  background: var(--bg-primary);
   border: 1px solid var(--accent);
   border-radius: var(--radius-lg);
   padding: 0.6rem 0.8rem;

@@ -56,15 +56,15 @@
 [data-theme="light"] {
   --bg-primary: #E9ECF2;
   --bg-secondary: #DFE3EB;
-  --bg-card: #F5F6F9;
-  --bg-elevated: #FFFFFF;
-  --bg-input: #ECEEF4;
+  --bg-card: #4a7a50;
+  --bg-elevated: #567d5c;
+  --bg-input: #3e6e44;
   --border: #C8CDD8;
   --border-focus: #2B5EA7;
 
-  --text-primary: #1B2030;
-  --text-secondary: #505872;
-  --text-muted: #838BA0;
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e8;
+  --text-muted: #b0b0c0;
 
   --accent: #2B5EA7;
   --accent-hover: #3A6FBB;

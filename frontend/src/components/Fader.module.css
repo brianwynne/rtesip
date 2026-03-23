@@ -1,5 +1,5 @@
 .fader {
-  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-primary) 100%);
+  background: var(--bg-card);
   border: 1px solid var(--green);
   border-radius: var(--radius-lg);
   padding: 0.4rem;
