@@ -52,10 +52,12 @@ function App() {
   // Kiosk mode: local touchscreen only shows Call + Contacts (no Audio/Settings)
   // Triggered by ?kiosk=1 in URL (set by Cage launcher) or local access
   const isKiosk = new URLSearchParams(window.location.search).has("kiosk");
-  const isDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.") || host.startsWith("172.");
 
-  // Skip login on localhost (dev) and kiosk (local touchscreen)
-  if (!ws.authed && !isDev && !isKiosk) {
+  // Skip login on local/LAN access and kiosk mode
+  // Login required only for public/external access
+  if (!ws.authed && !isLocal && !isKiosk) {
     return <LoginScreen onLogin={ws.authenticate} failed={ws.authFailed} />;
   }
 
