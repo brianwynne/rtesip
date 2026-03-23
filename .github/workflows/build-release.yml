@@ -97,6 +97,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Register QEMU for ARM64
+        run: docker run --rm --privileged tonistiigi/binfmt --install arm64
+
       - name: Download frontend dist
         uses: actions/download-artifact@v4
         with:
@@ -187,8 +190,6 @@ jobs:
           release: bookworm
           verbose-output: true
           enable-noobs: false
-          pi-gen-version: arm64
-          extra-host-modules: binfmt_misc
 
       - name: Compress image
         run: |
