@@ -192,6 +192,8 @@ jobs:
           release: bookworm
           verbose-output: true
           enable-noobs: false
+          extra-host-dependencies: qemu-user-static binfmt-support
+          extra-host-modules: binfmt_misc
 
       - name: Compress image
         run: |
