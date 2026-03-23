@@ -2,6 +2,6 @@ __pycache__/
 *.pyc
 .venv/
 node_modules/
-frontend/dist/
+# frontend/dist/ — committed for Pi deployment without Node
 *.egg-info/
 .env
