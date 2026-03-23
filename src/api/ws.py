@@ -80,6 +80,8 @@ async def connect_telnet() -> None:
     telnet.on_event(on_pjsua_event)
     while True:
         if await telnet.connect():
+            # Apply initial audio state from config on each connect
+            await _apply_initial_audio_state()
             # Wait for the read task to finish (i.e. disconnection)
             if telnet._read_task:
                 await telnet._read_task
@@ -87,6 +89,39 @@ async def connect_telnet() -> None:
         else:
             logger.info("Waiting for pjsua CLI...")
         await asyncio.sleep(2)
+
+
+async def _apply_initial_audio_state() -> None:
+    """Apply audio config to mixer state and pjsua on telnet connect."""
+    audio = get_section("audio")
+
+    # 3. Volume at startup — capture and playback
+    capture_vol = audio.get("capture_volume", 100)
+    playback_vol = audio.get("playback_volume", 100)
+    mixer_state.capture_left = capture_vol
+    mixer_state.capture_right = capture_vol
+    mixer_state.playback_left = playback_vol
+    mixer_state.playback_right = playback_vol
+
+    # 6. Hardware mixer flag
+    mixer_state.hardware_mixer = audio.get("hardware_mixer", False)
+
+    # Send initial volume to pjsua via telnet
+    if not mixer_state.hardware_mixer:
+        capture = mixer_state.capture_left / 100
+        playback = mixer_state.playback_left / 100
+        await telnet.set_volume(capture, playback)
+
+    # 5. Mic monitor — connect capture to playback port in pjsua conference bridge
+    if audio.get("mic_monitor", False):
+        # cc 0 0 connects conf port 0 (capture) to conf port 0 (playback)
+        await telnet.send("cc 0 0")
+        logger.info("Mic monitor enabled — connected capture to playback")
+
+    logger.info(
+        "Initial audio state applied: capture=%d playback=%d hw_mixer=%s mic_monitor=%s",
+        capture_vol, playback_vol, mixer_state.hardware_mixer, audio.get("mic_monitor", False),
+    )
 
 
 @router.websocket("/ws")

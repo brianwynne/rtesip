@@ -94,25 +94,50 @@ def discover_devices() -> list[AudioDevice]:
     return devices
 
 
-def resolve_device(device_id: str, direction: str = "out") -> Optional[int]:
+def resolve_device(device_id: str, direction: str = "out",
+                    device_type: str = "lr") -> Optional[int]:
     """Resolve device identifier to pjsua device number.
 
     device_id: "USB", or "plughw:CARD=xxx,DEV=0"
     direction: "in" or "out"
+    device_type: routing type — "lr" (normal), "ll", "rr", "rl" (channel routing).
+                 When not "lr", the ALSA PCM name is prefixed with the routing
+                 type (e.g. "ll:CARD=xxx") which selects the corresponding
+                 route_XX PCM defined in asound.conf.
     """
     devices = discover_devices()
 
+    def _match(dev: AudioDevice) -> bool:
+        if direction == "out":
+            return dev.has_output
+        return dev.has_input
+
+    def _apply_routing(dev: AudioDevice) -> AudioDevice:
+        """Apply routing prefix to device unique_id if not default lr."""
+        if device_type and device_type != "lr":
+            # Replace the plughw prefix with the routing PCM name
+            # e.g. "plughw:CARD=xxx,DEV=0" -> "ll:CARD=xxx,DEV=0"
+            dev.unique_id = f"{device_type}:{dev.unique_id.split(':', 1)[1]}" if ':' in dev.unique_id else dev.unique_id
+            dev.device_type = device_type
+        return dev
+
     if device_id == "USB":
         for dev in devices:
-            if dev.sub_type == "USB":
-                if (direction == "out" and dev.has_output) or (direction == "in" and dev.has_input):
-                    return dev.num
+            if dev.sub_type == "USB" and _match(dev):
+                _apply_routing(dev)
+                return dev.num
         return None
 
-    # Match by unique ID
+    # Match by unique ID (check both raw and with routing prefix)
     for dev in devices:
-        if dev.unique_id == device_id:
-            if (direction == "out" and dev.has_output) or (direction == "in" and dev.has_input):
-                return dev.num
+        if dev.unique_id == device_id and _match(dev):
+            _apply_routing(dev)
+            return dev.num
+
+    # Also match by card_id substring
+    for dev in devices:
+        if dev.card_id in device_id and _match(dev):
+            _apply_routing(dev)
+            return dev.num
 
     return None

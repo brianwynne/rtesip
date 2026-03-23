@@ -12,6 +12,8 @@ from src.api.routes import sip, audio, system, contacts, update
 from src.api.ws import router as ws_router, connect_telnet, start_meters, stop_meters
 from src.sip.pjsua_manager import pjsua
 from src.config.system import apply_performance_governor
+from src.config.settings import get_section
+from src.audio.mixer import discover_mixers, toggle_phantom_power, init_hifi_xlr
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +31,9 @@ async def lifespan(app: FastAPI):
     # Performance governor
     apply_performance_governor()
 
+    # Initialize audio hardware state (phantom power, HiFiBerry XLR)
+    await _init_audio_hardware()
+
     # Start pjsua
     await pjsua.start()
 
@@ -43,6 +48,27 @@ async def lifespan(app: FastAPI):
     logger.info("rtesip shutting down")
     await stop_meters()
     await pjsua.stop()
+
+
+async def _init_audio_hardware() -> None:
+    """Initialize audio hardware state on startup — phantom power, HiFiBerry XLR."""
+    try:
+        audio = get_section("audio")
+        mixers = discover_mixers()
+        hifi_xlr_cards = mixers.get("hifi_xlr", [])
+
+        # Initialize HiFiBerry XLR boards (balanced inputs, headphone amp)
+        if hifi_xlr_cards:
+            init_hifi_xlr(hifi_xlr_cards)
+            logger.info("HiFiBerry XLR initialized on cards: %s", hifi_xlr_cards)
+
+        # Apply phantom power state from config
+        if hifi_xlr_cards:
+            phantom = audio.get("phantom_power", False)
+            toggle_phantom_power(hifi_xlr_cards, phantom)
+            logger.info("Phantom power %s on cards: %s", "enabled" if phantom else "disabled", hifi_xlr_cards)
+    except Exception as e:
+        logger.warning("Audio hardware init failed (non-fatal): %s", e)
 
 
 app = FastAPI(title="rtesip", version="0.1.0", lifespan=lifespan)

@@ -9,7 +9,7 @@ import logging
 import re
 from typing import Callable, Optional
 
-from src.config.settings import DATA_DIR
+from src.config.settings import DATA_DIR, get_section
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +172,12 @@ class PjsuaTelnet:
             contact = self._resolve_contact(m.group(1))
             self.current_contact = contact
             self._emit_sync("incoming", {"destination": contact})
+
+            # 4. Auto answer — if enabled, automatically answer incoming calls
+            audio = get_section("audio")
+            if audio.get("auto_answer", False):
+                logger.info("Auto-answer enabled, answering incoming call from %s", contact)
+                asyncio.create_task(self.answer())
 
         # Call state: CALLING
         elif re.search(r"Call [0-9] state changed to CALLING$", data) or \

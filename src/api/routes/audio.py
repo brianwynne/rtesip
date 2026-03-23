@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from src.api.auth import require_api_key
-from src.audio.mixer import get_volume, discover_mixers, list_devices
+from src.audio.mixer import get_volume, discover_mixers, list_devices, toggle_phantom_power
 from src.audio.devices import discover_devices
 from src.audio.aes67 import (
     get_ptp_status, get_sources, get_remote_sources, get_sinks,
@@ -43,8 +43,42 @@ async def audio_settings():
 
 @router.put("/settings")
 async def update_audio(settings: dict):
+    old_audio = get_section("audio")
     result = update_section("audio", settings)
-    # Restart pjsua to apply new audio config
+
+    # Apply phantom power change immediately if it changed
+    if "phantom_power" in settings and settings["phantom_power"] != old_audio.get("phantom_power"):
+        mixers = discover_mixers()
+        hifi_xlr_cards = mixers.get("hifi_xlr", [])
+        if hifi_xlr_cards:
+            toggle_phantom_power(hifi_xlr_cards, settings["phantom_power"])
+
+    # Apply volume changes to mixer state
+    from src.api.ws import mixer_state, telnet
+    if "capture_volume" in settings or "playback_volume" in settings:
+        if "capture_volume" in settings:
+            mixer_state.capture_left = settings["capture_volume"]
+            mixer_state.capture_right = settings["capture_volume"]
+        if "playback_volume" in settings:
+            mixer_state.playback_left = settings["playback_volume"]
+            mixer_state.playback_right = settings["playback_volume"]
+        # Send to pjsua if using software mixer
+        if not mixer_state.hardware_mixer and telnet.connected:
+            capture = mixer_state.capture_left / 100
+            playback = mixer_state.playback_left / 100
+            await telnet.set_volume(capture, playback)
+
+    # Apply hardware mixer change
+    if "hardware_mixer" in settings:
+        mixer_state.hardware_mixer = settings["hardware_mixer"]
+
+    # Apply mic monitor change
+    if "mic_monitor" in settings and telnet.connected:
+        if settings["mic_monitor"]:
+            await telnet.send("cc 0 0")
+        # Note: disconnecting mic monitor requires pjsua restart
+
+    # Restart pjsua to apply device/routing/codec changes
     from src.sip.pjsua_manager import pjsua
     await pjsua.restart()
     return result

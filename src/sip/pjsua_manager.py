@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from src.config.settings import get_section, DATA_DIR
+from src.audio.devices import resolve_device
 
 logger = logging.getLogger(__name__)
 
@@ -139,8 +140,20 @@ def get_device_string() -> list[str]:
     audio = get_section("audio")
     args = []
 
-    # Device selection will be handled by audio device resolver
-    # For now, use defaults — pjsua auto-selects
+    # Device selection — resolve ALSA device IDs for pjsua
+    input_dev = audio.get("input", "USB")
+    output_dev = audio.get("output", "USB")
+    input_routing = audio.get("input_routing", "lr")
+    output_routing = audio.get("output_routing", "lr")
+
+    capture_id = resolve_device(input_dev, "in", device_type=input_routing)
+    playback_id = resolve_device(output_dev, "out", device_type=output_routing)
+
+    if capture_id is not None:
+        args.append(f"--capture-dev={capture_id}")
+    if playback_id is not None:
+        args.append(f"--playback-dev={playback_id}")
+
     if audio.get("capture_latency"):
         args.append(f"--capture-lat={audio['capture_latency']}")
     if audio.get("playback_latency"):
