@@ -83,6 +83,18 @@ app.include_router(update.router, prefix="/api/update", tags=["update"])
 # WebSocket
 app.include_router(ws_router)
 
-# Serve frontend (React SPA)
+# Serve frontend (React SPA) — mount static assets at /assets, serve index.html via catch-all
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+    from fastapi.responses import FileResponse
+
+    assets_dir = FRONTEND_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve index.html for all non-API, non-WS, non-asset paths (SPA routing)."""
+        file_path = FRONTEND_DIR / full_path
+        if full_path and file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIR / "index.html")
