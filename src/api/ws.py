@@ -45,9 +45,12 @@ async def broadcast(event: str, data: dict, authed_only: bool = True) -> None:
 
 
 async def on_pjsua_event(event: str, data: dict) -> None:
-    """Handle events from pjsua telnet — broadcast to WebSocket clients.
+    """Handle events from pjsua telnet — broadcast to WebSocket clients."""
+    # Feed conf_stat output to the meter parser
+    if event == "debug" and "data" in data:
+        if audio_meter.parse_conf_stat_line(data["data"]):
+            return  # Don't broadcast meter debug lines to clients
 
-    """
     await broadcast(event, data)
 
 
@@ -64,6 +67,7 @@ async def on_meter_levels(cap_l: int, cap_r: int, play_l: int, play_r: int) -> N
 async def start_meters() -> None:
     """Start audio metering and wire to WebSocket broadcaster."""
     audio_meter.on_levels(on_meter_levels)
+    audio_meter.set_telnet(telnet)
     await audio_meter.start()
 
 

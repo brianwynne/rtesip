@@ -1,41 +1,44 @@
-"""Live audio level metering — reads ALSA peak levels for real-time display.
+"""Live audio level metering — reads levels from pjsua conference bridge.
 
-Uses arecord piped through a peak detector to read capture levels,
-and monitors playback via ALSA's softvol or VU meter PCM.
-
-Falls back to pjsua's conference port stats if ALSA metering is unavailable.
+Uses pjsua's telnet CLI 'conf_stat' command to read tx/rx signal levels.
+No separate audio device access needed — piggybacks on pjsua's own audio.
+Zero additional CPU or device conflicts.
 """
 
 import asyncio
 import logging
-import struct
-import subprocess
+import re
 from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-# Metering rate — ~20 updates per second
-METER_INTERVAL = 0.05
-# Number of audio frames per meter sample (48kHz * 50ms = 2400 frames)
-FRAMES_PER_SAMPLE = 2400
-SAMPLE_RATE = 48000
-CHANNELS = 2
+# Metering rate — ~15fps (67ms interval)
+METER_INTERVAL = 0.067
+
+# Regex to parse conf_stat output
+# Port #00[48KHz/2/20ms/1920]  tx_level:   3.2, rx_level:   0.0
+LEVEL_RE = re.compile(
+    r"Port\s+#(\d+).*tx_level:\s*([\d.]+),\s*rx_level:\s*([\d.]+)"
+)
 
 
 class AudioMeter:
-    """Reads live audio peak levels from ALSA capture and playback devices.
+    """Reads live audio levels from pjsua conference bridge stats.
 
-    Runs arecord/aplay in monitor mode to get PCM samples, computes peak
-    levels, and calls the callback with normalized 0-100 values.
+    tx_level = what pjsua is sending (capture/mic level)
+    rx_level = what pjsua is receiving (playback/remote audio level)
+
+    Levels are in pjsua's arbitrary scale (0.0 = silence, ~4-5 = loud).
+    We normalize to 0-100 for display.
     """
 
     def __init__(self):
         self._running = False
-        self._capture_task: Optional[asyncio.Task] = None
-        self._playback_task: Optional[asyncio.Task] = None
+        self._task: Optional[asyncio.Task] = None
         self._on_levels: Optional[Callable] = None
+        self._telnet: Optional[object] = None
 
-        # Current peak levels (0-100)
+        # Current levels (0-100)
         self.capture_left = 0
         self.capture_right = 0
         self.playback_left = 0
@@ -45,167 +48,93 @@ class AudioMeter:
         """Register callback: callback(capture_l, capture_r, playback_l, playback_r)"""
         self._on_levels = callback
 
+    def set_telnet(self, telnet) -> None:
+        """Set the pjsua telnet client to query levels from."""
+        self._telnet = telnet
+
     async def start(self) -> None:
         if self._running:
             return
         self._running = True
-        self._capture_task = asyncio.create_task(self._monitor_capture())
-        self._playback_task = asyncio.create_task(self._monitor_playback())
-        logger.info("Audio metering started")
+        self._task = asyncio.create_task(self._poll_loop())
+        logger.info("Audio metering started (pjsua conf_stat)")
 
     async def stop(self) -> None:
         self._running = False
-        for task in [self._capture_task, self._playback_task]:
-            if task:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
         logger.info("Audio metering stopped")
 
-    async def _monitor_capture(self) -> None:
-        """Monitor capture (input) levels via arecord."""
+    async def _poll_loop(self) -> None:
+        """Poll pjsua conf_stat for signal levels."""
         while self._running:
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    "arecord",
-                    "-D", "default",
-                    "-f", "S16_LE",
-                    "-r", str(SAMPLE_RATE),
-                    "-c", str(CHANNELS),
-                    "-t", "raw",
-                    "--buffer-size", str(FRAMES_PER_SAMPLE * 4),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-
-                while self._running and proc.stdout:
-                    # Read one meter sample worth of audio
-                    bytes_needed = FRAMES_PER_SAMPLE * CHANNELS * 2  # 16-bit = 2 bytes
-                    data = await asyncio.wait_for(
-                        proc.stdout.read(bytes_needed),
-                        timeout=2.0,
-                    )
-                    if not data:
-                        break
-
-                    left, right = self._compute_peak_stereo(data)
-                    self.capture_left = left
-                    self.capture_right = right
-                    await self._emit()
-
-                proc.kill()
-                await proc.wait()
-
+                if self._telnet and self._telnet.connected:
+                    await self._read_levels()
+                await asyncio.sleep(METER_INTERVAL)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                logger.debug("Capture metering error: %s", e)
+                logger.debug("Metering poll error: %s", e)
                 await asyncio.sleep(1)
 
-    async def _monitor_playback(self) -> None:
-        """Monitor playback (output) levels.
+    async def _read_levels(self) -> None:
+        """Send conf_stat and parse the response for signal levels.
 
-        Uses arecord on the loopback or monitor device if available.
-        Falls back to tracking the capture level as a proxy when
-        no monitor source is available.
+        Since the telnet client processes all output through _parse_line,
+        we need a different approach: send the command and capture the
+        debug events that come back.
         """
-        # Try ALSA loopback monitor first
-        monitor_devices = ["hw:Loopback,1,0", "plug:monitor"]
+        if not self._telnet:
+            return
 
-        while self._running:
-            try:
-                # Attempt to open a monitor device
-                device = None
-                for dev in monitor_devices:
-                    try:
-                        test = await asyncio.create_subprocess_exec(
-                            "arecord", "-D", dev, "-d", "0",
-                            stdout=asyncio.subprocess.DEVNULL,
-                            stderr=asyncio.subprocess.DEVNULL,
-                        )
-                        await asyncio.wait_for(test.wait(), timeout=1)
-                        if test.returncode == 0:
-                            device = dev
-                            break
-                    except Exception:
-                        continue
+        # Send the command — the response will come through the telnet read loop
+        # We'll parse it from the debug output
+        await self._telnet.send("conf_stat")
 
-                if device:
-                    proc = await asyncio.create_subprocess_exec(
-                        "arecord",
-                        "-D", device,
-                        "-f", "S16_LE",
-                        "-r", str(SAMPLE_RATE),
-                        "-c", str(CHANNELS),
-                        "-t", "raw",
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.DEVNULL,
-                    )
+        # Give pjsua time to respond
+        await asyncio.sleep(0.05)
 
-                    while self._running and proc.stdout:
-                        bytes_needed = FRAMES_PER_SAMPLE * CHANNELS * 2
-                        data = await asyncio.wait_for(
-                            proc.stdout.read(bytes_needed),
-                            timeout=2.0,
-                        )
-                        if not data:
-                            break
+    def parse_conf_stat_line(self, line: str) -> bool:
+        """Parse a conf_stat output line. Called from telnet debug handler.
 
-                        left, right = self._compute_peak_stereo(data)
-                        self.playback_left = left
-                        self.playback_right = right
-                        await self._emit()
-
-                    proc.kill()
-                    await proc.wait()
-                else:
-                    # No monitor device — just sleep and let capture emit
-                    await asyncio.sleep(METER_INTERVAL)
-
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                logger.debug("Playback metering error: %s", e)
-                await asyncio.sleep(1)
-
-    @staticmethod
-    def _compute_peak_stereo(data: bytes) -> tuple[int, int]:
-        """Compute peak levels from interleaved S16_LE stereo PCM data.
-
-        Returns (left_pct, right_pct) as 0-100 values.
+        Returns True if the line was a conf_stat level line.
         """
-        if len(data) < 4:
-            return (0, 0)
+        m = LEVEL_RE.search(line)
+        if not m:
+            return False
 
-        # Unpack as signed 16-bit little-endian
-        num_samples = len(data) // 2
-        try:
-            samples = struct.unpack(f"<{num_samples}h", data[:num_samples * 2])
-        except struct.error:
-            return (0, 0)
+        port = int(m.group(1))
+        tx = float(m.group(2))
+        rx = float(m.group(3))
 
-        # Deinterleave L/R
-        peak_left = 0
-        peak_right = 0
-        for i in range(0, len(samples) - 1, 2):
-            peak_left = max(peak_left, abs(samples[i]))
-            peak_right = max(peak_right, abs(samples[i + 1]))
+        # Normalize pjsua levels (0-5 typical range) to 0-100
+        # pjsua uses RMS-like levels, ~4.0 is loud speech
+        tx_pct = min(100, int((tx / 5.0) * 100))
+        rx_pct = min(100, int((rx / 5.0) * 100))
 
-        # Normalize to 0-100 (32767 = full scale)
-        max_val = 32767
-        left_pct = min(100, int((peak_left / max_val) * 100))
-        right_pct = min(100, int((peak_right / max_val) * 100))
+        # Port 0 is the main conference port (sound device)
+        if port == 0:
+            # tx = what we're sending = capture/mic
+            # rx = what we're receiving = playback/remote
+            self.capture_left = tx_pct
+            self.capture_right = tx_pct  # pjsua reports mono levels
+            self.playback_left = rx_pct
+            self.playback_right = rx_pct
 
-        return (left_pct, right_pct)
+            # Emit levels
+            if self._on_levels:
+                asyncio.create_task(self._on_levels(
+                    self.capture_left, self.capture_right,
+                    self.playback_left, self.playback_right,
+                ))
+            return True
 
-    async def _emit(self) -> None:
-        if self._on_levels:
-            await self._on_levels(
-                self.capture_left, self.capture_right,
-                self.playback_left, self.playback_right,
-            )
+        return False
 
 
 # Singleton
