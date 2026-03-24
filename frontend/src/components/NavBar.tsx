@@ -29,7 +29,7 @@ export function NavBar({ active, onChange, kioskMode }: Props) {
           style={active === id ? { color, "--tab-accent": color } as React.CSSProperties : undefined}
           onClick={() => onChange(id)}
         >
-          <Icon size={18} />
+          <Icon size={28} />
           <span>{label}</span>
         </button>
       ))}

@@ -21,7 +21,7 @@ export function Fader({ type, leftLevel, rightLevel, linked, meterLeft = 0, mete
   const isCapture = type === "capture";
   const isMuted = leftLevel === 0 && rightLevel === 0;
   const Icon = isCapture ? (isMuted ? MicOff : Mic) : (isMuted ? VolumeX : Volume2);
-  const label = isCapture ? "INPUT" : "OUTPUT";
+  const label = isCapture ? "INPUTS" : "OUTPUTS";
   const chLabelL = isCapture && !linked ? "Mic 1" : "L";
   const chLabelR = isCapture && !linked ? "Mic 2" : "R";
 

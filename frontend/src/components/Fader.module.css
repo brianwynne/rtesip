@@ -8,17 +8,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  width: 10rem;
+  width: 12.5rem;
   flex-shrink: 0;
 }
 
 .label {
-  font-size: 0.65rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  letter-spacing: 0.12rem;
+  letter-spacing: 0.15rem;
   color: var(--text-secondary);
   text-align: center;
-  margin-bottom: 0.2rem;
+  margin-bottom: 2rem;
 }
 
 .meters {
@@ -31,11 +31,11 @@
   display: flex;
   gap: 0.5rem;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: 2rem;
 }
 
 .levelDisplay {
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   text-align: center;
@@ -46,7 +46,7 @@
   display: flex;
   justify-content: space-around;
   width: 100%;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
 }
@@ -55,12 +55,12 @@
   display: flex;
   gap: 0.3rem;
   width: 100%;
-  margin-top: 0.8rem;
+  margin-top: 2rem;
 }
 
 .muteBtn {
   flex: 1;
-  height: 2rem;
+  height: 2.5rem;
   border-radius: var(--radius);
   background: var(--bg-elevated);
   color: var(--text-secondary);
@@ -76,8 +76,8 @@
 }
 
 .linkBtn {
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-muted);

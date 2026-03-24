@@ -45,20 +45,20 @@ export function StatusBar({ connected, sipReady, accounts, ipAddress, theme, onT
       {/* Right: theme toggle + connection indicators */}
       <div className={styles.right}>
         <button className={styles.themeToggle} onClick={onToggleTheme} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
-          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          {theme === "dark" ? <Sun size={22} /> : <Moon size={22} />}
         </button>
         <div className={styles.indicator} title={sipReady ? "TLS Active" : "No TLS"}>
           {sipReady ? (
-            <Shield size={14} className={styles.iconGreen} />
+            <Shield size={22} className={styles.iconGreen} />
           ) : (
-            <ShieldOff size={14} className={styles.iconMuted} />
+            <ShieldOff size={22} className={styles.iconMuted} />
           )}
         </div>
         <div className={styles.indicator} title={connected ? "Connected" : "Disconnected"}>
           {connected ? (
-            <Wifi size={14} className={styles.iconGreen} />
+            <Wifi size={22} className={styles.iconGreen} />
           ) : (
-            <WifiOff size={14} className={styles.iconRed} />
+            <WifiOff size={22} className={styles.iconRed} />
           )}
         </div>
       </div>
