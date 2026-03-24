@@ -10,7 +10,7 @@ import json
 import logging
 import secrets
 import subprocess
-from typing import Set
+from typing import Optional, Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -103,14 +103,43 @@ async def on_meter_levels(cap_l: int, cap_r: int, play_l: int, play_r: int) -> N
     })
 
 
+_meter_broadcast_task: Optional[asyncio.Task] = None
+
+
+async def _meter_broadcast_loop() -> None:
+    """Poll meter levels and broadcast to WebSocket clients."""
+    while True:
+        try:
+            if authed_clients:
+                await broadcast("meters", {
+                    "cap_l": audio_meter.capture_left,
+                    "cap_r": audio_meter.capture_right,
+                    "play_l": audio_meter.playback_left,
+                    "play_r": audio_meter.playback_right,
+                })
+            await asyncio.sleep(0.067)  # ~15fps
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            await asyncio.sleep(1)
+
+
 async def start_meters() -> None:
-    """Start audio metering and wire to WebSocket broadcaster."""
-    audio_meter.on_levels(on_meter_levels)
+    """Start audio metering and broadcast loop."""
+    global _meter_broadcast_task
     audio_meter.set_telnet(telnet)
     await audio_meter.start()
+    _meter_broadcast_task = asyncio.create_task(_meter_broadcast_loop())
 
 
 async def stop_meters() -> None:
+    global _meter_broadcast_task
+    if _meter_broadcast_task:
+        _meter_broadcast_task.cancel()
+        try:
+            await _meter_broadcast_task
+        except asyncio.CancelledError:
+            pass
     await audio_meter.stop()
 
 
@@ -135,8 +164,8 @@ async def _apply_initial_audio_state() -> None:
     audio = get_section("audio")
 
     # 3. Volume at startup — capture and playback
-    capture_vol = audio.get("capture_volume", 100)
-    playback_vol = audio.get("playback_volume", 100)
+    capture_vol = audio.get("capture_volume", 25)
+    playback_vol = audio.get("playback_volume", 25)
     mixer_state.capture_left = capture_vol
     mixer_state.capture_right = capture_vol
     mixer_state.playback_left = playback_vol
@@ -146,9 +175,10 @@ async def _apply_initial_audio_state() -> None:
     mixer_state.hardware_mixer = audio.get("hardware_mixer", False)
 
     # Send initial volume to pjsua via telnet
+    # pjsua V command: 1.0 = unity gain, >1.0 = amplify. Scale fader 0-100 to 0.0-4.0x
     if not mixer_state.hardware_mixer:
-        capture = mixer_state.capture_left / 100
-        playback = mixer_state.playback_left / 100
+        capture = mixer_state.capture_left / 100 * 4.0
+        playback = mixer_state.playback_left / 100 * 4.0
         await telnet.set_volume(capture, playback)
 
     # 5. Mic monitor — connect capture to playback port in pjsua conference bridge
@@ -174,7 +204,6 @@ async def websocket_endpoint(ws: WebSocket):
             text = await ws.receive_text()
             msg = json.loads(text)
             command = msg.get("command") or msg.get("action", "")
-
             # --- Auth (challenge-response with SHA256) ---
             # TODO: Add rate limiting for production — limit auth attempts per IP
             # to prevent brute-force attacks on the challenge-response flow.
@@ -276,7 +305,13 @@ def _handle_volume(msg: dict, channel_type: str) -> None:
         attr_other = f"{prefix}_{'right' if ch == 'l' else 'left'}"
 
         current = getattr(mixer_state, attr_main)
-        if msg.get("direction") == "up":
+        if "level" in msg:
+            # Absolute level from fader drag
+            level = max(0, min(int(msg["level"]), max_vol))
+            setattr(mixer_state, attr_main, level)
+            if linked:
+                setattr(mixer_state, attr_other, level)
+        elif msg.get("direction") == "up":
             setattr(mixer_state, attr_main, min(current + 10, max_vol))
             if linked:
                 setattr(mixer_state, attr_other, min(getattr(mixer_state, attr_other) + 10, max_vol))
@@ -345,7 +380,7 @@ async def _broadcast_levels() -> None:
         except Exception as e:
             logger.warning("Hardware mixer volume update failed: %s", e)
     else:
-        # Software mixer via pjsua
-        capture = mixer_state.capture_left / 100
-        playback = mixer_state.playback_left / 100
+        # Software mixer via pjsua — scale fader 0-100 to 0.0-4.0x
+        capture = mixer_state.capture_left / 100 * 4.0
+        playback = mixer_state.playback_left / 100 * 4.0
         await telnet.set_volume(capture, playback)

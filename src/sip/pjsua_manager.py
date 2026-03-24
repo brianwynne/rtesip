@@ -39,7 +39,7 @@ def generate_config() -> str:
         "--snd-clock-rate=48000",
         "--quality=10",
         "--use-compact-form",
-        "--use-ice",
+        # "--use-ice",  # Disabled — causes Bad Request errors with some STUN servers
         "--max-calls=1",
         "--no-vad",
         "--ec-tail=0",
@@ -59,6 +59,10 @@ def generate_config() -> str:
     if audio.get("channels", 1) == 2:
         lines.append("--stereo")
     lines.append(f"--bitrate={audio.get('bitrate', 72000)}")
+
+    # Audio device selection is handled via ALSA default device
+    # (set in /etc/asound.conf or ~/.asoundrc) rather than pjsua --capture-dev/--playback-dev,
+    # because pjsua's internal device IDs don't map directly to ALSA card numbers.
 
     # Play files for ready/error tones
     if READY_WAV.exists():
@@ -143,19 +147,9 @@ def get_device_string() -> list[str]:
     audio = get_section("audio")
     args = []
 
-    # Device selection — resolve ALSA device IDs for pjsua
-    input_dev = audio.get("input", "USB")
-    output_dev = audio.get("output", "USB")
-    input_routing = audio.get("input_routing", "lr")
-    output_routing = audio.get("output_routing", "lr")
-
-    capture_id = resolve_device(input_dev, "in", device_type=input_routing)
-    playback_id = resolve_device(output_dev, "out", device_type=output_routing)
-
-    if capture_id is not None:
-        args.append(f"--capture-dev={capture_id}")
-    if playback_id is not None:
-        args.append(f"--playback-dev={playback_id}")
+    # Audio device selection is handled via ALSA default device (/etc/asound.conf)
+    # rather than pjsua --capture-dev/--playback-dev, because pjsua's internal
+    # device IDs don't map directly to ALSA card numbers.
 
     if audio.get("capture_latency"):
         args.append(f"--capture-lat={audio['capture_latency']}")

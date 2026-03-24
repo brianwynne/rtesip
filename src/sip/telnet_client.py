@@ -120,8 +120,9 @@ class PjsuaTelnet:
         await self.send(f"V {capture:.2f} {playback:.2f}")
 
     async def play_tone(self, tone_id: int) -> None:
-        """Play wav file: 0=ready, 1=error."""
-        await self.send(f"cc {tone_id} 0")
+        """Play tone — disabled until WAV files are available."""
+        # TODO: implement with proper WAV files and auto-disconnect
+        pass
 
     # --- Output parsing ---
 

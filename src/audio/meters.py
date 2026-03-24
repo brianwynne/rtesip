@@ -1,35 +1,32 @@
-"""Live audio level metering — reads levels from pjsua conference bridge.
+"""Live audio level metering — reads PCM from ALSA dsnoop tap.
 
-Uses pjsua's telnet CLI 'conf_stat' command to read tx/rx signal levels.
-No separate audio device access needed — piggybacks on pjsua's own audio.
-Zero additional CPU or device conflicts.
+Lightweight: reads small chunks from the shared capture device,
+computes RMS, and emits normalized 0-100 levels via callback.
+No extra processes — runs as an asyncio task in the main app.
 """
 
 import asyncio
 import logging
-import re
+import struct
+import math
 from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-# Metering rate — ~15fps (67ms interval)
+# Metering rate — ~15fps
 METER_INTERVAL = 0.067
 
-# Regex to parse conf_stat output
-# Port #00[48KHz/2/20ms/1920]  tx_level:   3.2, rx_level:   0.0
-LEVEL_RE = re.compile(
-    r"Port\s+#(\d+).*tx_level:\s*([\d.]+),\s*rx_level:\s*([\d.]+)"
-)
+# ALSA device for capture metering
+METER_DEVICE = "meter_capture"
+SAMPLE_RATE = 48000
+CHANNELS = 1
+PERIOD_SIZE = 480  # 10ms at 48kHz
 
 
 class AudioMeter:
-    """Reads live audio levels from pjsua conference bridge stats.
+    """Reads live audio levels from ALSA capture via dsnoop.
 
-    tx_level = what pjsua is sending (capture/mic level)
-    rx_level = what pjsua is receiving (playback/remote audio level)
-
-    Levels are in pjsua's arbitrary scale (0.0 = silence, ~4-5 = loud).
-    We normalize to 0-100 for display.
+    Levels are RMS-normalized to 0-100 for display.
     """
 
     def __init__(self):
@@ -37,6 +34,7 @@ class AudioMeter:
         self._task: Optional[asyncio.Task] = None
         self._on_levels: Optional[Callable] = None
         self._telnet: Optional[object] = None
+        self._pcm = None
 
         # Current levels (0-100)
         self.capture_left = 0
@@ -49,15 +47,15 @@ class AudioMeter:
         self._on_levels = callback
 
     def set_telnet(self, telnet) -> None:
-        """Set the pjsua telnet client to query levels from."""
+        """Set the pjsua telnet client (unused — kept for API compat)."""
         self._telnet = telnet
 
     async def start(self) -> None:
         if self._running:
             return
         self._running = True
-        self._task = asyncio.create_task(self._poll_loop())
-        logger.info("Audio metering started (pjsua conf_stat)")
+        self._task = asyncio.create_task(self._meter_loop())
+        logger.info("Audio metering started (ALSA dsnoop)")
 
     async def stop(self) -> None:
         self._running = False
@@ -67,73 +65,105 @@ class AudioMeter:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        self._close_pcm()
         logger.info("Audio metering stopped")
 
-    async def _poll_loop(self) -> None:
-        """Poll pjsua conf_stat for signal levels."""
-        while self._running:
-            try:
-                if self._telnet and self._telnet.connected:
-                    await self._read_levels()
-                await asyncio.sleep(METER_INTERVAL)
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                logger.debug("Metering poll error: %s", e)
-                await asyncio.sleep(1)
-
-    async def _read_levels(self) -> None:
-        """Send conf_stat and parse the response for signal levels.
-
-        Since the telnet client processes all output through _parse_line,
-        we need a different approach: send the command and capture the
-        debug events that come back.
-        """
-        if not self._telnet:
-            return
-
-        # Send the command — the response will come through the telnet read loop
-        # We'll parse it from the debug output
-        await self._telnet.send("conf_stat")
-
-        # Give pjsua time to respond
-        await asyncio.sleep(0.05)
-
-    def parse_conf_stat_line(self, line: str) -> bool:
-        """Parse a conf_stat output line. Called from telnet debug handler.
-
-        Returns True if the line was a conf_stat level line.
-        """
-        m = LEVEL_RE.search(line)
-        if not m:
+    def _open_pcm(self) -> bool:
+        """Open ALSA capture device for metering."""
+        try:
+            import alsaaudio
+            self._pcm = alsaaudio.PCM(
+                type=alsaaudio.PCM_CAPTURE,
+                mode=alsaaudio.PCM_NORMAL,
+                device=METER_DEVICE,
+                rate=SAMPLE_RATE,
+                channels=CHANNELS,
+                format=alsaaudio.PCM_FORMAT_S16_LE,
+                periodsize=PERIOD_SIZE,
+            )
+            # Test read — if it fails, the device isn't ready
+            length, _ = self._pcm.read()
+            if length < 0:
+                self._pcm.close()
+                self._pcm = None
+                return False
+            logger.info("Opened ALSA capture device for metering")
+            return True
+        except Exception as e:
+            logger.debug("Cannot open ALSA capture for metering: %s", e)
+            self._pcm = None
             return False
 
-        port = int(m.group(1))
-        tx = float(m.group(2))
-        rx = float(m.group(3))
+    def _close_pcm(self):
+        if self._pcm:
+            try:
+                self._pcm.close()
+            except Exception:
+                pass
+            self._pcm = None
 
-        # Normalize pjsua levels (0-5 typical range) to 0-100
-        # pjsua uses RMS-like levels, ~4.0 is loud speech
-        tx_pct = min(100, int((tx / 5.0) * 100))
-        rx_pct = min(100, int((rx / 5.0) * 100))
+    async def _meter_loop(self) -> None:
+        """Run the blocking meter reader in a dedicated thread."""
+        await asyncio.sleep(8)
+        await asyncio.to_thread(self._blocking_meter_loop)
 
-        # Port 0 is the main conference port (sound device)
-        if port == 0:
-            # tx = what we're sending = capture/mic
-            # rx = what we're receiving = playback/remote
-            self.capture_left = tx_pct
-            self.capture_right = tx_pct  # pjsua reports mono levels
-            self.playback_left = rx_pct
-            self.playback_right = rx_pct
+    def _blocking_meter_loop(self) -> None:
+        """Read PCM data and compute RMS levels (runs in dedicated thread)."""
+        import time
 
-            # Emit levels
-            if self._on_levels:
-                asyncio.create_task(self._on_levels(
-                    self.capture_left, self.capture_right,
-                    self.playback_left, self.playback_right,
-                ))
-            return True
+        retry_delay = 2
+        while self._running:
+            try:
+                if not self._pcm:
+                    if not self._open_pcm():
+                        time.sleep(retry_delay)
+                        retry_delay = min(retry_delay * 2, 30)
+                        continue
+                    retry_delay = 2
 
+                length, data = self._pcm.read()
+
+                if length == -32:
+                    # EPIPE — xrun, just retry
+                    time.sleep(0.1)
+                    continue
+
+                if length > 0 and data:
+                    if not hasattr(self, '_logged_first'):
+                        self._logged_first = True
+                        logger.info("Metering active — first successful read (%d frames)", length)
+                    rms = self._compute_rms(data, length)
+                    level = min(100, int((rms / 2000) * 100))
+                    self.capture_left = level
+                    self.capture_right = level
+
+                    # Levels are set on self — broadcast task picks them up
+                elif length < 0:
+                    logger.warning("ALSA meter read error: %d", length)
+                    self._close_pcm()
+                    time.sleep(2)
+                    continue
+
+                time.sleep(METER_INTERVAL)
+
+            except Exception as e:
+                logger.debug("Metering error: %s", e)
+                self._close_pcm()
+                time.sleep(5)
+
+    @staticmethod
+    def _compute_rms(data: bytes, frames: int) -> float:
+        """Compute RMS of S16_LE PCM data."""
+        if len(data) < frames * 2:
+            return 0.0
+        samples = struct.unpack(f"<{frames}h", data[:frames * 2])
+        if not samples:
+            return 0.0
+        sum_sq = sum(s * s for s in samples)
+        return math.sqrt(sum_sq / len(samples))
+
+    def parse_conf_stat_line(self, line: str) -> bool:
+        """Legacy — no longer used. Returns False."""
         return False
 
 

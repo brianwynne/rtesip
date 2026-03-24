@@ -10,12 +10,11 @@ interface Props {
 }
 
 const TICKS = [
-  { pct: 100, label: "+12" },
-  { pct: 87, label: "0" },
-  { pct: 67, label: "-12" },
-  { pct: 47, label: "-24" },
-  { pct: 27, label: "-36" },
-  { pct: 0, label: "-48" },
+  { pct: 100, label: "100" },
+  { pct: 75, label: "75" },
+  { pct: 50, label: "50" },
+  { pct: 25, label: "25" },
+  { pct: 0, label: "0" },
 ];
 
 export function Meter({ label, level, maxLevel = 150, muted, vertical, scalePosition = "none" }: Props) {
