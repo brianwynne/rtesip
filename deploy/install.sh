@@ -486,9 +486,10 @@ else
     warn "No pjsua binary found for architecture $ARCH — SIP calls will not work until pjsua is installed"
 fi
 
-# ── Set code directory ownership ─────────────────────────────
+# ── Set file ownership ───────────────────────────────────────
 info "Setting file ownership..."
 chown -R root:root "$INSTALL_DIR"
+chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
 ok "Ownership set"
 
 # ── Set CPU performance governor ─────────────────────────────
