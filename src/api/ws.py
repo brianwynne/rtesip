@@ -5,6 +5,7 @@ Uses challenge-response auth with SHA256.
 
 import asyncio
 import hashlib
+import ipaddress
 import json
 import logging
 import secrets
@@ -43,6 +44,43 @@ async def broadcast(event: str, data: dict, authed_only: bool = True) -> None:
             disconnected.add(ws)
     clients -= disconnected
     authed_clients -= disconnected
+
+
+_PRIVATE_NETS = (
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+)
+
+
+def _is_trusted(ip: str) -> bool:
+    """Check if IP is on a private/LAN network."""
+    try:
+        addr = ipaddress.ip_address(ip)
+        return any(addr in net for net in _PRIVATE_NETS)
+    except ValueError:
+        return False
+
+
+async def _send_initial_state(ws: WebSocket) -> None:
+    """Send initial state snapshot to a newly authenticated client."""
+    await ws.send_text(json.dumps({
+        "event": "state",
+        "call_state": telnet.call_state,
+        "current_contact": telnet.current_contact,
+        "accounts": {k: v for k, v in telnet.active_accounts.items()},
+        "sip_ready": telnet.sip_ready,
+    }))
+    await ws.send_text(json.dumps({
+        "event": "levels",
+        "cl": mixer_state.capture_left,
+        "cr": mixer_state.capture_right,
+        "clink": mixer_state.capture_linked,
+        "pl": mixer_state.playback_left,
+        "pr": mixer_state.playback_right,
+        "plink": mixer_state.playback_linked,
+    }))
 
 
 async def on_pjsua_event(event: str, data: dict) -> None:
@@ -142,6 +180,12 @@ async def websocket_endpoint(ws: WebSocket):
             # to prevent brute-force attacks on the challenge-response flow.
             if ws not in authed_clients:
                 if command == "authRequest":
+                    # Auto-auth for LAN/trusted clients
+                    client_ip = ws.client.host if ws.client else ""
+                    if _is_trusted(client_ip):
+                        authed_clients.add(ws)
+                        await _send_initial_state(ws)
+                        continue
                     challenge = secrets.token_hex(16)
                     challenges[ws] = challenge
                     await ws.send_text(json.dumps({"event": "challenge", "challenge": challenge}))
@@ -153,23 +197,7 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if msg.get("response") == expected or not pw_hash:
                         authed_clients.add(ws)
-                        # Send initial state on successful auth
-                        await ws.send_text(json.dumps({
-                            "event": "state",
-                            "call_state": telnet.call_state,
-                            "current_contact": telnet.current_contact,
-                            "accounts": {k: v for k, v in telnet.active_accounts.items()},
-                            "sip_ready": telnet.sip_ready,
-                        }))
-                        await ws.send_text(json.dumps({
-                            "event": "levels",
-                            "cl": mixer_state.capture_left,
-                            "cr": mixer_state.capture_right,
-                            "clink": mixer_state.capture_linked,
-                            "pl": mixer_state.playback_left,
-                            "pr": mixer_state.playback_right,
-                            "plink": mixer_state.playback_linked,
-                        }))
+                        await _send_initial_state(ws)
                     else:
                         await ws.send_text(json.dumps({"event": "notAuthed"}))
                 continue

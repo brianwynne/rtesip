@@ -148,7 +148,9 @@ class PjsuaTelnet:
 
     def _parse_line(self, data: str) -> None:
         """Parse a single line of pjsua telnet output into a structured event."""
-        if not data or data == "rtesip>":
+        # Strip null bytes and bell chars from pjsua output
+        data = data.replace("\x00", "").replace("\x07", "").strip()
+        if not data or (data.endswith(">") and " " not in data):
             return
 
         # Call state: CONFIRMED
@@ -192,7 +194,7 @@ class PjsuaTelnet:
             self._emit_sync("ringing", {"destination": self.current_contact or ""})
 
         # Registration status
-        elif (m := re.search(r"\[ [0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or \
+        elif (m := re.search(r"\[.?[0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or \
              (m := re.search(r"sip\:([^\:]+)\: registration.+status\=([0-9]{1,3}) \([A-z]+\)", data)):
             account_id = m.group(1)
             status = int(m.group(2))
@@ -227,9 +229,8 @@ class PjsuaTelnet:
 
         # Debug/other output
         else:
-            clean = data.replace("\x07", "")
-            if clean:
-                self._emit_sync("debug", {"data": clean})
+            if data:
+                self._emit_sync("debug", {"data": data})
 
     def _resolve_contact(self, raw: str) -> str:
         """Parse SIP From header into display name."""

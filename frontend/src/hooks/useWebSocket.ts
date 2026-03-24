@@ -70,10 +70,9 @@ export function useWebSocket() {
 
       ws.onopen = () => {
         setConnected(true);
-        // If we have a pending password, start auth. Otherwise wait for user login.
-        if (pendingPassword.current !== null) {
-          send({ command: "authRequest" });
-        }
+        // Always request auth — LAN clients auto-auth with empty password,
+        // remote clients use the pending password from login screen.
+        send({ command: "authRequest" });
       };
 
       ws.onmessage = (e) => {
@@ -105,6 +104,14 @@ export function useWebSocket() {
                 state: msg.call_state as CallState["state"],
                 destination: msg.current_contact as string,
               });
+            }
+            // Populate accounts from initial state (dict of id → registered bool)
+            if (msg.accounts && typeof msg.accounts === "object") {
+              const acc: Record<string, AccountStatus> = {};
+              for (const [id, registered] of Object.entries(msg.accounts)) {
+                acc[id] = { id, status: registered ? 200 : 0, registered: !!registered };
+              }
+              setAccounts(acc);
             }
             break;
 

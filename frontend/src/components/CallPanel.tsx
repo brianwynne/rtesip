@@ -67,7 +67,7 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
                     className={styles.quickBtn}
                     onClick={() => handleCall(contact.address)}
                   >
-                    <PhoneForwarded size={18} className={styles.quickIcon} />
+                    <PhoneForwarded size={28} className={styles.quickIcon} />
                     <span className={styles.quickName}>{contact.name}</span>
                     <span className={styles.quickAddr}>{contact.address}</span>
                   </button>
@@ -75,7 +75,7 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
               }
               return (
                 <div key={`empty-${i}`} className={styles.quickBtnEmpty}>
-                  <User size={18} className={styles.emptyIcon} />
+                  <User size={28} className={styles.emptyIcon} />
                   <span className={styles.emptyLabel}>{i + 1}</span>
                 </div>
               );

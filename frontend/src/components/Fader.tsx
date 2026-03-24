@@ -90,13 +90,13 @@ export function Fader({ type, leftLevel, rightLevel, linked, meterLeft = 0, mete
           className={`${styles.muteBtn} ${isMuted ? styles.muteBtnActive : ""}`}
           onClick={onMute}
         >
-          <Icon size={16} />
+          <Icon size={24} />
         </button>
         <button
           className={`${styles.linkBtn} ${linked ? styles.linkBtnActive : ""}`}
           onClick={() => onLink(!linked)}
         >
-          {linked ? <Link size={12} /> : <Unlink size={12} />}
+          {linked ? <Link size={20} /> : <Unlink size={20} />}
         </button>
       </div>
     </div>

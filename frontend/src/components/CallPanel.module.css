@@ -96,10 +96,10 @@
 }
 .quickBtn:active { transform: scale(0.98); }
 
-.quickIcon { color: var(--green); }
+.quickIcon { color: var(--text-primary); }
 
 .quickName {
-  font-size: 0.7rem;
+  font-size: 1rem;
   font-weight: 600;
   text-align: center;
   overflow: hidden;
@@ -109,7 +109,7 @@
 }
 
 .quickAddr {
-  font-size: 0.5rem;
+  font-size: 0.75rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   overflow: hidden;
@@ -131,9 +131,9 @@
   border-radius: var(--radius-lg);
 }
 
-.emptyIcon { color: var(--text-muted); opacity: 0.3; }
+.emptyIcon { color: var(--text-secondary); opacity: 0.6; }
 .emptyLabel {
-  font-size: 0.65rem;
+  font-size: 0.9rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   opacity: 0.3;
