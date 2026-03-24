@@ -226,14 +226,17 @@ done
 [[ -n "$PYTHON" ]] || fatal "Python 3.10+ is required. Install it and try again."
 ok "Python: $($PYTHON --version)"
 
-# Ensure python3-venv and build tools are available
-info "Installing Python build dependencies..."
+# Ensure system dependencies are available
+info "Installing system dependencies..."
 apt-get update -qq
-apt-get install -y -qq python3-venv python3-dev build-essential > /dev/null 2>&1 \
-    || apt-get install -y -qq python3.12-venv python3.12-dev build-essential > /dev/null 2>&1 \
-    || apt-get install -y -qq python3.11-venv python3.11-dev build-essential > /dev/null 2>&1 \
-    || fatal "Could not install python3-venv/dev. Install manually and retry."
-ok "Python build dependencies installed"
+apt-get install -y -qq python3-venv python3-dev build-essential \
+    ufw alsa-utils wget curl > /dev/null 2>&1 \
+    || apt-get install -y -qq python3.12-venv python3.12-dev build-essential \
+    ufw alsa-utils wget curl > /dev/null 2>&1 \
+    || apt-get install -y -qq python3.11-venv python3.11-dev build-essential \
+    ufw alsa-utils wget curl > /dev/null 2>&1 \
+    || fatal "Could not install dependencies. Install manually and retry."
+ok "System dependencies installed"
 
 # ── Verify source structure ──────────────────────────────────
 info "Using source from: $LOCAL_DIR"
@@ -457,14 +460,22 @@ if [ -n "$PJSUA_SRC" ]; then
     chmod +x /usr/local/bin/pjsua
 
     # Install pjsua runtime dependencies
+    # libasound2 renamed to libasound2t64 in newer Debian/Pi OS
     info "Installing pjsua dependencies..."
-    apt-get -qq install -y libasound2 libopus0 uuid-runtime 2>/dev/null || true
+    apt-get -qq install -y libopus0 uuid-runtime 2>/dev/null || true
+    apt-get -qq install -y libasound2t64 2>/dev/null \
+        || apt-get -qq install -y libasound2 2>/dev/null \
+        || true
 
-    # libssl1.1 needed but not in Bookworm — install from Bullseye if missing
+    # libssl1.1 needed but not in Bookworm/Trixie — install from Debian Bullseye
     if ! ldconfig -p | grep -q "libssl.so.1.1"; then
         info "Installing libssl1.1 compatibility..."
         if [ "$ARCH" = "armhf" ]; then
-            curl -fsSL -o /tmp/libssl1.1.deb "http://archive.raspberrypi.com/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u2_armhf.deb" 2>/dev/null && \
+            wget -q -O /tmp/libssl1.1.deb "http://ftp.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u1_armhf.deb" 2>/dev/null && \
+            dpkg -i /tmp/libssl1.1.deb 2>/dev/null && rm -f /tmp/libssl1.1.deb && \
+            ok "libssl1.1 installed" || warn "Could not install libssl1.1 — pjsua may not start"
+        elif [ "$ARCH" = "arm64" ]; then
+            wget -q -O /tmp/libssl1.1.deb "http://ftp.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u1_arm64.deb" 2>/dev/null && \
             dpkg -i /tmp/libssl1.1.deb 2>/dev/null && rm -f /tmp/libssl1.1.deb && \
             ok "libssl1.1 installed" || warn "Could not install libssl1.1 — pjsua may not start"
         fi
