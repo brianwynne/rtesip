@@ -32,6 +32,7 @@ mixer_state = MixerState()
 
 async def broadcast(event: str, data: dict, authed_only: bool = True) -> None:
     """Send event to all connected WebSocket clients."""
+    global clients, authed_clients
     message = json.dumps({"event": event, **data})
     target = authed_clients if authed_only else clients
     disconnected = set()
