@@ -11,6 +11,7 @@
   width: 100%;
   transition: border-color 0.3s;
   overflow: hidden;
+  position: relative;
 }
 
 .displayConnected {
@@ -77,7 +78,7 @@
 }
 
 .stateLabel {
-  font-size: 0.9rem;
+  font-size: 1.4rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1rem;
@@ -90,6 +91,14 @@
 
 .stateLabelIncoming {
   color: var(--amber);
+}
+
+.durationInline {
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--green);
+  margin-left: 0.8rem;
 }
 
 /* Party name — large */
@@ -160,25 +169,33 @@
 
 .iconGreen { color: var(--green); }
 
-/* Hangup button */
+/* Hangup button — round, positioned under clock */
 .hangupBtn {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.6rem;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.5rem 1.2rem;
-  border-radius: var(--radius);
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--red);
+  justify-content: center;
+  width: 7rem;
+  height: 3rem;
+  border-radius: var(--radius-lg);
+  background: rgba(239, 68, 68, 0.15);
+  border: 2px solid var(--red);
   color: var(--red);
-  font-size: 1rem;
+  font-size: 0.8rem;
   font-weight: 700;
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.06rem;
+  letter-spacing: 0.04rem;
   transition: all 0.15s;
+  flex-direction: row;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .hangupBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
   border-color: var(--red);
   color: var(--red);
 }

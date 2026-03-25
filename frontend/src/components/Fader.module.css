@@ -1,5 +1,5 @@
 .fader {
-  background: var(--bg-card);
+  background: #ffffff;
   border: 1px solid var(--green);
   border-radius: var(--radius-lg);
   padding: 0.4rem;
@@ -12,14 +12,16 @@
   height: 80%;
   align-self: center;
   flex-shrink: 0;
+  color: #000000;
 }
 
 .label {
-  font-size: 1.1rem;
+  font-size: 1.8rem;
   font-weight: 700;
   letter-spacing: 0.15rem;
-  color: var(--text-secondary);
+  color: #000000;
   text-align: center;
+  margin-top: 1rem;
   margin-bottom: 2rem;
 }
 
@@ -58,14 +60,14 @@
   flex: 1;
   height: 2.5rem;
   border-radius: var(--radius);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
+  background: #f0f0f0;
+  color: #000000;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
 }
-.muteBtn:hover { background: var(--border); }
+.muteBtn:hover { background: #e0e0e0; }
 .muteBtnActive {
   background: var(--red-dim);
   color: var(--red);
@@ -76,7 +78,7 @@
   height: 2.5rem;
   border-radius: var(--radius);
   background: transparent;
-  color: var(--text-muted);
+  color: #333333;
   display: flex;
   align-items: center;
   justify-content: center;

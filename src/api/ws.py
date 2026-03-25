@@ -72,6 +72,7 @@ async def _send_initial_state(ws: WebSocket) -> None:
         "accounts": {k: v for k, v in telnet.active_accounts.items()},
         "sip_ready": telnet.sip_ready,
         "server_reachable": telnet.server_reachable,
+        "connected_at": telnet.connected_at,
     }))
     await ws.send_text(json.dumps({
         "event": "levels",

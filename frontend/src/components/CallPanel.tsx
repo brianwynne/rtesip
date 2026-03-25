@@ -78,9 +78,11 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
                       className={styles.quickBtn}
                       onClick={() => handleCall(contact.address)}
                     >
-                      <PhoneForwarded size={28} className={styles.quickIcon} />
-                      <span className={styles.quickName}>{contact.name}</span>
-                      <span className={styles.quickAddr}>{contact.address}</span>
+                      <PhoneForwarded size={18} className={styles.quickIcon} />
+                      <div className={styles.quickText}>
+                        <span className={styles.quickName}>{contact.name}</span>
+                        <span className={styles.quickAddr}>{contact.address}</span>
+                      </div>
                     </button>
                   );
                 }

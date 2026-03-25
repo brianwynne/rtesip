@@ -102,9 +102,13 @@ export function useWebSocket() {
             setSipReady(msg.sip_ready as boolean);
             if ("server_reachable" in msg) setServerReachable(!!msg.server_reachable);
             if (msg.call_state) {
-              setCallState({
-                state: msg.call_state as CallState["state"],
-                destination: msg.current_contact as string,
+              setCallState((prev) => {
+                if (prev.state === msg.call_state && prev.destination === msg.current_contact) return prev;
+                return {
+                  state: msg.call_state as CallState["state"],
+                  destination: msg.current_contact as string,
+                  connectedAt: msg.connected_at as number | undefined,
+                };
               });
             }
             // Populate accounts from initial state (dict of id → registered bool)
@@ -142,7 +146,7 @@ export function useWebSocket() {
             setSipReady(false);
             setServerReachable(false);
             setAccounts({});
-            setCallState({ state: "idle" });
+            // Don't reset callState — preserves call duration timer during WS reconnect
             break;
 
           case "calling":
@@ -156,7 +160,7 @@ export function useWebSocket() {
             setCallState({ state: "incoming", destination: msg.destination as string });
             break;
           case "connected":
-            setCallState({ state: "connected", destination: msg.destination as string });
+            setCallState({ state: "connected", destination: msg.destination as string, connectedAt: msg.connected_at as number });
             break;
           case "ended":
             setCallState({ state: "idle" });

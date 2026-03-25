@@ -40,6 +40,7 @@ class PjsuaTelnet:
         # State
         self.call_state = CallState.IDLE
         self.current_contact: Optional[str] = None
+        self.connected_at: Optional[float] = None  # epoch timestamp when call connected
         self.active_accounts: dict[str, bool] = {}
         self.sip_ready = False
         self.server_reachable = False
@@ -167,11 +168,14 @@ class PjsuaTelnet:
 
         elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]$", data):
             self.call_state = CallState.CONNECTED
-            self._emit_sync("connected", {"destination": self.current_contact})
+            import time as _time
+            self.connected_at = _time.time()
+            self._emit_sync("connected", {"destination": self.current_contact, "connected_at": self.connected_at})
 
         # Call state: DISCONNECTED
         elif m := re.search(r"\[DISCONNCTD\] t\: ([^;]+)", data):
             self.call_state = CallState.IDLE
+            self.connected_at = None
             self._emit_sync("ended", {"destination": m.group(1)})
             self.current_contact = None
 

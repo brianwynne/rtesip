@@ -27,16 +27,6 @@ export function Fader({ type, leftLevel, rightLevel, linked = true, onMute, onLi
     <div className={styles.fader}>
       <span className={styles.label}>{label}</span>
 
-      {/* Level readout */}
-      {stereo ? (
-        <div className={styles.levelDisplaySplit}>
-          <span>L {leftLevel}</span>
-          <span>R {rightLevel}</span>
-        </div>
-      ) : (
-        <div className={styles.levelDisplay}>{leftLevel}</div>
-      )}
-
       {/* Fader sliders */}
       <div className={styles.faders}>
         <FaderSlider

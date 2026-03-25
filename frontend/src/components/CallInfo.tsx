@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { PhoneOff, Shield, ShieldOff, Radio, Wifi } from "lucide-react";
+import { useState, useEffect } from "react";
+import { PhoneOff, Shield, ShieldOff, Wifi } from "lucide-react";
 import type { CallState } from "../types";
 import styles from "./CallInfo.module.css";
 
@@ -13,7 +13,6 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
   const [now, setNow] = useState(new Date());
   const [duration, setDuration] = useState(0);
   const [confirmHangup, setConfirmHangup] = useState(false);
-  const connectedAt = useRef<number | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -21,17 +20,19 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
   }, []);
 
   useEffect(() => {
-    if (callState.state === "connected") {
-      if (!connectedAt.current) connectedAt.current = Date.now();
+    if (callState.state === "connected" && callState.connectedAt) {
+      // Use server timestamp — survives page reloads
+      const serverEpochMs = callState.connectedAt * 1000;
       const t = setInterval(() => {
-        setDuration(Math.floor((Date.now() - (connectedAt.current || Date.now())) / 1000));
+        setDuration(Math.floor((Date.now() - serverEpochMs) / 1000));
       }, 1000);
+      // Set immediately
+      setDuration(Math.floor((Date.now() - serverEpochMs) / 1000));
       return () => clearInterval(t);
-    } else {
-      connectedAt.current = null;
+    } else if (callState.state !== "connected") {
       setDuration(0);
     }
-  }, [callState.state]);
+  }, [callState.state, callState.connectedAt]);
 
   useEffect(() => {
     if (confirmHangup) {
@@ -90,6 +91,9 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
             {isCalling && "Calling"}
             {!isActive && "Standby"}
           </span>
+          {isConnected && (
+            <span className={styles.durationInline}>{formatDuration(duration)}</span>
+          )}
         </div>
         <span className={styles.clock}>{formatTime(now)}</span>
       </div>
@@ -109,12 +113,6 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
       {/* Bottom: metadata */}
       <div className={styles.bottomRow}>
         <div className={styles.metaGroup}>
-          {isConnected && (
-            <div className={`${styles.meta} ${styles.metaDuration}`}>
-              <Radio size={9} />
-              <span>{formatDuration(duration)}</span>
-            </div>
-          )}
           <div className={styles.meta}>
             {sipReady ? <Shield size={9} className={styles.iconGreen} /> : <ShieldOff size={9} />}
             <span>{sipReady ? "TLS" : "TCP"}</span>
@@ -124,20 +122,21 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
             <span>Opus</span>
           </div>
         </div>
-
-        {isActive && (
-          <button
-            className={`${styles.hangupBtn} ${confirmHangup ? styles.hangupConfirm : ""}`}
-            onClick={() => {
-              if (confirmHangup) { onHangup(); setConfirmHangup(false); }
-              else setConfirmHangup(true);
-            }}
-          >
-            <PhoneOff size={9} />
-            <span>{confirmHangup ? "Confirm" : "End"}</span>
-          </button>
-        )}
       </div>
+
+      {/* Hangup button — positioned under the clock */}
+      {isActive && (
+        <button
+          className={`${styles.hangupBtn} ${confirmHangup ? styles.hangupConfirm : ""}`}
+          onClick={() => {
+            if (confirmHangup) { onHangup(); setConfirmHangup(false); }
+            else setConfirmHangup(true);
+          }}
+        >
+          <PhoneOff size={18} />
+          <span>{confirmHangup ? "Confirm" : "End"}</span>
+        </button>
+      )}
     </div>
   );
 }
