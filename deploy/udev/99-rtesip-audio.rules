@@ -1,0 +1,4 @@
+# Restart rtesip when USB audio device is plugged/unplugged
+# This triggers detect-audio.sh via ExecStartPre on restart
+SUBSYSTEM=="sound", ACTION=="add", ATTR{id}!="", TAG+="systemd", RUN+="/bin/systemctl restart rtesip.service"
+SUBSYSTEM=="sound", ACTION=="remove", TAG+="systemd", RUN+="/bin/systemctl restart rtesip.service"

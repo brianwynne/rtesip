@@ -445,7 +445,16 @@ for DETECT_SRC in "$LOCAL_DIR/deploy/scripts/detect-audio.sh" "$SCRIPT_DIR/scrip
         break
     fi
 done
-fi
+
+# ── Install udev rule for USB audio hot-plug ──────────────────
+for UDEV_SRC in "$LOCAL_DIR/deploy/udev/99-rtesip-audio.rules" "$SCRIPT_DIR/udev/99-rtesip-audio.rules"; do
+    if [[ -f "$UDEV_SRC" ]]; then
+        cp "$UDEV_SRC" /etc/udev/rules.d/99-rtesip-audio.rules
+        udevadm control --reload-rules 2>/dev/null
+        ok "USB audio hot-plug rule installed"
+        break
+    fi
+done
 
 # ── Install CLI ──────────────────────────────────────────────
 info "Installing CLI..."
