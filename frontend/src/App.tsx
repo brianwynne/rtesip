@@ -66,6 +66,7 @@ function App() {
       <StatusBar
         connected={ws.connected}
         sipReady={ws.sipReady}
+        serverReachable={ws.serverReachable}
         accounts={ws.accounts}
         ipAddress={ipAddress || window.location.hostname}
         theme={theme}

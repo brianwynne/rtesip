@@ -42,6 +42,7 @@ class PjsuaTelnet:
         self.current_contact: Optional[str] = None
         self.active_accounts: dict[str, bool] = {}
         self.sip_ready = False
+        self.server_reachable = False
 
         # Event callback
         self._on_event: Optional[Callable] = None
@@ -62,6 +63,12 @@ class PjsuaTelnet:
                 timeout=3,
             )
             self._connected = True
+            # Reset state on reconnect (pjsua may have restarted)
+            self.sip_ready = False
+            self.server_reachable = False
+            self.active_accounts = {}
+            self.call_state = CallState.IDLE
+            self.current_contact = None
             logger.info("Connected to pjsua CLI at %s:%d", self.host, self.port)
 
             # Initial queries on connect
@@ -200,16 +207,14 @@ class PjsuaTelnet:
             account_id = m.group(1)
             status = int(m.group(2))
             self.active_accounts[account_id] = (status == 200)
+            self.server_reachable = True
 
             if status == 200:
                 if not self.sip_ready:
                     self.sip_ready = True
-                    asyncio.create_task(self.play_tone(1))
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": True, "sip_ready": self.sip_ready, "server_reachable": True})
             elif status > 200:
-                if not self.sip_ready:
-                    asyncio.create_task(self.play_tone(2))
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": False, "server_reachable": True})
 
         # Audio device error
         elif "PJMEDIA_EAUD_SYSERR" in data:
@@ -220,8 +225,9 @@ class PjsuaTelnet:
             if "not nominated" not in data and "REGISTER" not in data and "registration" not in data:
                 self._emit_sync("network_error", {"error": data})
 
-        # Connection errors
+        # Connection errors — server unreachable
         elif ("Connection timed out" in data or "Connection refused" in data) and not self.current_contact:
+            self.server_reachable = False
             self._emit_sync("connection_error", {"error": data})
 
         # SIP error reason

@@ -45,6 +45,7 @@ export function useWebSocket() {
     pl: 100, pr: 100, plink: true,
   });
   const [sipReady, setSipReady] = useState(false);
+  const [serverReachable, setServerReachable] = useState(false);
   const [meterLevels, setMeterLevels] = useState({ cap_l: 0, cap_r: 0, play_l: 0, play_r: 0 });
 
   const send = useCallback((data: Record<string, unknown>) => {
@@ -99,6 +100,7 @@ export function useWebSocket() {
             setAuthed(true);
             setAuthFailed(false);
             setSipReady(msg.sip_ready as boolean);
+            if ("server_reachable" in msg) setServerReachable(!!msg.server_reachable);
             if (msg.call_state) {
               setCallState({
                 state: msg.call_state as CallState["state"],
@@ -131,8 +133,17 @@ export function useWebSocket() {
           case "account": {
             const acc = msg as unknown as AccountStatus & { event: string };
             setAccounts((prev) => ({ ...prev, [acc.id]: acc }));
+            if ("sip_ready" in msg) setSipReady(!!msg.sip_ready);
+            if ("server_reachable" in msg) setServerReachable(!!msg.server_reachable);
             break;
           }
+
+          case "backend_disconnected":
+            setSipReady(false);
+            setServerReachable(false);
+            setAccounts({});
+            setCallState({ state: "idle" });
+            break;
 
           case "calling":
           case "trying":
@@ -266,7 +277,7 @@ export function useWebSocket() {
   }, [send]);
 
   return {
-    connected, authed, authFailed, callState, accounts, volume, sipReady, meterLevels,
+    connected, authed, authFailed, callState, accounts, volume, sipReady, serverReachable, meterLevels,
     send, authenticate,
     call: (address: string) => send({ command: "call", address }),
     hangup: () => send({ command: "hangup" }),
