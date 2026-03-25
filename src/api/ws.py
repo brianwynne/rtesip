@@ -234,7 +234,7 @@ async def websocket_endpoint(ws: WebSocket):
             # --- Call control ---
             if command == "call":
                 address = msg.get("address", "").strip().lower()
-                if not telnet.current_contact and address:
+                if address:
                     telnet.current_contact = address
                     await telnet.make_call(address)
 

@@ -103,9 +103,8 @@ class AudioMeter:
             self._pcm = None
 
     async def _meter_loop(self) -> None:
-        """Run the blocking meter reader in a dedicated thread."""
-        await asyncio.sleep(8)
-        await asyncio.to_thread(self._blocking_meter_loop)
+        """Metering disabled — ALSA dsnoop conflicts with pjsua on Pi."""
+        pass
 
     def _blocking_meter_loop(self) -> None:
         """Read PCM data and compute RMS levels (runs in dedicated thread)."""
