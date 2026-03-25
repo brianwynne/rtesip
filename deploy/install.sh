@@ -431,6 +431,19 @@ fi
 systemctl daemon-reload
 ok "Systemd service installed"
 
+# ── Install ALSA configuration ────────────────────────────────
+# USB audio devices need dmix/dsnoop to avoid buzzing in pjsua.
+# Only install if no asound.conf exists (don't overwrite HiFiBerry config).
+if [[ ! -f /etc/asound.conf ]]; then
+    for ASOUND_SRC in "$LOCAL_DIR/deploy/conf/asound-usb.conf" "$SCRIPT_DIR/conf/asound-usb.conf"; do
+        if [[ -f "$ASOUND_SRC" ]]; then
+            cp "$ASOUND_SRC" /etc/asound.conf
+            ok "ALSA configuration installed (USB audio)"
+            break
+        fi
+    done
+fi
+
 # ── Install CLI ──────────────────────────────────────────────
 info "Installing CLI..."
 if [ -f "$LOCAL_DIR/deploy/sip-reporter-cli.sh" ]; then

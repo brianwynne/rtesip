@@ -9,6 +9,7 @@ StartLimitIntervalSec=60
 Type=simple
 User=rtesip
 Group=rtesip
+SupplementaryGroups=audio
 WorkingDirectory=/opt/rtesip
 ExecStart=/opt/rtesip/.venv/bin/python run.py
 Restart=always
