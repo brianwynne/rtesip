@@ -102,7 +102,9 @@ def scan_wifi_networks(interface: str = "wlan0", timeout: int = 10) -> list[dict
     """
     networks = []
 
-    # Ensure interface is up
+    # Ensure WiFi is unblocked and interface is up (needs root)
+    subprocess.run(["rfkill", "unblock", "wifi"],
+                   capture_output=True, timeout=5)
     subprocess.run(["ip", "link", "set", interface, "up"],
                    capture_output=True, timeout=5)
 

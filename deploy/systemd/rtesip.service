@@ -9,9 +9,11 @@ StartLimitIntervalSec=60
 Type=simple
 User=rtesip
 Group=rtesip
-SupplementaryGroups=audio
+SupplementaryGroups=audio netdev
 WorkingDirectory=/opt/rtesip
 ExecStartPre=+/opt/rtesip/deploy/scripts/detect-audio.sh
+ExecStartPre=+/usr/sbin/rfkill unblock wifi
+ExecStartPre=+/usr/sbin/ip link set wlan0 up
 ExecStart=/opt/rtesip/.venv/bin/python run.py
 Restart=always
 RestartSec=3
@@ -20,17 +22,17 @@ TimeoutStopSec=15
 EnvironmentFile=-/etc/rtesip/env
 
 # Hardening
-ProtectSystem=strict
+ProtectSystem=full
 ReadWritePaths=/var/lib/rtesip /run/rtesip /boot /var/log/rtesip
 NoNewPrivileges=true
 ProtectHome=true
-PrivateTmp=true
+# PrivateTmp=true  # Disabled — wpa_cli needs shared /tmp for response socket
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 
 # Capabilities for port 80 and RT audio
-AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SYS_NICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SYS_NICE CAP_NET_ADMIN
 
 # RT priority for audio subprocess
 LimitRTPRIO=99
