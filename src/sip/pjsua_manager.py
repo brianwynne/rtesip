@@ -42,7 +42,7 @@ def generate_config() -> str:
         # "--use-ice",  # Disabled — causes Bad Request errors with some STUN servers
         "--max-calls=1",
         "--no-vad",
-        "--ec-tail=0",
+        "--ec-tail=200",
         "--snd-auto-close=0",
         f"--use-cli",
         f"--cli-telnet-port={CLI_PORT}",
