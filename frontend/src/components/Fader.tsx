@@ -1,6 +1,5 @@
 import { Volume2, VolumeX, Mic, MicOff, Link, Unlink } from "lucide-react";
 import { FaderSlider } from "./FaderSlider";
-import { Meter } from "./Meter";
 import styles from "./Fader.module.css";
 
 interface Props {
@@ -8,8 +7,6 @@ interface Props {
   leftLevel: number;
   rightLevel: number;
   linked: boolean;
-  meterLeft?: number;
-  meterRight?: number;
   onUp: (channel: "l" | "r") => void;
   onDown: (channel: "l" | "r") => void;
   onMute: () => void;
@@ -17,13 +14,11 @@ interface Props {
   onSetLevel?: (channel: "l" | "r", level: number) => void;
 }
 
-export function Fader({ type, leftLevel, rightLevel, linked, meterLeft = 0, meterRight = 0, onMute, onLink, onUp, onDown, onSetLevel }: Props) {
+export function Fader({ type, leftLevel, rightLevel, linked, onMute, onLink, onUp, onDown, onSetLevel }: Props) {
   const isCapture = type === "capture";
   const isMuted = leftLevel === 0 && rightLevel === 0;
   const Icon = isCapture ? (isMuted ? MicOff : Mic) : (isMuted ? VolumeX : Volume2);
   const label = isCapture ? "INPUTS" : "OUTPUTS";
-  const chLabelL = isCapture && !linked ? "Mic 1" : "L";
-  const chLabelR = isCapture && !linked ? "Mic 2" : "R";
 
   const handleLevel = (channel: "l" | "r", level: number) => {
     if (onSetLevel) {
@@ -41,17 +36,11 @@ export function Fader({ type, leftLevel, rightLevel, linked, meterLeft = 0, mete
     <div className={styles.fader}>
       <span className={styles.label}>{label}</span>
 
-      {/* Meters */}
-      <div className={styles.meters}>
-        <Meter label={chLabelL} level={meterLeft} muted={isMuted} vertical scalePosition="left" maxLevel={100} />
-        <Meter label={chLabelR} level={meterRight} muted={isMuted} vertical scalePosition="right" maxLevel={100} />
-      </div>
-
       {/* Per-channel level readout (unlinked) */}
       {!linked && (
         <div className={styles.levelDisplaySplit}>
-          <span>{leftLevel}%</span>
-          <span>{rightLevel}%</span>
+          <span>{leftLevel}</span>
+          <span>{rightLevel}</span>
         </div>
       )}
 
@@ -80,7 +69,7 @@ export function Fader({ type, leftLevel, rightLevel, linked, meterLeft = 0, mete
       {/* Level readout (linked) */}
       {linked && (
         <div className={styles.levelDisplay}>
-          {leftLevel}%
+          {leftLevel}
         </div>
       )}
 

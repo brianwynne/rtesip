@@ -22,7 +22,6 @@ interface Props {
   onSetVolLevel?: (ch: "l" | "r", level: number) => void;
   onSetGainLevel?: (ch: "l" | "r", level: number) => void;
   sipReady: boolean;
-  meterLevels: { cap_l: number; cap_r: number; play_l: number; play_r: number };
 }
 
 export function CallPage(props: Props) {
@@ -38,8 +37,6 @@ export function CallPage(props: Props) {
         onMute={props.onMuteGain}
         onLink={props.onLinkGain}
         onSetLevel={props.onSetGainLevel}
-        meterLeft={props.meterLevels.cap_l}
-        meterRight={props.meterLevels.cap_r}
       />
       <div className={styles.callSection}>
         <CallPanel
@@ -62,8 +59,6 @@ export function CallPage(props: Props) {
         onMute={props.onMuteVol}
         onLink={props.onLinkVol}
         onSetLevel={props.onSetVolLevel}
-        meterLeft={props.meterLevels.play_l}
-        meterRight={props.meterLevels.play_r}
       />
     </div>
   );

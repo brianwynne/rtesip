@@ -92,7 +92,6 @@ function App() {
             onSetVolLevel={ws.setVolLevel}
             onSetGainLevel={ws.setGainLevel}
             sipReady={ws.sipReady}
-            meterLevels={ws.meterLevels}
           />
         )}
         {page === "audio" && <AudioPage />}

@@ -2,12 +2,13 @@
   display: flex;
   gap: 0.1rem;
   touch-action: none;
+  height: 100%;
 }
 
 .scale {
   position: relative;
   width: 1.75rem;
-  height: 6rem;
+  height: 100%;
 }
 
 .scaleLabel {
@@ -23,7 +24,7 @@
 .track {
   position: relative;
   width: 1.75rem;
-  height: 6rem;
+  height: 100%;
   cursor: pointer;
 }
 
