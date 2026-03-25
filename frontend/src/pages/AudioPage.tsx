@@ -183,10 +183,10 @@ export function AudioPage() {
                 type="number"
                 value={settings.playback_volume}
                 min={0}
-                max={150}
+                max={100}
                 onChange={(e) => save({ playback_volume: Number(e.target.value) })}
               />
-              <span className={styles.unit}>% 0-150%</span>
+              <span className={styles.unit}>0-10</span>
             </div>
           </label>
         </div>
@@ -237,10 +237,10 @@ export function AudioPage() {
                 type="number"
                 value={settings.capture_volume}
                 min={0}
-                max={150}
+                max={100}
                 onChange={(e) => save({ capture_volume: Number(e.target.value) })}
               />
-              <span className={styles.unit}>% 0-150%</span>
+              <span className={styles.unit}>0-10</span>
             </div>
           </label>
         </div>
