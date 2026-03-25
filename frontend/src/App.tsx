@@ -81,14 +81,9 @@ function App() {
             onHangup={ws.hangup}
             onAnswer={ws.answer}
             onReject={ws.reject}
-            onVolUp={(ch) => ws.setVol(ch, "up")}
-            onVolDown={(ch) => ws.setVol(ch, "down")}
-            onGainUp={(ch) => ws.setGain(ch, "up")}
-            onGainDown={(ch) => ws.setGain(ch, "down")}
             onMuteVol={() => ws.mute("vol")}
             onMuteGain={() => ws.mute("gain")}
             onLinkVol={(l) => ws.toggleLink("vol", l)}
-            onLinkGain={(l) => ws.toggleLink("gain", l)}
             onSetVolLevel={ws.setVolLevel}
             onSetGainLevel={ws.setGainLevel}
             sipReady={ws.sipReady}

@@ -42,7 +42,7 @@ export function useWebSocket() {
   const [accounts, setAccounts] = useState<Record<string, AccountStatus>>({});
   const [volume, setVolume] = useState<VolumeState>({
     cl: 100, cr: 100, clink: false,
-    pl: 100, pr: 100, plink: false,
+    pl: 100, pr: 100, plink: true,
   });
   const [sipReady, setSipReady] = useState(false);
   const [meterLevels, setMeterLevels] = useState({ cap_l: 0, cap_r: 0, play_l: 0, play_r: 0 });

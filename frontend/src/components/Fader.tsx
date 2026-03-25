@@ -5,43 +5,36 @@ import styles from "./Fader.module.css";
 interface Props {
   type: "playback" | "capture";
   leftLevel: number;
-  rightLevel: number;
-  linked: boolean;
-  onUp: (channel: "l" | "r") => void;
-  onDown: (channel: "l" | "r") => void;
+  rightLevel?: number;
+  linked?: boolean;
   onMute: () => void;
-  onLink: (linked: boolean) => void;
+  onLink?: (linked: boolean) => void;
   onSetLevel?: (channel: "l" | "r", level: number) => void;
 }
 
-export function Fader({ type, leftLevel, rightLevel, linked, onMute, onLink, onUp, onDown, onSetLevel }: Props) {
+export function Fader({ type, leftLevel, rightLevel, linked = true, onMute, onLink, onSetLevel }: Props) {
   const isCapture = type === "capture";
-  const isMuted = leftLevel === 0 && rightLevel === 0;
+  const isMuted = leftLevel === 0 && (rightLevel ?? leftLevel) === 0;
   const Icon = isCapture ? (isMuted ? MicOff : Mic) : (isMuted ? VolumeX : Volume2);
-  const label = isCapture ? "INPUTS" : "OUTPUTS";
+  const label = isCapture ? "MIC" : "VOLUME";
+  const stereo = !isCapture && !linked;
 
   const handleLevel = (channel: "l" | "r", level: number) => {
-    if (onSetLevel) {
-      onSetLevel(channel, level);
-    } else {
-      const current = channel === "l" ? leftLevel : rightLevel;
-      const diff = level - current;
-      const steps = Math.abs(Math.round(diff / 10));
-      const fn = diff > 0 ? onUp : onDown;
-      for (let i = 0; i < steps; i++) fn(channel);
-    }
+    if (onSetLevel) onSetLevel(channel, level);
   };
 
   return (
     <div className={styles.fader}>
       <span className={styles.label}>{label}</span>
 
-      {/* Per-channel level readout (unlinked) */}
-      {!linked && (
+      {/* Level readout */}
+      {stereo ? (
         <div className={styles.levelDisplaySplit}>
-          <span>{leftLevel}</span>
-          <span>{rightLevel}</span>
+          <span>L {leftLevel}</span>
+          <span>R {rightLevel}</span>
         </div>
+      ) : (
+        <div className={styles.levelDisplay}>{leftLevel}</div>
       )}
 
       {/* Fader sliders */}
@@ -51,27 +44,14 @@ export function Fader({ type, leftLevel, rightLevel, linked, onMute, onLink, onU
           muted={isMuted}
           onChange={(lvl) => handleLevel("l", lvl)}
         />
-        {!linked ? (
+        {stereo && (
           <FaderSlider
-            level={rightLevel}
+            level={rightLevel ?? leftLevel}
             muted={isMuted}
             onChange={(lvl) => handleLevel("r", lvl)}
           />
-        ) : (
-          <FaderSlider
-            level={rightLevel}
-            muted={isMuted}
-            onChange={(lvl) => handleLevel("l", lvl)}
-          />
         )}
       </div>
-
-      {/* Level readout (linked) */}
-      {linked && (
-        <div className={styles.levelDisplay}>
-          {leftLevel}
-        </div>
-      )}
 
       {/* Mute + Link */}
       <div className={styles.actions}>
@@ -81,12 +61,14 @@ export function Fader({ type, leftLevel, rightLevel, linked, onMute, onLink, onU
         >
           <Icon size={24} />
         </button>
-        <button
-          className={`${styles.linkBtn} ${linked ? styles.linkBtnActive : ""}`}
-          onClick={() => onLink(!linked)}
-        >
-          {linked ? <Link size={20} /> : <Unlink size={20} />}
-        </button>
+        {!isCapture && onLink && (
+          <button
+            className={`${styles.linkBtn} ${linked ? styles.linkBtnActive : ""}`}
+            onClick={() => onLink(!linked)}
+          >
+            {linked ? <Link size={20} /> : <Unlink size={20} />}
+          </button>
+        )}
       </div>
     </div>
   );

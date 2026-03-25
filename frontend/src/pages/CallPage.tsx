@@ -11,14 +11,9 @@ interface Props {
   onHangup: () => void;
   onAnswer: () => void;
   onReject: () => void;
-  onVolUp: (ch: "l" | "r") => void;
-  onVolDown: (ch: "l" | "r") => void;
-  onGainUp: (ch: "l" | "r") => void;
-  onGainDown: (ch: "l" | "r") => void;
   onMuteVol: () => void;
   onMuteGain: () => void;
   onLinkVol: (linked: boolean) => void;
-  onLinkGain: (linked: boolean) => void;
   onSetVolLevel?: (ch: "l" | "r", level: number) => void;
   onSetGainLevel?: (ch: "l" | "r", level: number) => void;
   sipReady: boolean;
@@ -30,12 +25,7 @@ export function CallPage(props: Props) {
       <Fader
         type="capture"
         leftLevel={props.volume.cl}
-        rightLevel={props.volume.cr}
-        linked={props.volume.clink}
-        onUp={props.onGainUp}
-        onDown={props.onGainDown}
         onMute={props.onMuteGain}
-        onLink={props.onLinkGain}
         onSetLevel={props.onSetGainLevel}
       />
       <div className={styles.callSection}>
@@ -54,8 +44,6 @@ export function CallPage(props: Props) {
         leftLevel={props.volume.pl}
         rightLevel={props.volume.pr}
         linked={props.volume.plink}
-        onUp={props.onVolUp}
-        onDown={props.onVolDown}
         onMute={props.onMuteVol}
         onLink={props.onLinkVol}
         onSetLevel={props.onSetVolLevel}
