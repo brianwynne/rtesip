@@ -9,6 +9,8 @@
   justify-content: center;
   gap: 0.3rem;
   width: 15rem;
+  height: 80%;
+  align-self: center;
   flex-shrink: 0;
 }
 

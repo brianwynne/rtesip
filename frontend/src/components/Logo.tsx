@@ -6,7 +6,7 @@ interface Props {
 }
 
 export function Logo({ size = "medium", showWordmark = true }: Props) {
-  const s = size === "small" ? 1 : size === "large" ? 2.5 : 1.6;
+  const s = size === "small" ? 2 : size === "large" ? 2.5 : 1.6;
 
   return (
     <div className={styles.logo} style={{ gap: `${s * 0.3}rem` }}>
