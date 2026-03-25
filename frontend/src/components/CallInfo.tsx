@@ -57,6 +57,29 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
   const isIncoming = callState.state === "incoming";
   const isCalling = callState.state === "calling" || callState.state === "ringing";
 
+  // Parse destination into display name and domain
+  const HOME_DOMAIN = "sip.rtegroup.ie";
+  const dest = callState.destination || "";
+  let displayName = dest;
+  let displayDomain = "";
+
+  // Parse SIP address: "Display Name <sip:user@domain>" or "user@domain"
+  if (dest.includes("@")) {
+    let addr = dest;
+    let name = "";
+    // Extract display name from "Name <sip:...>" format
+    const angleMatch = dest.match(/^"?([^"<]+)"?\s*<(.+)>$/);
+    if (angleMatch) {
+      name = angleMatch[1].trim();
+      addr = angleMatch[2];
+    }
+    // Strip sip: prefix and any ;params
+    addr = addr.replace(/^sip:/i, "").replace(/;.*$/, "");
+    const [user, domain] = addr.split("@", 2);
+    displayName = name || user;
+    displayDomain = domain === HOME_DOMAIN ? "" : domain;
+  }
+
   return (
     <div className={`${styles.display} ${isConnected ? styles.displayConnected : isIncoming ? styles.displayIncoming : isCalling ? styles.displayCalling : ""}`}>
       {/* Top: status + clock */}
@@ -76,7 +99,10 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
       {/* Centre: party name */}
       <div className={styles.partyRow}>
         {isActive ? (
-          <span className={styles.partyName}>{callState.destination || "Unknown"}</span>
+          <>
+            <span className={styles.partyName}>{displayName || "Unknown"}</span>
+            {displayDomain && <span className={styles.partyDomain}>{displayDomain}</span>}
+          </>
         ) : (
           <span className={styles.partyNameIdle}>No active call</span>
         )}

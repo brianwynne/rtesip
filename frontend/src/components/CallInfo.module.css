@@ -95,9 +95,11 @@
 /* Party name — large */
 .partyRow {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
+  gap: 0.1rem;
 }
 
 .partyName {
@@ -110,6 +112,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+.partyDomain {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-align: center;
 }
 
 .partyNameIdle {
