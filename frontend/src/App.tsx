@@ -57,6 +57,14 @@ function App() {
   // Kiosk mode: local touchscreen only shows Call + Contacts (no Audio/Settings)
   // Triggered by ?kiosk=1 in URL (set by Cage launcher) or local access
   const isKiosk = new URLSearchParams(window.location.search).has("kiosk");
+
+  // Hide cursor in kiosk mode (touchscreen only)
+  useEffect(() => {
+    if (isKiosk) {
+      document.documentElement.style.cursor = "none";
+      document.body.style.cursor = "none";
+    }
+  }, [isKiosk]);
   const host = window.location.hostname;
   const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.") || host.startsWith("172.");
 

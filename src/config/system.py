@@ -66,29 +66,60 @@ def apply_network_config() -> None:
 # --- WiFi ---
 
 def apply_wifi_config() -> None:
-    """Apply WiFi settings — wpa_supplicant config."""
+    """Apply WiFi settings via wpa_cli — connect or disconnect WiFi.
+
+    Uses wpa_cli to dynamically add/remove networks without restarting
+    wpa_supplicant. Works within the systemd sandbox.
+    """
     wifi = get_section("wifi")
+    interface = wifi.get("interface", "wlan0")
 
-    # Kill existing wpa_supplicant
-    subprocess.run(["killall", "wpa_supplicant"], capture_output=True, timeout=5)
-
-    if wifi.get("enabled") and wifi.get("ssid"):
-        interface = wifi.get("interface", "wlan0")
-        ssid = _sanitize_quoted(wifi["ssid"])
-        psk = _sanitize_quoted(wifi.get("psk", ""))
-        conf = (
-            f"ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev\n"
-            f"country={wifi.get('country', 'ie').lower()}\n"
-            f"update_config=1\n"
-            f"network={{\n"
-            f"  ssid=\"{ssid}\"\n"
-            f"  scan_ssid=1\n"
-            f"  key_mgmt=WPA-PSK\n"
-            f"  psk=\"{psk}\"\n"
-            f"}}\n"
+    def _wpa(*args: str) -> str:
+        r = subprocess.run(
+            ["wpa_cli", "-i", interface] + list(args),
+            capture_output=True, text=True, timeout=5,
         )
-        wpa_path = Path(f"/etc/wpa_supplicant/wpa_supplicant-{interface}.conf")
-        wpa_path.write_text(conf)
+        return r.stdout.strip()
+
+    if not wifi.get("enabled") or not wifi.get("ssid"):
+        # Disable WiFi — disconnect and remove all networks
+        _wpa("disconnect")
+        result = _wpa("list_networks")
+        for line in result.splitlines()[1:]:
+            parts = line.split("\t")
+            if parts:
+                _wpa("remove_network", parts[0])
+        logger.info("WiFi disabled")
+        return
+
+    ssid = wifi["ssid"]
+    psk = wifi.get("psk", "")
+
+    # Remove existing networks
+    result = _wpa("list_networks")
+    for line in result.splitlines()[1:]:
+        parts = line.split("\t")
+        if parts:
+            _wpa("remove_network", parts[0])
+
+    # Add new network
+    net_id = _wpa("add_network").strip()
+    _wpa("set_network", net_id, "ssid", f'"{ssid}"')
+
+    if psk:
+        _wpa("set_network", net_id, "psk", f'"{psk}"')
+    else:
+        _wpa("set_network", net_id, "key_mgmt", "NONE")
+
+    _wpa("enable_network", net_id)
+    _wpa("save_config")
+
+    # Request DHCP
+    import time
+    time.sleep(5)  # wait for association
+    subprocess.run(["dhclient", interface], capture_output=True, timeout=15)
+
+    logger.info("WiFi configured: %s", ssid)
 
 
 # --- WiFi Scan ---
