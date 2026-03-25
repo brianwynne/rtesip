@@ -66,125 +66,101 @@ def apply_network_config() -> None:
 # --- WiFi ---
 
 def apply_wifi_config() -> None:
-    """Apply WiFi settings via wpa_cli — connect or disconnect WiFi.
+    """Apply WiFi settings via NetworkManager (nmcli).
 
-    Uses wpa_cli to dynamically add/remove networks without restarting
-    wpa_supplicant. Works within the systemd sandbox.
+    Handles connection, DHCP, and persistence automatically.
     """
     wifi = get_section("wifi")
-    interface = wifi.get("interface", "wlan0")
+    ssid = wifi.get("ssid", "")
+    psk = wifi.get("psk", "")
+    conn_name = "rtesip-wifi"
 
-    def _wpa(*args: str) -> str:
+    def _nm(*args: str) -> str:
         r = subprocess.run(
-            ["wpa_cli", "-i", interface] + list(args),
-            capture_output=True, text=True, timeout=5,
+            ["nmcli"] + list(args),
+            capture_output=True, text=True, timeout=15,
         )
         return r.stdout.strip()
 
-    if not wifi.get("enabled") or not wifi.get("ssid"):
-        # Disable WiFi — disconnect and remove all networks
-        _wpa("disconnect")
-        result = _wpa("list_networks")
-        for line in result.splitlines()[1:]:
-            parts = line.split("\t")
-            if parts:
-                _wpa("remove_network", parts[0])
+    if not wifi.get("enabled") or not ssid:
+        # Disconnect and remove saved connection
+        _nm("connection", "down", conn_name)
+        _nm("connection", "delete", conn_name)
+        _nm("radio", "wifi", "off")
         logger.info("WiFi disabled")
         return
 
-    ssid = wifi["ssid"]
-    psk = wifi.get("psk", "")
-
-    # Remove existing networks
-    result = _wpa("list_networks")
-    for line in result.splitlines()[1:]:
-        parts = line.split("\t")
-        if parts:
-            _wpa("remove_network", parts[0])
-
-    # Add new network
-    net_id = _wpa("add_network").strip()
-    _wpa("set_network", net_id, "ssid", f'"{ssid}"')
-
-    if psk:
-        _wpa("set_network", net_id, "psk", f'"{psk}"')
-    else:
-        _wpa("set_network", net_id, "key_mgmt", "NONE")
-
-    _wpa("enable_network", net_id)
-    _wpa("save_config")
-
-    # Request DHCP
+    # Ensure WiFi radio is on
+    _nm("radio", "wifi", "on")
     import time
-    time.sleep(5)  # wait for association
-    subprocess.run(["dhclient", interface], capture_output=True, timeout=15)
+    time.sleep(2)
 
-    logger.info("WiFi configured: %s", ssid)
+    # Remove existing connection if any
+    _nm("connection", "delete", conn_name)
+
+    # Create new connection
+    if psk:
+        _nm("connection", "add", "type", "wifi", "con-name", conn_name,
+            "ssid", ssid, "wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", psk)
+    else:
+        _nm("connection", "add", "type", "wifi", "con-name", conn_name,
+            "ssid", ssid)
+
+    # Connect
+    result = _nm("connection", "up", conn_name)
+    logger.info("WiFi configured: %s — %s", ssid, result)
 
 
 # --- WiFi Scan ---
 
 def scan_wifi_networks(interface: str = "wlan0", timeout: int = 10) -> list[dict]:
-    """Scan for available WiFi networks using wpa_cli.
-
-    Returns list of dicts with ssid, bssid, signal, frequency, flags.
-    Same approach as the original scanWiFi block — launches wpa_supplicant
-    with a scan config if needed, runs scan, parses results.
-    """
+    """Scan for available WiFi networks using NetworkManager (nmcli)."""
     networks = []
 
-    # Ensure WiFi is unblocked and interface is up (needs root)
-    subprocess.run(["rfkill", "unblock", "wifi"],
-                   capture_output=True, timeout=5)
-    subprocess.run(["ip", "link", "set", interface, "up"],
+    # Ensure WiFi radio is on
+    subprocess.run(["nmcli", "radio", "wifi", "on"],
                    capture_output=True, timeout=5)
 
-    # Trigger scan
+    # Trigger rescan
+    subprocess.run(["nmcli", "device", "wifi", "rescan"],
+                   capture_output=True, timeout=10)
+
+    import time
+    time.sleep(3)
+
+    # Get scan results
     try:
-        subprocess.run(
-            ["wpa_cli", "-i", interface, "scan"],
-            capture_output=True, text=True, timeout=5,
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "BSSID,FREQ,SIGNAL,SECURITY,SSID", "device", "wifi", "list"],
+            capture_output=True, text=True, timeout=10,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-        logger.warning("WiFi scan trigger failed: %s", e)
+        logger.warning("WiFi scan failed: %s", e)
         return networks
 
-    # Wait for scan results (poll up to timeout seconds)
-    import time
-    best_results = []
-    for _ in range(timeout):
-        time.sleep(1)
-        try:
-            result = subprocess.run(
-                ["wpa_cli", "-i", interface, "scan_results"],
-                capture_output=True, text=True, timeout=5,
-            )
-            lines = result.stdout.strip().split("\n")
-            # First line is header: bssid / frequency / signal / flags / ssid
-            if len(lines) > len(best_results):
-                best_results = lines
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            break
-
-    # Parse results (skip header line)
     seen_ssids = set()
-    for line in best_results[1:]:
-        parts = line.split("\t")
+    for line in result.stdout.strip().splitlines():
+        # nmcli -t uses : as separator, but BSSID contains colons
+        # Format: AA\:BB\:CC\:DD\:EE\:FF:freq:signal:security:ssid
+        parts = line.replace("\\:", "~").split(":")
         if len(parts) >= 5:
-            ssid = parts[4].strip()
-            if not ssid or ssid in seen_ssids or "\x00" in ssid:
+            bssid = parts[0].replace("~", ":")
+            freq = parts[1].replace(" MHz", "")
+            signal = parts[2]
+            security = parts[3]
+            ssid = ":".join(parts[4:])  # SSID might contain colons
+            if not ssid or ssid in seen_ssids:
                 continue
             seen_ssids.add(ssid)
             networks.append({
-                "bssid": parts[0],
-                "frequency": int(parts[1]) if parts[1].isdigit() else 0,
-                "signal": int(parts[2]) if parts[2].lstrip("-").isdigit() else 0,
-                "flags": parts[3],
+                "bssid": bssid,
+                "frequency": int(freq) if freq.isdigit() else 0,
+                "signal": int(signal) if signal.lstrip("-").isdigit() else 0,
+                "flags": security,
                 "ssid": ssid,
-                "security": "WPA" if "WPA" in parts[3] else "Open",
+                "security": "WPA" if "WPA" in security else "Open" if not security or security == "--" else security,
             })
 
-    # Sort by signal strength (strongest first)
     networks.sort(key=lambda n: n["signal"], reverse=True)
     logger.info("WiFi scan found %d networks", len(networks))
     return networks
