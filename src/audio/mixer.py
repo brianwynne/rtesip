@@ -37,7 +37,7 @@ class MixerState:
     playback_right: int = 100
     playback_left_mute_buf: int = 0
     playback_right_mute_buf: int = 0
-    playback_linked: bool = False
+    playback_linked: bool = True
     hardware_mixer: bool = False
 
 
