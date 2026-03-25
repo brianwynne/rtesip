@@ -42,7 +42,9 @@ function App() {
     fetch("/api/system/status")
       .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => {
-        if (data.hostname) setIpAddress(data.hostname);
+        const ips = data.ip_addresses || {};
+        const parts = Object.values(ips).filter(Boolean);
+        setIpAddress(parts.length > 0 ? parts.join(" | ") : data.hostname || window.location.hostname);
       })
       .catch(() => {
         setIpAddress(window.location.hostname);

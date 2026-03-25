@@ -21,6 +21,23 @@ from src.config.system import (
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
+def _get_ip_addresses() -> dict[str, str]:
+    """Get IP addresses for all active network interfaces."""
+    import socket
+    import fcntl
+    import struct
+    ips = {}
+    for iface in ("eth0", "wlan0"):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            addr = fcntl.ioctl(s.fileno(), 0x8915,  # SIOCGIFADDR
+                               struct.pack('256s', iface.encode()))
+            ips[iface] = socket.inet_ntoa(addr[20:24])
+        except (OSError, IOError):
+            pass
+    return ips
+
+
 @router.get("/status")
 async def system_status():
     temp = "unknown"
@@ -30,6 +47,7 @@ async def system_status():
 
     uptime = Path("/proc/uptime").read_text().split()[0] if Path("/proc/uptime").exists() else "0"
     hw = get_hardware_info()
+    ips = _get_ip_addresses()
 
     return {
         "cpu_temp": temp,
@@ -37,6 +55,7 @@ async def system_status():
         "hostname": get_section("network").get("hostname", "rtesip"),
         "serial": hw.get("serial", ""),
         "model": hw.get("model", ""),
+        "ip_addresses": ips,
     }
 
 

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Phone, PhoneForwarded, X, Keyboard, User } from "lucide-react";
+import { Phone, PhoneForwarded, X, Keyboard, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { SoftKeyboard } from "./SoftKeyboard";
 import { CallInfo } from "./CallInfo";
 import type { CallState, Contact } from "../types";
 import styles from "./CallPanel.module.css";
+
+const PAGE_SIZE = 4;
 
 interface Props {
   callState: CallState;
@@ -18,6 +20,7 @@ interface Props {
 export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onReject, contacts }: Props) {
   const [address, setAddress] = useState("");
   const [mode, setMode] = useState<"idle" | "keyboard">("idle");
+  const [page, setPage] = useState(0);
 
   const handleCall = (addr?: string) => {
     const target = addr || address.trim();
@@ -57,29 +60,47 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
       {!isIncoming && (
         <div className={styles.idlePanel}>
 
-          <div className={styles.quickGrid}>
-            {Array.from({ length: 8 }).map((_, i) => {
-              const contact = quickDials[i] || (quickDials.length === 0 ? contacts[i] : undefined);
-              if (contact) {
+          <div className={styles.quickSection}>
+            {page > 0 && (
+              <button className={styles.pageBtn} onClick={() => setPage(page - 1)}>
+                <ChevronLeft size={28} />
+              </button>
+            )}
+            <div className={styles.quickGrid}>
+              {Array.from({ length: PAGE_SIZE }).map((_, i) => {
+                const idx = page * PAGE_SIZE + i;
+                const allContacts = quickDials.length > 0 ? quickDials : contacts;
+                const contact = allContacts[idx];
+                if (contact) {
+                  return (
+                    <button
+                      key={contact.id}
+                      className={styles.quickBtn}
+                      onClick={() => handleCall(contact.address)}
+                    >
+                      <PhoneForwarded size={28} className={styles.quickIcon} />
+                      <span className={styles.quickName}>{contact.name}</span>
+                      <span className={styles.quickAddr}>{contact.address}</span>
+                    </button>
+                  );
+                }
                 return (
-                  <button
-                    key={contact.id}
-                    className={styles.quickBtn}
-                    onClick={() => handleCall(contact.address)}
-                  >
-                    <PhoneForwarded size={28} className={styles.quickIcon} />
-                    <span className={styles.quickName}>{contact.name}</span>
-                    <span className={styles.quickAddr}>{contact.address}</span>
-                  </button>
+                  <div key={`empty-${i}`} className={styles.quickBtnEmpty}>
+                    <User size={28} className={styles.emptyIcon} />
+                    <span className={styles.emptyLabel}>{idx + 1}</span>
+                  </div>
                 );
-              }
-              return (
-                <div key={`empty-${i}`} className={styles.quickBtnEmpty}>
-                  <User size={28} className={styles.emptyIcon} />
-                  <span className={styles.emptyLabel}>{i + 1}</span>
-                </div>
-              );
-            })}
+              })}
+            </div>
+            {(() => {
+              const allContacts = quickDials.length > 0 ? quickDials : contacts;
+              const totalPages = Math.max(1, Math.ceil(allContacts.length / PAGE_SIZE));
+              return page < totalPages - 1 ? (
+                <button className={styles.pageBtn} onClick={() => setPage(page + 1)}>
+                  <ChevronRight size={28} />
+                </button>
+              ) : <div className={styles.pageBtnSpacer} />;
+            })()}
           </div>
 
           <button className={styles.keyboardBtn} onClick={() => setMode("keyboard")}>
