@@ -1,4 +1,4 @@
-import { Globe, Shield, ShieldOff, Sun, Moon } from "lucide-react";
+import { Globe, Shield, ShieldOff, Sun, Moon, Cable, Wifi } from "lucide-react";
 import { Logo } from "./Logo";
 import type { AccountStatus } from "../types";
 import styles from "./StatusBar.module.css";
@@ -8,12 +8,12 @@ interface Props {
   sipReady: boolean;
   serverReachable: boolean;
   accounts: Record<string, AccountStatus>;
-  ipAddress?: string;
+  ipAddresses: Record<string, string>;
   theme: "dark" | "light";
   onToggleTheme: () => void;
 }
 
-export function StatusBar({ sipReady, serverReachable, accounts, ipAddress, theme, onToggleTheme }: Props) {
+export function StatusBar({ sipReady, serverReachable, accounts, ipAddresses, theme, onToggleTheme }: Props) {
   const accountList = Object.values(accounts);
 
   return (
@@ -21,9 +21,12 @@ export function StatusBar({ sipReady, serverReachable, accounts, ipAddress, them
       {/* Left: branding + IP */}
       <div className={styles.left}>
         <Logo size="small" />
-        {ipAddress && (
-          <span className={styles.ip}>{ipAddress}</span>
-        )}
+        {Object.entries(ipAddresses).map(([iface, ip]) => (
+          <span key={iface} className={styles.ip}>
+            {iface.startsWith("wlan") ? <Wifi size={14} /> : <Cable size={14} />}
+            {ip}
+          </span>
+        ))}
       </div>
 
       {/* Spacer pushes right section to the edge */}

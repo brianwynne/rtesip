@@ -32,7 +32,10 @@
 }
 
 .ip {
-  margin-left: 3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 1rem;
   font-size: 1rem;
   font-family: var(--font-mono);
   color: var(--text-muted);

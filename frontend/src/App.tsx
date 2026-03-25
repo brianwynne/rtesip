@@ -16,7 +16,7 @@ import styles from "./App.module.css";
 function App() {
   const [page, setPage] = useState<Page>("call");
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [ipAddress, setIpAddress] = useState("");
+  const [ipAddresses, setIpAddresses] = useState<Record<string, string>>({});
   const ws = useWebSocket();
   const { theme, toggle: toggleTheme } = useTheme();
   useRingtone(ws.callState.state === "incoming");
@@ -43,11 +43,14 @@ function App() {
       .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => {
         const ips = data.ip_addresses || {};
-        const parts = Object.values(ips).filter(Boolean);
-        setIpAddress(parts.length > 0 ? parts.join(" | ") : data.hostname || window.location.hostname);
+        if (Object.keys(ips).length > 0) {
+          setIpAddresses(ips);
+        } else {
+          setIpAddresses({ eth0: window.location.hostname });
+        }
       })
       .catch(() => {
-        setIpAddress(window.location.hostname);
+        setIpAddresses({ eth0: window.location.hostname });
       });
   }, []);
 
@@ -70,7 +73,7 @@ function App() {
         sipReady={ws.sipReady}
         serverReachable={ws.serverReachable}
         accounts={ws.accounts}
-        ipAddress={ipAddress || window.location.hostname}
+        ipAddresses={ipAddresses}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
