@@ -11,6 +11,7 @@ User=rtesip
 Group=rtesip
 SupplementaryGroups=audio
 WorkingDirectory=/opt/rtesip
+ExecStartPre=+/opt/rtesip/deploy/scripts/detect-audio.sh
 ExecStart=/opt/rtesip/.venv/bin/python run.py
 Restart=always
 RestartSec=3

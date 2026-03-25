@@ -431,17 +431,20 @@ fi
 systemctl daemon-reload
 ok "Systemd service installed"
 
-# ── Install ALSA configuration ────────────────────────────────
-# USB audio devices need dmix/dsnoop to avoid buzzing in pjsua.
-# Only install if no asound.conf exists (don't overwrite HiFiBerry config).
-if [[ ! -f /etc/asound.conf ]]; then
-    for ASOUND_SRC in "$LOCAL_DIR/deploy/conf/asound-usb.conf" "$SCRIPT_DIR/conf/asound-usb.conf"; do
-        if [[ -f "$ASOUND_SRC" ]]; then
-            cp "$ASOUND_SRC" /etc/asound.conf
-            ok "ALSA configuration installed (USB audio)"
-            break
-        fi
-    done
+# ── Install audio detection script ────────────────────────────
+# Detects USB audio device on service start and generates /etc/asound.conf
+# with dmix/dsnoop to avoid buzzing in pjsua.
+for DETECT_SRC in "$LOCAL_DIR/deploy/scripts/detect-audio.sh" "$SCRIPT_DIR/scripts/detect-audio.sh"; do
+    if [[ -f "$DETECT_SRC" ]]; then
+        mkdir -p "$INSTALL_DIR/deploy/scripts"
+        cp "$DETECT_SRC" "$INSTALL_DIR/deploy/scripts/detect-audio.sh"
+        chmod +x "$INSTALL_DIR/deploy/scripts/detect-audio.sh"
+        ok "Audio detection script installed"
+        # Run it now to generate initial asound.conf
+        "$INSTALL_DIR/deploy/scripts/detect-audio.sh"
+        break
+    fi
+done
 fi
 
 # ── Install CLI ──────────────────────────────────────────────
