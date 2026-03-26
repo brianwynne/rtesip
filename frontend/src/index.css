@@ -15,6 +15,7 @@
   --text-primary: #f4f4fc;
   --text-secondary: #a4a4c4;
   --text-muted: #727290;
+  --text-on-card: #f4f4fc;
 
   /* Vivid saturated accents */
   --accent: #6b8cff;
@@ -62,9 +63,10 @@
   --border: #C8CDD8;
   --border-focus: #2B5EA7;
 
-  --text-primary: #ffffff;
-  --text-secondary: #e0e0e8;
-  --text-muted: #b0b0c0;
+  --text-primary: #1a1a2e;
+  --text-secondary: #2d2d44;
+  --text-muted: #5a5a70;
+  --text-on-card: #ffffff;
 
   --accent: #2B5EA7;
   --accent-hover: #3A6FBB;
@@ -101,6 +103,7 @@
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
+
 
 html, body, #root {
   height: 100%;

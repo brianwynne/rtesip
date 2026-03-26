@@ -111,7 +111,7 @@
   background: var(--bg-card);
   border: 1px solid var(--green);
   border-radius: var(--radius-lg);
-  color: var(--text-primary);
+  color: var(--text-on-card);
   transition: all 0.15s;
   overflow: hidden;
 }
@@ -186,7 +186,7 @@
   background: var(--bg-card);
   border: 1px solid var(--accent);
   border-radius: var(--radius-lg);
-  color: var(--text-primary);
+  color: var(--text-on-card);
   font-size: 1.4rem;
   font-weight: 600;
   transition: all 0.15s;
