@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, PhoneForwarded, X, Keyboard, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Phone, PhoneForwarded, X, Keyboard, User, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { SoftKeyboard } from "./SoftKeyboard";
 import { CallInfo } from "./CallInfo";
 import type { CallState, Contact } from "../types";
@@ -21,6 +21,8 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
   const [address, setAddress] = useState("");
   const [mode, setMode] = useState<"idle" | "keyboard">("idle");
   const [page, setPage] = useState(0);
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactName, setContactName] = useState("");
 
   const handleCall = (addr?: string) => {
     const target = addr || address.trim();
@@ -29,6 +31,19 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
       setAddress("");
       setMode("idle");
     }
+  };
+
+  const saveContact = async () => {
+    if (!contactName.trim() || !address.trim()) return;
+    try {
+      await fetch("/api/contacts/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: contactName.trim(), address: address.trim(), type: "sip", quickDial: true }),
+      });
+      setSavingContact(false);
+      setContactName("");
+    } catch { /* ignore */ }
   };
 
   const quickDials = contacts.filter((c) => c.quickDial);
@@ -144,23 +159,53 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
             onSubmit={() => handleCall()}
           />
 
-          <div className={styles.callBtnRow}>
-            <button
-              className={styles.bigBtnGreen}
-              onClick={() => handleCall()}
-              disabled={!address.trim()}
-            >
-              <Phone size={24} />
-              <span>Call</span>
-            </button>
-            <button
-              className={styles.bigBtnMuted}
-              onClick={() => setAddress("")}
-            >
-              <X size={24} />
-              <span>Clear</span>
-            </button>
-          </div>
+          {savingContact ? (
+            <div className={styles.saveContactRow}>
+              <input
+                className={styles.contactNameInput}
+                type="text"
+                placeholder="Contact name"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveContact()}
+                autoFocus
+              />
+              <button className={styles.bigBtnGreen} onClick={saveContact} disabled={!contactName.trim()}>
+                <UserPlus size={24} />
+                <span>Save</span>
+              </button>
+              <button className={styles.bigBtnMuted} onClick={() => { setSavingContact(false); setContactName(""); }}>
+                <X size={24} />
+                <span>Cancel</span>
+              </button>
+            </div>
+          ) : (
+            <div className={styles.callBtnRow}>
+              <button
+                className={styles.bigBtnGreen}
+                onClick={() => handleCall()}
+                disabled={!address.trim()}
+              >
+                <Phone size={24} />
+                <span>Call</span>
+              </button>
+              <button
+                className={styles.bigBtnAccent}
+                onClick={() => setSavingContact(true)}
+                disabled={!address.trim()}
+              >
+                <UserPlus size={24} />
+                <span>Save</span>
+              </button>
+              <button
+                className={styles.bigBtnMuted}
+                onClick={() => setAddress("")}
+              >
+                <X size={24} />
+                <span>Clear</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

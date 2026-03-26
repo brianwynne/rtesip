@@ -5,6 +5,16 @@
   width: 100%;
   margin: 0 auto;
   background: var(--bg-primary);
+  transition: background 0.3s;
+}
+
+.appIncoming {
+  animation: incomingFlash 0.8s ease infinite;
+}
+
+@keyframes incomingFlash {
+  0%, 100% { background: var(--bg-primary); }
+  50% { background: rgba(239, 68, 68, 0.25); }
 }
 
 .content {
