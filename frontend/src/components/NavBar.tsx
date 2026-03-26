@@ -1,7 +1,7 @@
-import { Phone, Sliders, Settings, Users, Radio } from "lucide-react";
+import { Phone, Sliders, Settings, Users, Radio, Wifi } from "lucide-react";
 import styles from "./NavBar.module.css";
 
-export type Page = "call" | "audio" | "sip" | "contacts" | "settings";
+export type Page = "call" | "audio" | "sip" | "contacts" | "settings" | "wifi";
 
 interface Props {
   active: Page;
@@ -14,6 +14,7 @@ const allTabs: { id: Page; label: string; icon: typeof Phone; kiosk: boolean; co
   { id: "audio", label: "Audio", icon: Sliders, kiosk: false, color: "var(--cyan)" },
   { id: "sip", label: "SIP", icon: Radio, kiosk: false, color: "var(--accent)" },
   { id: "contacts", label: "Contacts", icon: Users, kiosk: true, color: "var(--amber)" },
+  { id: "wifi", label: "WiFi", icon: Wifi, kiosk: true, color: "var(--cyan)" },
   { id: "settings", label: "Settings", icon: Settings, kiosk: false, color: "var(--text-secondary)" },
 ];
 
