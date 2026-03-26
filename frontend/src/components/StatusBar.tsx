@@ -60,7 +60,7 @@ export function StatusBar({ sipReady, serverReachable, accounts, ipAddresses, th
           )}
         </div>
         <div className={styles.indicator} title={serverReachable ? "SIP Server Reachable" : "SIP Server Unreachable"}>
-          <Globe size={22} className={serverReachable ? styles.iconGreen : styles.iconMuted} />
+          <Globe size={22} className={serverReachable ? styles.iconGreen : styles.iconRed} />
         </div>
       </div>
     </div>
