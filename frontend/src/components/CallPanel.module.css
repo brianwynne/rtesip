@@ -144,7 +144,7 @@
 }
 
 .quickAddr {
-  font-size: 0.5rem;
+  font-size: 0.65rem;
   font-family: var(--font-mono);
   color: var(--text-muted);
   text-align: left;
