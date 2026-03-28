@@ -1,6 +1,7 @@
 """Telnet client for pjsua CLI — parses call state, registration, errors.
 
 Connects to pjsua's telnet CLI and translates output into structured events.
+Compatible with pjsua/pjsip 2.14.
 """
 
 import asyncio
@@ -40,10 +41,10 @@ class PjsuaTelnet:
         # State
         self.call_state = CallState.IDLE
         self.current_contact: Optional[str] = None
-        self.connected_at: Optional[float] = None  # epoch timestamp when call connected
         self.active_accounts: dict[str, bool] = {}
         self.sip_ready = False
         self.server_reachable = False
+        self.connected_at: Optional[str] = None
 
         # Event callback
         self._on_event: Optional[Callable] = None
@@ -64,12 +65,8 @@ class PjsuaTelnet:
                 timeout=3,
             )
             self._connected = True
-            # Reset state on reconnect (pjsua may have restarted)
-            self.sip_ready = False
-            self.server_reachable = False
-            self.active_accounts = {}
-            self.call_state = CallState.IDLE
-            self.current_contact = None
+            import datetime
+            self.connected_at = datetime.datetime.now().isoformat()
             logger.info("Connected to pjsua CLI at %s:%d", self.host, self.port)
 
             # Initial queries on connect
@@ -111,7 +108,6 @@ class PjsuaTelnet:
     # --- Call control commands ---
 
     async def make_call(self, uri: str, account_id: int = 0) -> None:
-        await self.send(f"acc next {account_id}")
         await self.send(f"call new sip:{uri}")
 
     async def answer(self) -> None:
@@ -129,7 +125,6 @@ class PjsuaTelnet:
 
     async def play_tone(self, tone_id: int) -> None:
         """Play tone — disabled until WAV files are available."""
-        # TODO: implement with proper WAV files and auto-disconnect
         pass
 
     # --- Output parsing ---
@@ -144,7 +139,17 @@ class PjsuaTelnet:
                     self._connected = False
                     await self._emit("backend_disconnected", {})
                     break
-                self._buffer += data.decode("utf-8", errors="replace")
+                # Strip telnet negotiation bytes (IAC sequences)
+                cleaned = bytearray()
+                i = 0
+                raw = data
+                while i < len(raw):
+                    if raw[i] == 0xff and i + 2 < len(raw):
+                        i += 3  # skip IAC + command + option
+                    else:
+                        cleaned.append(raw[i])
+                        i += 1
+                self._buffer += bytes(cleaned).decode("utf-8", errors="replace")
                 # Process only complete lines; keep partial trailing data in buffer
                 while "\n" in self._buffer:
                     line, self._buffer = self._buffer.split("\n", 1)
@@ -163,62 +168,64 @@ class PjsuaTelnet:
             return
 
         # Call state: CONFIRMED
-        if re.search(r"Call [0-9] state changed to CONFIRMED$", data):
+        if re.search(r"Call [0-9] state changed to CONFIRMED", data):
             asyncio.create_task(self.send("call list"))
 
-        elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]$", data):
+        elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]", data):
             self.call_state = CallState.CONNECTED
-            import time as _time
-            self.connected_at = _time.time()
-            self._emit_sync("connected", {"destination": self.current_contact, "connected_at": self.connected_at})
+            self._emit_sync("connected", {"destination": self.current_contact})
 
-        # Call state: DISCONNECTED
-        elif m := re.search(r"\[DISCONNCTD\] t\: ([^;]+)", data):
+        # Call state: DISCONNECTED (pjsua 2.9 uses DISCONNCTD, 2.14 uses DISCONNECTED)
+        elif m := re.search(r"\[DISCONN[A-Z]*\] t\: ([^;]+)", data):
             self.call_state = CallState.IDLE
-            self.connected_at = None
             self._emit_sync("ended", {"destination": m.group(1)})
             self.current_contact = None
 
+        # pjsua 2.14 format: Call 0 is DISCONNECTED [reason=...]
+        elif m := re.search(r"Call [0-9] is DISCONNECTED", data):
+            self.call_state = CallState.IDLE
+            self._emit_sync("ended", {"destination": self.current_contact or ""})
+            self.current_contact = None
+
         # Incoming call
-        elif (m := re.search(r"From\: (.+)", data)) or \
-             (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]$", data)):
+        elif (m := re.search(r"From\: (.+)", data)) or              (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]", data)):
             self.call_state = CallState.INCOMING
             contact = self._resolve_contact(m.group(1))
             self.current_contact = contact
             self._emit_sync("incoming", {"destination": contact})
 
-            # 4. Auto answer — if enabled, automatically answer incoming calls
+            # Auto answer — if enabled, automatically answer incoming calls
             audio = get_section("audio")
             if audio.get("auto_answer", False):
                 logger.info("Auto-answer enabled, answering incoming call from %s", contact)
                 asyncio.create_task(self.answer())
 
         # Call state: CALLING
-        elif re.search(r"Call [0-9] state changed to CALLING$", data) or \
-             re.search(r"Current call id\=[0-9] to .+ \[CALLING\]$", data):
+        elif re.search(r"Call [0-9] state changed to CALLING", data) or              re.search(r"Current call id\=[0-9] to .+ \[CALLING\]", data):
             self.call_state = CallState.CALLING
             self._emit_sync("calling", {"destination": self.current_contact})
 
         # Call state: RINGING (180)
-        elif re.search(r"Call [0-9] state changed to EARLY \(180 Ringing\)$", data) or \
-             re.search(r"Current call id\=[0-9] to .+ \[EARLY\]$", data):
+        elif re.search(r"Call [0-9] state changed to EARLY \(180 Ringing\)", data) or              re.search(r"Current call id\=[0-9] to .+ \[EARLY\]", data):
             self.call_state = CallState.RINGING
             self._emit_sync("ringing", {"destination": self.current_contact or ""})
 
-        # Registration status
-        elif (m := re.search(r"\[.?[0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or \
-             (m := re.search(r"sip\:([^\:]+)\: registration.+status\=([0-9]{1,3}) \([A-z]+\)", data)):
+        # Registration status (event format and acc show format)
+        elif (m := re.search(r"\[.?[0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or              (m := re.search(r"sip\:([^\:]+)\: registration.+status\=([0-9]{1,3}) \([A-z]+\)", data)) or              (m := re.search(r"sip\:([^@]+)@[^:]+\: ([0-9]{3})\/", data)):
             account_id = m.group(1)
             status = int(m.group(2))
             self.active_accounts[account_id] = (status == 200)
-            self.server_reachable = True
 
             if status == 200:
+                self.server_reachable = True
                 if not self.sip_ready:
                     self.sip_ready = True
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": True, "sip_ready": self.sip_ready, "server_reachable": True})
+                    asyncio.create_task(self.play_tone(1))
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
             elif status > 200:
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": False, "server_reachable": True})
+                if not self.sip_ready:
+                    asyncio.create_task(self.play_tone(2))
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
 
         # Audio device error
         elif "PJMEDIA_EAUD_SYSERR" in data:
@@ -229,13 +236,12 @@ class PjsuaTelnet:
             if "not nominated" not in data and "REGISTER" not in data and "registration" not in data:
                 self._emit_sync("network_error", {"error": data})
 
-        # Connection errors — server unreachable
+        # Connection errors
         elif ("Connection timed out" in data or "Connection refused" in data) and not self.current_contact:
-            self.server_reachable = False
             self._emit_sync("connection_error", {"error": data})
 
         # SIP error reason
-        elif m := re.search(r"\[reason\=([0-9]{3}) \((.+)\)\]$", data):
+        elif m := re.search(r"\[reason\=([0-9]{3}) \((.+)\)\]", data):
             self._emit_sync("reason", {"code": int(m.group(1)), "verbose": m.group(2)})
 
         # Debug/other output

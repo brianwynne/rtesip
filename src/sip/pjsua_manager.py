@@ -38,8 +38,8 @@ def generate_config() -> str:
         "--clock-rate=48000",
         "--snd-clock-rate=48000",
         "--quality=10",
-        "--use-compact-form",
-        # "--use-ice",  # Disabled — causes Bad Request errors with some STUN servers
+        # "--use-compact-form",  # disabled for Twilio compatibility
+        "--use-ice",  # Re-enabled for Twilio — causes Bad Request errors with some STUN servers
         "--max-calls=1",
         "--no-vad",
         "--ec-tail=200",
@@ -58,7 +58,6 @@ def generate_config() -> str:
     # Audio settings
     if audio.get("channels", 1) == 2:
         lines.append("--stereo")
-    lines.append(f"--bitrate={audio.get('bitrate', 72000)}")
 
     # Audio device selection is handled via ALSA default device
     # (set in /etc/asound.conf or ~/.asoundrc) rather than pjsua --capture-dev/--playback-dev,
@@ -156,13 +155,13 @@ def get_device_string() -> list[str]:
     if audio.get("playback_latency"):
         args.append(f"--playback-lat={audio['playback_latency']}")
     if audio.get("period_size"):
-        args.append(f"--period-size={audio['period_size']}")
+        pass  # args.append(f"--period-size={audio['period_size']}")  # removed for pjsip 2.14
 
     # Jitter buffer — tighter for wired, wider for WiFi
     if audio.get("wifi_mode"):
-        args.extend(["--jb-max-size=720", "--jb-min-size=40"])
+        args.extend(["--jb-max-size=720"])
     else:
-        args.extend(["--jb-max-size=360", "--jb-min-size=20"])
+        args.extend(["--jb-max-size=360"])
 
     return args
 
@@ -205,7 +204,7 @@ class PjsuaProcess:
             "/usr/bin/chrt", "-r", "99",
             PJSUA_BIN,
             f"--config-file={PJSUA_CONF}",
-            "--no-wav-loop",
+            # "--no-wav-loop",  # removed for pjsip 2.14
             "--thread-cnt=3",
         ] + device_args
 
