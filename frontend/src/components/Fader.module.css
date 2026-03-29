@@ -1,5 +1,5 @@
 .fader {
-  background: #ffffff;
+  background: #3a4555;
   border: 1px solid var(--green);
   border-radius: var(--radius-lg);
   padding: 0.4rem;
@@ -12,7 +12,7 @@
   height: 80%;
   align-self: center;
   flex-shrink: 0;
-  color: #000000;
+  color: #e8e8f0;
 }
 
 .label {

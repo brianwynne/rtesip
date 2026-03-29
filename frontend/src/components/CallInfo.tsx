@@ -114,11 +114,11 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
       <div className={styles.bottomRow}>
         <div className={styles.metaGroup}>
           <div className={styles.meta}>
-            {sipReady ? <Shield size={9} className={styles.iconGreen} /> : <ShieldOff size={9} />}
+            {sipReady ? <Shield size={14} className={styles.iconGreen} /> : <ShieldOff size={14} />}
             <span>{sipReady ? "TLS" : "TCP"}</span>
           </div>
           <div className={styles.meta}>
-            <Wifi size={9} />
+            <Wifi size={14} />
             <span>{callState.codec || "—"}</span>
           </div>
         </div>

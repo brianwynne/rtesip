@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from typing import Callable, Optional
 
 from src.config.settings import DATA_DIR, get_section
@@ -175,7 +176,7 @@ class PjsuaTelnet:
 
         elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]", data):
             self.call_state = CallState.CONNECTED
-            self._emit_sync("connected", {"destination": self.current_contact, "codec": self.current_codec})
+            self._emit_sync("connected", {"destination": self.current_contact, "codec": self.current_codec, "connected_at": time.time()})
 
         # Codec from call dump_q: "#0 audio G722 @16kHz" or "#0 audio PCMU @8kHz"
         elif m := re.search(r"#[0-9] audio (\w+)\s*@", data):
