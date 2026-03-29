@@ -1,0 +1,11 @@
+[Unit]
+Description=Clean up Plymouth after kiosk starts
+After=rtesip-kiosk.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 10
+ExecStart=/usr/bin/plymouth quit
+
+[Install]
+WantedBy=multi-user.target

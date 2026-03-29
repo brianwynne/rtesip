@@ -580,6 +580,11 @@ GTEOF
     mkdir -p /etc/sysctl.d
     echo 'kernel.printk = 3 3 3 3' > /etc/sysctl.d/99-hide-kernel-messages.conf
 
+    # Plymouth cleanup — quit daemon after kiosk starts to free ~47MB
+    cp "$INSTALL_DIR/deploy/systemd/plymouth-cleanup.service" /etc/systemd/system/ 2>/dev/null \
+        || cp "$LOCAL_DIR/deploy/systemd/plymouth-cleanup.service" /etc/systemd/system/ 2>/dev/null
+    systemctl enable plymouth-cleanup.service 2>/dev/null || true
+
     update-initramfs -u 2>/dev/null || true
     ok "Boot splash installed"
 else
