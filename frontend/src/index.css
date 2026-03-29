@@ -8,6 +8,8 @@
   --bg-card: #22223c;
   --bg-elevated: #2c2c4a;
   --bg-input: #262642;
+  --bg-fader: #3a4555;
+  --text-fader: #e8e8f0;
   --border: #3a3a5c;
   --border-focus: #6b8cff;
 
@@ -60,6 +62,8 @@
   --bg-card: #4a7a50;
   --bg-elevated: #567d5c;
   --bg-input: #3e6e44;
+  --bg-fader: #ffffff;
+  --text-fader: #333333;
   --border: #C8CDD8;
   --border-focus: #2B5EA7;
 

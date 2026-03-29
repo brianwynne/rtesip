@@ -16,7 +16,7 @@
   right: 0;
   font-size: 1.6rem;
   font-family: var(--font-mono);
-  color: #e8e8f0;
+  color: var(--text-fader);
   transform: translateY(50%);
   line-height: 1;
 }
