@@ -120,8 +120,8 @@ async def _apply_initial_audio_state() -> None:
     audio = get_section("audio")
 
     # 3. Volume at startup — capture and playback
-    capture_vol = audio.get("capture_volume", 25)
-    playback_vol = audio.get("playback_volume", 25)
+    capture_vol = audio.get("capture_volume", 50)
+    playback_vol = audio.get("playback_volume", 50)
     mixer_state.capture_left = capture_vol
     mixer_state.capture_right = capture_vol
     mixer_state.playback_left = playback_vol
