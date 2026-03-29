@@ -1,4 +1,4 @@
-// SIP Reporter Plymouth boot splash — cycles through 5 splash screens
+// SIP Reporter Plymouth boot splash — time-based cycle through 5 screens
 
 // Load images
 splash1 = Image("splash1.png");
@@ -14,28 +14,33 @@ sprite3 = Sprite(splash3);
 sprite4 = Sprite(splash4);
 sprite5 = Sprite(splash5);
 
-// Center all sprites
-for (i = 0; i < 5; i++) {
-    if (i == 0) s = sprite1;
-    if (i == 1) s = sprite2;
-    if (i == 2) s = sprite3;
-    if (i == 3) s = sprite4;
-    if (i == 4) s = sprite5;
-    s.SetX(Window.GetX() + (Window.GetWidth() - splash1.GetWidth()) / 2);
-    s.SetY(Window.GetY() + (Window.GetHeight() - splash1.GetHeight()) / 2);
-    s.SetOpacity(0);
-}
+// Center all sprites and hide
+sprite1.SetX(Window.GetX() + (Window.GetWidth() - splash1.GetWidth()) / 2);
+sprite1.SetY(Window.GetY() + (Window.GetHeight() - splash1.GetHeight()) / 2);
+sprite2.SetX(Window.GetX() + (Window.GetWidth() - splash2.GetWidth()) / 2);
+sprite2.SetY(Window.GetY() + (Window.GetHeight() - splash2.GetHeight()) / 2);
+sprite3.SetX(Window.GetX() + (Window.GetWidth() - splash3.GetWidth()) / 2);
+sprite3.SetY(Window.GetY() + (Window.GetHeight() - splash3.GetHeight()) / 2);
+sprite4.SetX(Window.GetX() + (Window.GetWidth() - splash4.GetWidth()) / 2);
+sprite4.SetY(Window.GetY() + (Window.GetHeight() - splash4.GetHeight()) / 2);
+sprite5.SetX(Window.GetX() + (Window.GetWidth() - splash5.GetWidth()) / 2);
+sprite5.SetY(Window.GetY() + (Window.GetHeight() - splash5.GetHeight()) / 2);
 
-// Show first splash immediately
 sprite1.SetOpacity(1);
+sprite2.SetOpacity(0);
+sprite3.SetOpacity(0);
+sprite4.SetOpacity(0);
+sprite5.SetOpacity(0);
 
-// Track progress
-global.progress = 0;
+// Time-based cycling — each image shows for ~3 seconds
+global.counter = 0;
 global.current = 0;
 
 fun refresh_callback() {
-    // Cycle through splashes based on boot progress
-    new_idx = Math.Int(global.progress * 5);
+    global.counter++;
+
+    // Switch every ~250 refresh calls (~5 seconds at 50fps)
+    new_idx = Math.Int(global.counter / 250);
     if (new_idx > 4) new_idx = 4;
 
     if (new_idx != global.current) {
@@ -59,10 +64,7 @@ fun refresh_callback() {
 
 Plymouth.SetRefreshFunction(refresh_callback);
 
-fun boot_progress_callback(duration, progress) {
-    global.progress = progress;
-}
-
+fun boot_progress_callback(duration, progress) { }
 Plymouth.SetBootProgressFunction(boot_progress_callback);
 
 // Hide password prompt and messages
