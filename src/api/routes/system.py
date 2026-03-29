@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 import subprocess
 from pathlib import Path
 
@@ -167,26 +168,24 @@ async def update_ntp(settings: dict):
 
 @router.post("/reboot")
 async def reboot():
-    try:
-        subprocess.Popen(["shutdown", "-r", "+0", "rtesip reboot"])
-        return {"status": "rebooting"}
-    except Exception as e:
-        logger.error("Reboot failed: %s", e)
-        return JSONResponse(status_code=500, content={"error": f"Reboot failed: {e}"})
+    os.system("/usr/bin/sudo /bin/systemctl reboot &")
+    return {"status": "rebooting"}
 
 
 @router.post("/restart-services")
 async def restart_services():
-    try:
-        subprocess.run(["systemctl", "restart", "rtesip"], timeout=10)
-        return {"status": "restarting"}
-    except Exception as e:
-        logger.error("Service restart failed: %s", e)
-        return JSONResponse(status_code=500, content={"error": f"Service restart failed: {e}"})
+    os.system("/usr/bin/sudo /bin/systemctl restart rtesip &")
+    return {"status": "restarting"}
+
+
+@router.post("/shutdown")
+async def shutdown():
+    os.system("/usr/bin/sudo /bin/systemctl poweroff &")
+    return {"status": "shutting down"}
 
 
 @router.post("/factory-reset")
 async def do_factory_reset():
     await asyncio.to_thread(factory_reset)
-    subprocess.Popen(["shutdown", "-r", "+0", "rtesip factory reset"])
+    subprocess.Popen(["/usr/bin/sudo", "/sbin/shutdown", "-r", "+0", "rtesip factory reset"])
     return {"status": "reset complete, rebooting"}

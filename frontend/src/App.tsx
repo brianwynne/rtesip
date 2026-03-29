@@ -75,8 +75,10 @@ function App() {
     return <LoginScreen onLogin={ws.authenticate} failed={ws.authFailed} />;
   }
 
+  const isIncoming = ws.callState.state === "incoming";
+
   return (
-    <div className={styles.app}>
+    <div className={`${styles.app} ${isIncoming ? styles.appIncoming : ""}`}>
       <StatusBar
         connected={ws.connected}
         sipReady={ws.sipReady}

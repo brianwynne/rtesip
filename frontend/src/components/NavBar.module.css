@@ -41,3 +41,76 @@
   background: var(--tab-accent, var(--accent));
   border-radius: 0 0 2px 2px;
 }
+
+.powerTab {
+  flex: 0 0 4.5rem;
+  color: var(--text-muted);
+  border-left: 1px solid var(--border);
+}
+
+.powerTab:hover {
+  color: var(--amber);
+}
+
+.powerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.powerMenu {
+  background: var(--bg-secondary);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 22rem;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.powerOption {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.4rem 1.6rem;
+  border-radius: 0.8rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.powerOption:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.powerDanger {
+  color: var(--red, #ef4444);
+}
+
+.powerDanger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.powerCancel {
+  padding: 1.2rem;
+  border-radius: 0.8rem;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  border: 1px solid var(--border);
+}
+
+.powerCancel:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
