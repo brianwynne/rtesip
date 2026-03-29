@@ -131,10 +131,10 @@ async def _apply_initial_audio_state() -> None:
     mixer_state.hardware_mixer = audio.get("hardware_mixer", False)
 
     # Send initial volume to pjsua via telnet
-    # pjsua V command: 1.0 = unity gain, >1.0 = amplify. Scale fader 0-100 to 0.0-4.0x
+    # pjsua V command: 1.0 = unity gain, >1.0 = amplify. Scale fader 0-100 to 0.0-2.0x
     if not mixer_state.hardware_mixer:
-        capture = mixer_state.capture_left / 100 * 4.0
-        playback = mixer_state.playback_left / 100 * 4.0
+        capture = mixer_state.capture_left / 100 * 2.0
+        playback = mixer_state.playback_left / 100 * 2.0
         await telnet.set_volume(capture, playback)
 
     # 5. Mic monitor — connect capture to playback port in pjsua conference bridge
@@ -336,7 +336,7 @@ async def _broadcast_levels() -> None:
         except Exception as e:
             logger.warning("Hardware mixer volume update failed: %s", e)
     else:
-        # Software mixer via pjsua — scale fader 0-100 to 0.0-4.0x
-        capture = mixer_state.capture_left / 100 * 4.0
-        playback = mixer_state.playback_left / 100 * 4.0
+        # Software mixer via pjsua — scale fader 0-100 to 0.0-2.0x
+        capture = mixer_state.capture_left / 100 * 2.0
+        playback = mixer_state.playback_left / 100 * 2.0
         await telnet.set_volume(capture, playback)
