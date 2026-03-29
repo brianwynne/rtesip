@@ -1,0 +1,1 @@
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl
