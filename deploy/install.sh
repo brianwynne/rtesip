@@ -527,7 +527,7 @@ for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
 done
 
 if [ -n "$SPLASH_SRC" ]; then
-    apt-get -qq install -y plymouth 2>/dev/null || true
+    apt-get -qq install -y plymouth plymouth-themes 2>/dev/null || true
     THEME_DIR="/usr/share/plymouth/themes/sip-reporter"
     mkdir -p "$THEME_DIR"
     cp "$SPLASH_SRC"/*.png "$THEME_DIR/"
@@ -542,16 +542,43 @@ if [ -n "$SPLASH_SRC" ]; then
         CMDLINE="/boot/cmdline.txt"
     fi
     if [ -n "$CMDLINE" ]; then
-        # Add splash parameters if not present
         grep -q "quiet" "$CMDLINE" || sed -i 's/$/ quiet/' "$CMDLINE"
         grep -q "splash" "$CMDLINE" || sed -i 's/$/ splash/' "$CMDLINE"
         grep -q "plymouth.ignore-serial-consoles" "$CMDLINE" || sed -i 's/$/ plymouth.ignore-serial-consoles/' "$CMDLINE"
         grep -q "vt.global_cursor_default=0" "$CMDLINE" || sed -i 's/$/ vt.global_cursor_default=0/' "$CMDLINE"
         grep -q "logo.nologo" "$CMDLINE" || sed -i 's/$/ logo.nologo/' "$CMDLINE"
+        grep -q "loglevel=3" "$CMDLINE" || sed -i 's/$/ loglevel=3/' "$CMDLINE"
     fi
 
-    # Disable login prompt on tty1
-    systemctl disable getty@tty1.service 2>/dev/null || true
+    # Disable rainbow screen
+    if [ -n "$CMDLINE" ]; then
+        CONFIG_TXT="$(dirname $CMDLINE)/config.txt"
+        if [ -f "$CONFIG_TXT" ]; then
+            grep -q "disable_splash" "$CONFIG_TXT" || echo "disable_splash=1" >> "$CONFIG_TXT"
+        fi
+    fi
+
+    # Plymouth deactivate instead of quit — keeps splash on screen until kiosk takes over
+    mkdir -p /etc/systemd/system/plymouth-quit.service.d
+    cat > /etc/systemd/system/plymouth-quit.service.d/retain.conf << 'PLEOF'
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/plymouth deactivate
+PLEOF
+
+    # Hide getty login prompt on tty1
+    mkdir -p /etc/systemd/system/getty@tty1.service.d
+    cat > /etc/systemd/system/getty@tty1.service.d/quiet.conf << 'GTEOF'
+[Service]
+StandardOutput=null
+GTEOF
+
+    # TTY permissions for kiosk seat access
+    echo 'SUBSYSTEM=="tty", KERNEL=="tty[0-1]", GROUP="tty", MODE="0660"' > /etc/udev/rules.d/99-tty-permissions.rules
+
+    # Suppress kernel messages on console
+    mkdir -p /etc/sysctl.d
+    echo 'kernel.printk = 3 3 3 3' > /etc/sysctl.d/99-hide-kernel-messages.conf
 
     update-initramfs -u 2>/dev/null || true
     ok "Boot splash installed"
