@@ -1,20 +1,17 @@
-// SIP Reporter Plymouth boot splash — time-based cycle through 5 screens
+// SIP Reporter Plymouth boot splash
 
-// Load images
 splash1 = Image("splash1.png");
 splash2 = Image("splash2.png");
 splash3 = Image("splash3.png");
 splash4 = Image("splash4.png");
 splash5 = Image("splash5.png");
 
-// Create sprites
 sprite1 = Sprite(splash1);
 sprite2 = Sprite(splash2);
 sprite3 = Sprite(splash3);
 sprite4 = Sprite(splash4);
 sprite5 = Sprite(splash5);
 
-// Center all sprites and hide
 sprite1.SetX(Window.GetX() + (Window.GetWidth() - splash1.GetWidth()) / 2);
 sprite1.SetY(Window.GetY() + (Window.GetHeight() - splash1.GetHeight()) / 2);
 sprite2.SetX(Window.GetX() + (Window.GetWidth() - splash2.GetWidth()) / 2);
@@ -32,33 +29,34 @@ sprite3.SetOpacity(0);
 sprite4.SetOpacity(0);
 sprite5.SetOpacity(0);
 
-// Time-based cycling — each image shows for ~3 seconds
 global.counter = 0;
 global.current = 0;
 
 fun refresh_callback() {
     global.counter++;
 
-    // Switch every ~250 refresh calls (~5 seconds at 50fps)
-    new_idx = Math.Int(global.counter / 250);
-    if (new_idx > 4) new_idx = 4;
+    if (global.current == 0 && global.counter >= 100) {
+        sprite1.SetOpacity(0);
+        sprite2.SetOpacity(1);
+        global.current = 1;
+    }
 
-    if (new_idx != global.current) {
-        // Hide current
-        if (global.current == 0) sprite1.SetOpacity(0);
-        if (global.current == 1) sprite2.SetOpacity(0);
-        if (global.current == 2) sprite3.SetOpacity(0);
-        if (global.current == 3) sprite4.SetOpacity(0);
-        if (global.current == 4) sprite5.SetOpacity(0);
+    if (global.current == 1 && global.counter >= 200) {
+        sprite2.SetOpacity(0);
+        sprite3.SetOpacity(1);
+        global.current = 2;
+    }
 
-        // Show new
-        if (new_idx == 0) sprite1.SetOpacity(1);
-        if (new_idx == 1) sprite2.SetOpacity(1);
-        if (new_idx == 2) sprite3.SetOpacity(1);
-        if (new_idx == 3) sprite4.SetOpacity(1);
-        if (new_idx == 4) sprite5.SetOpacity(1);
+    if (global.current == 2 && global.counter >= 300) {
+        sprite3.SetOpacity(0);
+        sprite4.SetOpacity(1);
+        global.current = 3;
+    }
 
-        global.current = new_idx;
+    if (global.current == 3 && global.counter >= 400) {
+        sprite4.SetOpacity(0);
+        sprite5.SetOpacity(1);
+        global.current = 4;
     }
 }
 
@@ -67,11 +65,8 @@ Plymouth.SetRefreshFunction(refresh_callback);
 fun boot_progress_callback(duration, progress) { }
 Plymouth.SetBootProgressFunction(boot_progress_callback);
 
-// Hide password prompt and messages
 fun message_callback(text) { }
 Plymouth.SetMessageFunction(message_callback);
 
-fun display_password_callback(prompt, bullets) {
-    return "";
-}
+fun display_password_callback(prompt, bullets) { return ""; }
 Plymouth.SetDisplayPasswordFunction(display_password_callback);
