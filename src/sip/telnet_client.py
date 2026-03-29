@@ -256,10 +256,9 @@ class PjsuaTelnet:
         elif "PJMEDIA_EAUD_SYSERR" in data:
             self._emit_sync("audio_error", {"error": "device_error"})
 
-        # STUN/network errors
+        # STUN/network errors (don't affect server_reachable — these are ICE/NAT issues, not SIP server)
         elif any(err in data for err in ["PJNATH_ESTUNTIMEDOUT", "Error sending STUN request", "PJ_ERESOLVE"]):
             if "not nominated" not in data and "REGISTER" not in data and "registration" not in data:
-                self.server_reachable = False
                 self._emit_sync("network_error", {"error": data})
 
         # Connection errors
