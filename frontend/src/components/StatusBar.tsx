@@ -13,9 +13,10 @@ interface Props {
   onToggleTheme: () => void;
   callState: CallState;
   wifiSignal: number | null;
+  publicIp: string | null;
 }
 
-export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal }: Props) {
+export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal, publicIp }: Props) {
   const accountList = Object.values(accounts);
   const hasWifi = "wlan0" in ipAddresses;
   const WifiIcon = wifiSignal == null || !hasWifi ? WifiOff : wifiSignal > -50 ? Wifi : wifiSignal > -70 ? WifiLow : WifiOff;
@@ -33,6 +34,12 @@ export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onTog
             {ip}
           </span>
         ))}
+        {publicIp && (
+          <span className={styles.ip} title="Public IP">
+            <Globe size={14} />
+            {publicIp}
+          </span>
+        )}
       </div>
 
       {/* Spacer pushes right section to the edge */}

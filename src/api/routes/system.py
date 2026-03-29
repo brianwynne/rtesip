@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import socket
 import subprocess
 from pathlib import Path
 
@@ -50,6 +51,21 @@ async def system_status():
     hw = get_hardware_info()
     ips = _get_ip_addresses()
 
+    # Public IP via STUN-discovered address or external service
+    public_ip = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(2)
+        s.connect(("8.8.8.8", 80))
+        public_ip = s.getsockname()[0]
+        s.close()
+        # If it's a private IP, it's behind NAT — try to get real public IP
+        if public_ip.startswith(("10.", "172.", "192.168.")):
+            import urllib.request
+            public_ip = urllib.request.urlopen("https://api.ipify.org", timeout=3).read().decode().strip()
+    except Exception:
+        pass
+
     # WiFi signal strength from /proc/net/wireless
     wifi_signal = None
     try:
@@ -69,6 +85,7 @@ async def system_status():
         "serial": hw.get("serial", ""),
         "model": hw.get("model", ""),
         "ip_addresses": ips,
+        "public_ip": public_ip,
         "wifi_signal": wifi_signal,
     }
 

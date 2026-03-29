@@ -19,6 +19,7 @@ function App() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [ipAddresses, setIpAddresses] = useState<Record<string, string>>({});
   const [wifiSignal, setWifiSignal] = useState<number | null>(null);
+  const [publicIp, setPublicIp] = useState<string | null>(null);
   const ws = useWebSocket();
   const { theme, toggle: toggleTheme } = useTheme();
   useRingtone(ws.callState.state === "incoming");
@@ -52,6 +53,7 @@ function App() {
             setIpAddresses({ eth0: window.location.hostname });
           }
           if (data.wifi_signal != null) setWifiSignal(data.wifi_signal);
+          if (data.public_ip) setPublicIp(data.public_ip);
         })
         .catch(() => {
           setIpAddresses({ eth0: window.location.hostname });
@@ -96,6 +98,7 @@ function App() {
         onToggleTheme={toggleTheme}
         callState={ws.callState}
         wifiSignal={wifiSignal}
+        publicIp={publicIp}
       />
       <main className={styles.content}>
         {page === "call" && (
