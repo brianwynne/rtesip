@@ -35,25 +35,25 @@ global.current = 0;
 fun refresh_callback() {
     global.counter++;
 
-    if (global.current == 0 && global.counter >= 100) {
+    if (global.current == 0 && global.counter >= 150) {
         sprite1.SetOpacity(0);
         sprite2.SetOpacity(1);
         global.current = 1;
     }
 
-    if (global.current == 1 && global.counter >= 200) {
+    if (global.current == 1 && global.counter >= 300) {
         sprite2.SetOpacity(0);
         sprite3.SetOpacity(1);
         global.current = 2;
     }
 
-    if (global.current == 2 && global.counter >= 300) {
+    if (global.current == 2 && global.counter >= 450) {
         sprite3.SetOpacity(0);
         sprite4.SetOpacity(1);
         global.current = 3;
     }
 
-    if (global.current == 3 && global.counter >= 400) {
+    if (global.current == 3 && global.counter >= 600) {
         sprite4.SetOpacity(0);
         sprite5.SetOpacity(1);
         global.current = 4;
