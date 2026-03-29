@@ -50,6 +50,18 @@ async def system_status():
     hw = get_hardware_info()
     ips = _get_ip_addresses()
 
+    # WiFi signal strength from /proc/net/wireless
+    wifi_signal = None
+    try:
+        wireless = Path("/proc/net/wireless").read_text()
+        for line in wireless.splitlines():
+            if "wlan0" in line:
+                parts = line.split()
+                wifi_signal = int(float(parts[3]))  # signal level in dBm
+                break
+    except Exception:
+        pass
+
     return {
         "cpu_temp": temp,
         "uptime_seconds": float(uptime),
@@ -57,6 +69,7 @@ async def system_status():
         "serial": hw.get("serial", ""),
         "model": hw.get("model", ""),
         "ip_addresses": ips,
+        "wifi_signal": wifi_signal,
     }
 
 

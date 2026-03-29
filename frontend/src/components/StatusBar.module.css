@@ -126,4 +126,5 @@
 
 .iconGreen { color: var(--green); }
 .iconRed { color: var(--red); }
+.iconAmber { color: var(--amber); }
 .iconMuted { color: var(--text-muted); }

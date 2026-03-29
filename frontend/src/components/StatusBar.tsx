@@ -1,4 +1,4 @@
-import { Globe, Shield, ShieldOff, Sun, Moon, Cable, Wifi } from "lucide-react";
+import { Globe, Shield, ShieldOff, Sun, Moon, Cable, Wifi, WifiLow, WifiOff } from "lucide-react";
 import { Logo } from "./Logo";
 import type { AccountStatus, CallState } from "../types";
 import styles from "./StatusBar.module.css";
@@ -12,10 +12,15 @@ interface Props {
   theme: "dark" | "light";
   onToggleTheme: () => void;
   callState: CallState;
+  wifiSignal: number | null;
 }
 
-export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState }: Props) {
+export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal }: Props) {
   const accountList = Object.values(accounts);
+  const hasWifi = "wlan0" in ipAddresses;
+  const WifiIcon = wifiSignal == null || !hasWifi ? WifiOff : wifiSignal > -50 ? Wifi : wifiSignal > -70 ? WifiLow : WifiOff;
+  const wifiColor = wifiSignal == null || !hasWifi ? styles.iconMuted : wifiSignal > -50 ? styles.iconGreen : wifiSignal > -70 ? styles.iconAmber : styles.iconRed;
+  const wifiLabel = wifiSignal != null ? `WiFi ${wifiSignal} dBm` : "No WiFi";
 
   return (
     <div className={styles.bar}>
@@ -60,6 +65,11 @@ export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onTog
             ) : (
               <ShieldOff size={22} className={styles.iconRed} />
             )}
+          </div>
+        )}
+        {hasWifi && (
+          <div className={styles.indicator} title={wifiLabel}>
+            <WifiIcon size={22} className={wifiColor} />
           </div>
         )}
         <div className={styles.indicator} title={serverReachable ? "SIP Server Reachable" : "SIP Server Unreachable"}>

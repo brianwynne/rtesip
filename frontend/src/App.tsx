@@ -18,6 +18,7 @@ function App() {
   const [page, setPage] = useState<Page>("call");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [ipAddresses, setIpAddresses] = useState<Record<string, string>>({});
+  const [wifiSignal, setWifiSignal] = useState<number | null>(null);
   const ws = useWebSocket();
   const { theme, toggle: toggleTheme } = useTheme();
   useRingtone(ws.callState.state === "incoming");
@@ -40,19 +41,25 @@ function App() {
   }, [page, fetchContacts]);
 
   useEffect(() => {
-    fetch("/api/system/status")
-      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
-      .then((data) => {
-        const ips = data.ip_addresses || {};
-        if (Object.keys(ips).length > 0) {
-          setIpAddresses(ips);
-        } else {
+    const fetchStatus = () => {
+      fetch("/api/system/status")
+        .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
+        .then((data) => {
+          const ips = data.ip_addresses || {};
+          if (Object.keys(ips).length > 0) {
+            setIpAddresses(ips);
+          } else {
+            setIpAddresses({ eth0: window.location.hostname });
+          }
+          if (data.wifi_signal != null) setWifiSignal(data.wifi_signal);
+        })
+        .catch(() => {
           setIpAddresses({ eth0: window.location.hostname });
-        }
-      })
-      .catch(() => {
-        setIpAddresses({ eth0: window.location.hostname });
-      });
+        });
+    };
+    fetchStatus();
+    const t = setInterval(fetchStatus, 30000);
+    return () => clearInterval(t);
   }, []);
 
   // Kiosk mode: local touchscreen only shows Call + Contacts (no Audio/Settings)
@@ -88,6 +95,7 @@ function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         callState={ws.callState}
+        wifiSignal={wifiSignal}
       />
       <main className={styles.content}>
         {page === "call" && (
