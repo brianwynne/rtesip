@@ -23,6 +23,8 @@ export interface CallState {
   destination?: string;
   connectedAt?: number;  // server epoch timestamp
   codec?: string;
+  srtpActive?: boolean;
+  srtpSuite?: string;
 }
 
 export interface AccountStatus {

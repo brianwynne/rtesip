@@ -87,6 +87,7 @@ function App() {
         ipAddresses={ipAddresses}
         theme={theme}
         onToggleTheme={toggleTheme}
+        callState={ws.callState}
       />
       <main className={styles.content}>
         {page === "call" && (

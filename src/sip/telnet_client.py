@@ -47,6 +47,8 @@ class PjsuaTelnet:
         self.server_reachable = False
         self.connected_at: Optional[str] = None
         self.current_codec: Optional[str] = None
+        self.srtp_active: bool = False
+        self.srtp_suite: Optional[str] = None
 
         # Event callback
         self._on_event: Optional[Callable] = None
@@ -184,12 +186,21 @@ class PjsuaTelnet:
             if self.call_state == CallState.CONNECTED:
                 self._emit_sync("codec", {"codec": self.current_codec})
 
+        # SRTP status from call dump_q: "SRTP status: Active Crypto-suite: AES_256_CM_HMAC_SHA1_80"
+        elif m := re.search(r"SRTP status:\s*(\w+)", data):
+            self.srtp_active = (m.group(1).lower() == "active")
+            suite_match = re.search(r"Crypto-suite:\s*(\S+)", data)
+            self.srtp_suite = suite_match.group(1) if suite_match else None
+            self._emit_sync("srtp", {"active": self.srtp_active, "suite": self.srtp_suite})
+
         # Call state: DISCONNECTED (pjsua 2.9 uses DISCONNCTD, 2.14 uses DISCONNECTED)
         elif m := re.search(r"\[DISCONN[A-Z]*\] t\: ([^;]+)", data):
             self.call_state = CallState.IDLE
             self._emit_sync("ended", {"destination": m.group(1)})
             self.current_contact = None
             self.current_codec = None
+            self.srtp_active = False
+            self.srtp_suite = None
 
         # pjsua 2.14 format: Call 0 is DISCONNECTED [reason=...]
         elif m := re.search(r"Call [0-9] is DISCONNECTED", data):
@@ -197,6 +208,8 @@ class PjsuaTelnet:
             self._emit_sync("ended", {"destination": self.current_contact or ""})
             self.current_contact = None
             self.current_codec = None
+            self.srtp_active = False
+            self.srtp_suite = None
 
         # Incoming call
         elif (m := re.search(r"From\: (.+)", data)) or              (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]", data)):

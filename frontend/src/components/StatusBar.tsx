@@ -1,6 +1,6 @@
 import { Globe, Shield, ShieldOff, Sun, Moon, Cable, Wifi } from "lucide-react";
 import { Logo } from "./Logo";
-import type { AccountStatus } from "../types";
+import type { AccountStatus, CallState } from "../types";
 import styles from "./StatusBar.module.css";
 
 interface Props {
@@ -11,9 +11,10 @@ interface Props {
   ipAddresses: Record<string, string>;
   theme: "dark" | "light";
   onToggleTheme: () => void;
+  callState: CallState;
 }
 
-export function StatusBar({ sipReady, serverReachable, accounts, ipAddresses, theme, onToggleTheme }: Props) {
+export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState }: Props) {
   const accountList = Object.values(accounts);
 
   return (
@@ -52,13 +53,15 @@ export function StatusBar({ sipReady, serverReachable, accounts, ipAddresses, th
         <button className={styles.themeToggle} onClick={onToggleTheme} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
           {theme === "dark" ? <Sun size={22} /> : <Moon size={22} />}
         </button>
-        <div className={styles.indicator} title={sipReady ? "TLS Active" : "No TLS"}>
-          {sipReady ? (
-            <Shield size={22} className={styles.iconGreen} />
-          ) : (
-            <ShieldOff size={22} className={styles.iconMuted} />
-          )}
-        </div>
+        {callState.state === "connected" && (
+          <div className={styles.indicator} title={callState.srtpActive ? `SRTP Active — ${callState.srtpSuite || ""}` : "SRTP Inactive"}>
+            {callState.srtpActive ? (
+              <Shield size={22} className={styles.iconGreen} />
+            ) : (
+              <ShieldOff size={22} className={styles.iconRed} />
+            )}
+          </div>
+        )}
         <div className={styles.indicator} title={serverReachable ? "SIP Server Reachable" : "SIP Server Unreachable"}>
           <Globe size={22} className={serverReachable ? styles.iconGreen : styles.iconRed} />
         </div>

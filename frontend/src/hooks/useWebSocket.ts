@@ -165,6 +165,9 @@ export function useWebSocket() {
           case "codec":
             setCallState((prev) => ({ ...prev, codec: msg.codec as string }));
             break;
+          case "srtp":
+            setCallState((prev) => ({ ...prev, srtpActive: msg.active as boolean, srtpSuite: msg.suite as string }));
+            break;
           case "ended":
             setCallState({ state: "idle" });
             break;
