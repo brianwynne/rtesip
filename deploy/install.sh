@@ -516,6 +516,49 @@ chown -R root:root "$INSTALL_DIR"
 chown rtesip:rtesip /var/lib/rtesip /var/log/rtesip /run/rtesip
 ok "Ownership set"
 
+# ── Install Plymouth boot splash ─────────────────────────────
+info "Installing boot splash..."
+SPLASH_SRC=""
+for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
+    if [ -d "$d/deploy/splash" ]; then
+        SPLASH_SRC="$d/deploy/splash"
+        break
+    fi
+done
+
+if [ -n "$SPLASH_SRC" ]; then
+    apt-get -qq install -y plymouth 2>/dev/null || true
+    THEME_DIR="/usr/share/plymouth/themes/sip-reporter"
+    mkdir -p "$THEME_DIR"
+    cp "$SPLASH_SRC"/*.png "$THEME_DIR/"
+    cp "$SPLASH_SRC/sip-reporter.plymouth" "$THEME_DIR/"
+    cp "$SPLASH_SRC/sip-reporter.script" "$THEME_DIR/"
+    plymouth-set-default-theme sip-reporter 2>/dev/null || true
+
+    # Configure boot to use splash and hide text
+    if [ -f /boot/firmware/cmdline.txt ]; then
+        CMDLINE="/boot/firmware/cmdline.txt"
+    elif [ -f /boot/cmdline.txt ]; then
+        CMDLINE="/boot/cmdline.txt"
+    fi
+    if [ -n "$CMDLINE" ]; then
+        # Add splash parameters if not present
+        grep -q "quiet" "$CMDLINE" || sed -i 's/$/ quiet/' "$CMDLINE"
+        grep -q "splash" "$CMDLINE" || sed -i 's/$/ splash/' "$CMDLINE"
+        grep -q "plymouth.ignore-serial-consoles" "$CMDLINE" || sed -i 's/$/ plymouth.ignore-serial-consoles/' "$CMDLINE"
+        grep -q "vt.global_cursor_default=0" "$CMDLINE" || sed -i 's/$/ vt.global_cursor_default=0/' "$CMDLINE"
+        grep -q "logo.nologo" "$CMDLINE" || sed -i 's/$/ logo.nologo/' "$CMDLINE"
+    fi
+
+    # Disable login prompt on tty1
+    systemctl disable getty@tty1.service 2>/dev/null || true
+
+    update-initramfs -u 2>/dev/null || true
+    ok "Boot splash installed"
+else
+    warn "Splash images not found — skipping boot splash"
+fi
+
 # ── Set CPU performance governor ─────────────────────────────
 info "Setting CPU performance governor..."
 GOVERNOR_PATH="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"

@@ -1,0 +1,75 @@
+// SIP Reporter Plymouth boot splash — cycles through 5 splash screens
+
+// Load images
+splash1 = Image("splash1.png");
+splash2 = Image("splash2.png");
+splash3 = Image("splash3.png");
+splash4 = Image("splash4.png");
+splash5 = Image("splash5.png");
+
+// Create sprites
+sprite1 = Sprite(splash1);
+sprite2 = Sprite(splash2);
+sprite3 = Sprite(splash3);
+sprite4 = Sprite(splash4);
+sprite5 = Sprite(splash5);
+
+// Center all sprites
+for (i = 0; i < 5; i++) {
+    if (i == 0) s = sprite1;
+    if (i == 1) s = sprite2;
+    if (i == 2) s = sprite3;
+    if (i == 3) s = sprite4;
+    if (i == 4) s = sprite5;
+    s.SetX(Window.GetX() + (Window.GetWidth() - splash1.GetWidth()) / 2);
+    s.SetY(Window.GetY() + (Window.GetHeight() - splash1.GetHeight()) / 2);
+    s.SetOpacity(0);
+}
+
+// Show first splash immediately
+sprite1.SetOpacity(1);
+
+// Track progress
+global.progress = 0;
+global.current = 0;
+
+fun refresh_callback() {
+    // Cycle through splashes based on boot progress
+    new_idx = Math.Int(global.progress * 5);
+    if (new_idx > 4) new_idx = 4;
+
+    if (new_idx != global.current) {
+        // Hide current
+        if (global.current == 0) sprite1.SetOpacity(0);
+        if (global.current == 1) sprite2.SetOpacity(0);
+        if (global.current == 2) sprite3.SetOpacity(0);
+        if (global.current == 3) sprite4.SetOpacity(0);
+        if (global.current == 4) sprite5.SetOpacity(0);
+
+        // Show new
+        if (new_idx == 0) sprite1.SetOpacity(1);
+        if (new_idx == 1) sprite2.SetOpacity(1);
+        if (new_idx == 2) sprite3.SetOpacity(1);
+        if (new_idx == 3) sprite4.SetOpacity(1);
+        if (new_idx == 4) sprite5.SetOpacity(1);
+
+        global.current = new_idx;
+    }
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun boot_progress_callback(duration, progress) {
+    global.progress = progress;
+}
+
+Plymouth.SetBootProgressFunction(boot_progress_callback);
+
+// Hide password prompt and messages
+fun message_callback(text) { }
+Plymouth.SetMessageFunction(message_callback);
+
+fun display_password_callback(prompt, bullets) {
+    return "";
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);

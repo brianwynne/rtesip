@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=SIP Reporter
+Description=SIP Reporter boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/sip-reporter
+ScriptFile=/usr/share/plymouth/themes/sip-reporter/sip-reporter.script
