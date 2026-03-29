@@ -41,19 +41,19 @@ fun refresh_callback() {
         global.current = 1;
     }
 
-    if (global.current == 1 && global.counter >= 400) {
+    if (global.current == 1 && global.counter >= 350) {
         sprite2.SetOpacity(0);
         sprite3.SetOpacity(1);
         global.current = 2;
     }
 
-    if (global.current == 2 && global.counter >= 600) {
+    if (global.current == 2 && global.counter >= 550) {
         sprite3.SetOpacity(0);
         sprite4.SetOpacity(1);
         global.current = 3;
     }
 
-    if (global.current == 3 && global.counter >= 800) {
+    if (global.current == 3 && global.counter >= 700) {
         sprite4.SetOpacity(0);
         sprite5.SetOpacity(1);
         global.current = 4;

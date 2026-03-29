@@ -22,6 +22,7 @@ export interface CallState {
   state: "idle" | "calling" | "ringing" | "incoming" | "connected";
   destination?: string;
   connectedAt?: number;  // server epoch timestamp
+  codec?: string;
 }
 
 export interface AccountStatus {

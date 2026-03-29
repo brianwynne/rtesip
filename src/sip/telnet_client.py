@@ -45,6 +45,7 @@ class PjsuaTelnet:
         self.sip_ready = False
         self.server_reachable = False
         self.connected_at: Optional[str] = None
+        self.current_codec: Optional[str] = None
 
         # Event callback
         self._on_event: Optional[Callable] = None
@@ -170,22 +171,31 @@ class PjsuaTelnet:
         # Call state: CONFIRMED
         if re.search(r"Call [0-9] state changed to CONFIRMED", data):
             asyncio.create_task(self.send("call list"))
+            asyncio.create_task(self.send("call dump_q"))
 
         elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]", data):
             self.call_state = CallState.CONNECTED
-            self._emit_sync("connected", {"destination": self.current_contact})
+            self._emit_sync("connected", {"destination": self.current_contact, "codec": self.current_codec})
+
+        # Codec from call dump_q: "#0 audio G722 @16kHz" or "#0 audio PCMU @8kHz"
+        elif m := re.search(r"#[0-9] audio (\w+)\s*@", data):
+            self.current_codec = m.group(1).upper()
+            if self.call_state == CallState.CONNECTED:
+                self._emit_sync("codec", {"codec": self.current_codec})
 
         # Call state: DISCONNECTED (pjsua 2.9 uses DISCONNCTD, 2.14 uses DISCONNECTED)
         elif m := re.search(r"\[DISCONN[A-Z]*\] t\: ([^;]+)", data):
             self.call_state = CallState.IDLE
             self._emit_sync("ended", {"destination": m.group(1)})
             self.current_contact = None
+            self.current_codec = None
 
         # pjsua 2.14 format: Call 0 is DISCONNECTED [reason=...]
         elif m := re.search(r"Call [0-9] is DISCONNECTED", data):
             self.call_state = CallState.IDLE
             self._emit_sync("ended", {"destination": self.current_contact or ""})
             self.current_contact = None
+            self.current_codec = None
 
         # Incoming call
         elif (m := re.search(r"From\: (.+)", data)) or              (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]", data)):

@@ -119,7 +119,7 @@ export function CallInfo({ callState, sipReady, onHangup }: Props) {
           </div>
           <div className={styles.meta}>
             <Wifi size={9} />
-            <span>Opus</span>
+            <span>{callState.codec || "—"}</span>
           </div>
         </div>
       </div>

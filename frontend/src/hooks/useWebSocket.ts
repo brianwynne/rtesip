@@ -160,7 +160,10 @@ export function useWebSocket() {
             setCallState({ state: "incoming", destination: msg.destination as string });
             break;
           case "connected":
-            setCallState({ state: "connected", destination: msg.destination as string, connectedAt: msg.connected_at as number });
+            setCallState((prev) => ({ ...prev, state: "connected", destination: msg.destination as string, connectedAt: msg.connected_at as number, codec: msg.codec as string || prev.codec }));
+            break;
+          case "codec":
+            setCallState((prev) => ({ ...prev, codec: msg.codec as string }));
             break;
           case "ended":
             setCallState({ state: "idle" });
