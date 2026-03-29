@@ -470,46 +470,45 @@ else
     warn "CLI script not found, skipping"
 fi
 
-# ── Install pjsua binary ─────────────────────────────────────
-info "Installing pjsua..."
+# ── Install pjsua 2.14 binary + shared libraries ─────────────
+info "Installing pjsua 2.14..."
 ARCH=$(dpkg --print-architecture)
-PJSUA_SRC=""
-if [ "$ARCH" = "armhf" ] && [ -f "$LOCAL_DIR/deploy/bin/pjsua-armhf" ]; then
-    PJSUA_SRC="$LOCAL_DIR/deploy/bin/pjsua-armhf"
-elif [ -f "$INSTALL_DIR/deploy/bin/pjsua-armhf" ] && [ "$ARCH" = "armhf" ]; then
-    PJSUA_SRC="$INSTALL_DIR/deploy/bin/pjsua-armhf"
+PJSUA_BUNDLE=""
+if [ "$ARCH" = "armhf" ]; then
+    for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
+        if [ -f "$d/deploy/bin/pjsua-214-armhf.tar.gz" ]; then
+            PJSUA_BUNDLE="$d/deploy/bin/pjsua-214-armhf.tar.gz"
+            break
+        fi
+    done
 fi
 
-if [ -n "$PJSUA_SRC" ]; then
-    cp "$PJSUA_SRC" /usr/local/bin/pjsua
+if [ -n "$PJSUA_BUNDLE" ]; then
+    # Extract pjsua binary and shared libraries
+    tar xzf "$PJSUA_BUNDLE" -C /usr/local/lib/ --exclude=pjsua
+    tar xzf "$PJSUA_BUNDLE" -C /usr/local/bin/ pjsua
     chmod +x /usr/local/bin/pjsua
+    ldconfig
 
     # Install pjsua runtime dependencies
-    # libasound2 renamed to libasound2t64 in newer Debian/Pi OS
     info "Installing pjsua dependencies..."
-    apt-get -qq install -y libopus0 uuid-runtime 2>/dev/null || true
+    apt-get -qq install -y libopus0 libsrtp2-1 uuid-runtime 2>/dev/null || true
     apt-get -qq install -y libasound2t64 2>/dev/null \
         || apt-get -qq install -y libasound2 2>/dev/null \
         || true
 
-    # libssl1.1 needed but not in Bookworm/Trixie — install from Debian Bullseye
-    if ! ldconfig -p | grep -q "libssl.so.1.1"; then
-        info "Installing libssl1.1 compatibility..."
-        if [ "$ARCH" = "armhf" ]; then
-            wget -q -O /tmp/libssl1.1.deb "http://ftp.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u1_armhf.deb" 2>/dev/null && \
-            dpkg -i /tmp/libssl1.1.deb 2>/dev/null && rm -f /tmp/libssl1.1.deb && \
-            ok "libssl1.1 installed" || warn "Could not install libssl1.1 — pjsua may not start"
-        elif [ "$ARCH" = "arm64" ]; then
-            wget -q -O /tmp/libssl1.1.deb "http://ftp.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u1_arm64.deb" 2>/dev/null && \
-            dpkg -i /tmp/libssl1.1.deb 2>/dev/null && rm -f /tmp/libssl1.1.deb && \
-            ok "libssl1.1 installed" || warn "Could not install libssl1.1 — pjsua may not start"
-        fi
-    fi
-
-    ok "pjsua installed at /usr/local/bin/pjsua"
+    ok "pjsua 2.14 installed at /usr/local/bin/pjsua"
 else
-    warn "No pjsua binary found for architecture $ARCH — SIP calls will not work until pjsua is installed"
+    warn "No pjsua bundle found for architecture $ARCH — SIP calls will not work until pjsua is installed"
 fi
+
+# ── Sudoers for reboot/shutdown from web UI ──────────────────
+info "Installing sudoers for rtesip..."
+cp "$INSTALL_DIR/deploy/conf/sudoers-rtesip" /etc/sudoers.d/rtesip 2>/dev/null \
+    || cp "$LOCAL_DIR/deploy/conf/sudoers-rtesip" /etc/sudoers.d/rtesip 2>/dev/null \
+    || echo 'rtesip ALL=(ALL) NOPASSWD: /bin/systemctl' > /etc/sudoers.d/rtesip
+chmod 440 /etc/sudoers.d/rtesip
+ok "Sudoers installed"
 
 # ── Set file ownership ───────────────────────────────────────
 info "Setting file ownership..."
