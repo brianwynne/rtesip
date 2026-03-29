@@ -234,6 +234,7 @@ class PjsuaTelnet:
                     asyncio.create_task(self.play_tone(1))
                 self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
             elif status > 200:
+                self.server_reachable = False
                 if not self.sip_ready:
                     asyncio.create_task(self.play_tone(2))
                 self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
@@ -245,10 +246,17 @@ class PjsuaTelnet:
         # STUN/network errors
         elif any(err in data for err in ["PJNATH_ESTUNTIMEDOUT", "Error sending STUN request", "PJ_ERESOLVE"]):
             if "not nominated" not in data and "REGISTER" not in data and "registration" not in data:
+                self.server_reachable = False
                 self._emit_sync("network_error", {"error": data})
 
         # Connection errors
         elif ("Connection timed out" in data or "Connection refused" in data) and not self.current_contact:
+            self.server_reachable = False
+            self._emit_sync("connection_error", {"error": data})
+
+        # Transport errors — server connection lost
+        elif "transport error" in data.lower() or "PJSIP_ETPNOTAVAIL" in data:
+            self.server_reachable = False
             self._emit_sync("connection_error", {"error": data})
 
         # SIP error reason
