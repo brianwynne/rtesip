@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "./components/StatusBar";
 import { LoginScreen } from "./components/LoginScreen";
+import { PinLock } from "./components/PinLock";
 import { NavBar, type Page } from "./components/NavBar";
 import { CallPage } from "./pages/CallPage";
 import { AudioPage } from "./pages/AudioPage";
@@ -20,9 +21,25 @@ function App() {
   const [ipAddresses, setIpAddresses] = useState<Record<string, string>>({});
   const [wifiSignal, setWifiSignal] = useState<number | null>(null);
   const [publicIp, setPublicIp] = useState<string | null>(null);
+  const [deviceLocked, setDeviceLocked] = useState(true);
+  const [lockChecked, setLockChecked] = useState(false);
   const ws = useWebSocket();
   const { theme, toggle: toggleTheme } = useTheme();
   useRingtone(ws.callState.state === "incoming");
+
+  // Check device lock status on mount
+  useEffect(() => {
+    fetch("/api/system/lock-status")
+      .then((r) => r.json())
+      .then((data) => {
+        setDeviceLocked(data.locked);
+        setLockChecked(true);
+      })
+      .catch(() => {
+        setDeviceLocked(false);
+        setLockChecked(true);
+      });
+  }, []);
 
   const fetchContacts = useCallback(() => {
     fetch("/api/contacts/")
@@ -77,6 +94,11 @@ function App() {
   }, [isKiosk]);
   const host = window.location.hostname;
   const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.") || host.startsWith("172.");
+
+  // Device PIN lock — shows on boot, unlocks for session
+  if (lockChecked && deviceLocked) {
+    return <PinLock onUnlock={() => setDeviceLocked(false)} />;
+  }
 
   // Skip login on local/LAN access and kiosk mode
   // Login required only for public/external access

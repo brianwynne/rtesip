@@ -1,0 +1,111 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.1rem;
+}
+
+.lockIcon {
+  color: var(--accent);
+  margin: 0.5rem 0;
+}
+
+.dots {
+  display: flex;
+  gap: 0.8rem;
+  margin: 0.5rem 0;
+}
+
+.dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+  transition: all 0.15s;
+}
+
+.dotFilled {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.dotError {
+  border-color: var(--red);
+  background: var(--red);
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.errorText {
+  color: var(--red);
+  font-size: 0.9rem;
+  font-weight: 600;
+  height: 1.2rem;
+}
+
+.checkingText {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  height: 1.2rem;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+  width: 28rem;
+  margin-top: 0.5rem;
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 5rem;
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 2.2rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  transition: all 0.1s;
+}
+
+.key:hover {
+  background: var(--bg-elevated);
+}
+
+.key:active {
+  transform: scale(0.95);
+  background: var(--accent-dim);
+}
+
+.keyAction {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.05rem;
+}

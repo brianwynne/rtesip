@@ -1,6 +1,7 @@
 """System endpoints — status, network, display, AES67, WiFi, reboot, factory reset."""
 
 import asyncio
+import hashlib
 import logging
 import os
 import socket
@@ -21,6 +22,35 @@ from src.config.system import (
 )
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
+
+# Device lock state — locked on boot, unlocked with PIN for the session
+_device_unlocked = False
+
+
+@router.post("/unlock")
+async def unlock_device(body: dict):
+    """Unlock device with PIN code. Stays unlocked until reboot."""
+    global _device_unlocked
+    pin = body.get("pin", "")
+    pin_hash = hashlib.sha256(pin.encode()).hexdigest()
+    security = get_section("security")
+    stored_hash = security.get("device_pin_hash", "")
+    if not stored_hash:
+        # No PIN configured — always unlocked
+        _device_unlocked = True
+        return {"unlocked": True}
+    if pin_hash == stored_hash:
+        _device_unlocked = True
+        return {"unlocked": True}
+    return JSONResponse(status_code=403, content={"unlocked": False, "error": "Invalid PIN"})
+
+
+@router.get("/lock-status")
+async def lock_status():
+    """Check if device is locked."""
+    security = get_section("security")
+    has_pin = bool(security.get("device_pin_hash", ""))
+    return {"locked": has_pin and not _device_unlocked, "has_pin": has_pin}
 
 
 def _get_ip_addresses() -> dict[str, str]:
