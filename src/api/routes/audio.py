@@ -68,6 +68,21 @@ async def detected_devices():
                 pass
 
             is_usb = Path(f"/proc/asound/card{card_num}/usbid").exists()
+
+            # Check for Auto Gain Control mixer control
+            has_agc = False
+            agc_on = False
+            try:
+                r = subprocess.run(
+                    ["amixer", "-c", str(card_num), "sget", "Auto Gain Control"],
+                    capture_output=True, text=True, timeout=3
+                )
+                if r.returncode == 0:
+                    has_agc = True
+                    agc_on = "values=on" in r.stdout
+            except Exception:
+                pass
+
             devices.append({
                 "card": card_num,
                 "id": card_id,
@@ -75,10 +90,28 @@ async def detected_devices():
                 "usb": is_usb,
                 "capture_channels": cap_ch,
                 "playback_channels": play_ch,
+                "has_agc": has_agc,
+                "agc_on": agc_on,
             })
     except Exception as e:
         logger.warning("Failed to detect audio devices: %s", e)
     return {"devices": devices}
+
+
+@router.put("/agc")
+async def set_agc(params: dict):
+    """Toggle Auto Gain Control on a specific card."""
+    card = params.get("card", 0)
+    enabled = params.get("enabled", False)
+    try:
+        subprocess.run(
+            ["amixer", "-c", str(card), "sset", "Auto Gain Control", "on" if enabled else "off"],
+            capture_output=True, text=True, timeout=3, check=True
+        )
+        return {"card": card, "agc_on": enabled}
+    except Exception as e:
+        logger.warning("Failed to set AGC on card %s: %s", card, e)
+        return {"error": str(e)}
 
 
 @router.get("/devices")

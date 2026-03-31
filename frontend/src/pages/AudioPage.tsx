@@ -16,6 +16,8 @@ interface DetectedDevice {
   usb: boolean;
   capture_channels: number;
   playback_channels: number;
+  has_agc: boolean;
+  agc_on: boolean;
 }
 
 interface AudioSettings {
@@ -399,6 +401,31 @@ export function AudioPage() {
               <span className={styles.unit}>%</span>
             </div>
           </label>
+          {(() => {
+            const dev = detectedDevices.find(
+              (d) => deviceValue(d) === settings.input_left_device,
+            );
+            return dev?.has_agc ? (
+              <label className={styles.toggle}>
+                <span>Auto Gain Control</span>
+                <input
+                  type="checkbox"
+                  checked={dev.agc_on}
+                  onChange={(e) => {
+                    fetch("/api/audio/agc", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ card: dev.card, enabled: e.target.checked }),
+                    }).then(() => {
+                      setDetectedDevices((prev) =>
+                        prev.map((d) => d.card === dev.card ? { ...d, agc_on: e.target.checked } : d)
+                      );
+                    }).catch(() => {});
+                  }}
+                />
+              </label>
+            ) : null;
+          })()}
         </div>
 
         {/* Output */}
