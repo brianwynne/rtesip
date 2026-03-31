@@ -249,6 +249,7 @@ export function AudioPage() {
         {/* Input */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Input</h3>
+          <div className={styles.hint}>Changing device or channel will drop any active call.</div>
           {isStereo ? (
             <>
               <ChannelMapping
@@ -312,6 +313,7 @@ export function AudioPage() {
         {/* Output */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Output</h3>
+          <div className={styles.hint}>Changing device or channel will drop any active call.</div>
           {isStereo ? (
             <>
               <ChannelMapping
