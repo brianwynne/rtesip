@@ -78,10 +78,44 @@ async def update_audio(settings: dict):
             await telnet.send("cc 0 0")
         # Note: disconnecting mic monitor requires pjsua restart
 
+    # Update ALSA routing if changed
+    if "input_routing" in settings or "output_routing" in settings:
+        _update_asound_routing()
+
     # Restart pjsua to apply device/routing/codec changes
     from src.sip.pjsua_manager import pjsua
     await pjsua.restart()
     return result
+
+
+def _update_asound_routing():
+    """Update /etc/asound.conf default PCM based on routing settings."""
+    import re
+    audio = get_section("audio")
+    in_route = audio.get("input_routing", "lr")
+    out_route = audio.get("output_routing", "lr")
+
+    cap_pcm = "usb_cap" if in_route == "lr" else f"cap_{in_route}"
+    play_pcm = "usb_play" if out_route == "lr" else f"play_{out_route}"
+
+    asound_path = Path("/etc/asound.conf")
+    if not asound_path.exists():
+        return
+
+    content = asound_path.read_text()
+    # Replace the default PCM section
+    new_default = f"""pcm.!default {{
+    type asym
+    playback.pcm {play_pcm}
+    capture.pcm {cap_pcm}
+}}"""
+    content = re.sub(
+        r'pcm\.!default\s*\{[^}]*\}',
+        new_default,
+        content
+    )
+    asound_path.write_text(content)
+    logger.info("ALSA routing updated: capture=%s playback=%s", cap_pcm, play_pcm)
 
 
 # --- AES67 ---

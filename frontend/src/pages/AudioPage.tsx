@@ -161,6 +161,7 @@ export function AudioPage() {
               <option value="ll">LL (Left only)</option>
               <option value="rr">RR (Right only)</option>
               <option value="rl">RL (Swap)</option>
+              <option value="mono">Mono (L+R mix)</option>
             </select>
           </label>
           <label className={styles.field}>
@@ -215,6 +216,7 @@ export function AudioPage() {
               <option value="ll">LL (Left only)</option>
               <option value="rr">RR (Right only)</option>
               <option value="rl">RL (Swap)</option>
+              <option value="mono">Mono (L+R mix)</option>
             </select>
           </label>
           <label className={styles.field}>
