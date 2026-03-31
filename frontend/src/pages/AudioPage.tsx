@@ -157,11 +157,21 @@ export function AudioPage() {
               value={settings.input_routing}
               onChange={(e) => save({ input_routing: e.target.value })}
             >
-              <option value="lr">LR (Stereo)</option>
-              <option value="ll">LL (Left only)</option>
-              <option value="rr">RR (Right only)</option>
-              <option value="rl">RL (Swap)</option>
-              <option value="mono">Mono (L+R mix)</option>
+              {settings.channels === 2 ? (
+                <>
+                  <option value="lr">LR (Stereo)</option>
+                  <option value="ll">LL (Left only)</option>
+                  <option value="rr">RR (Right only)</option>
+                  <option value="rl">RL (Swap)</option>
+                  <option value="mono">Mono (L+R mix)</option>
+                </>
+              ) : (
+                <>
+                  <option value="ll">Left</option>
+                  <option value="rr">Right</option>
+                  <option value="mono">Mix (L+R)</option>
+                </>
+              )}
             </select>
           </label>
           <label className={styles.field}>
@@ -212,11 +222,21 @@ export function AudioPage() {
               value={settings.output_routing}
               onChange={(e) => save({ output_routing: e.target.value })}
             >
-              <option value="lr">LR (Stereo)</option>
-              <option value="ll">LL (Left only)</option>
-              <option value="rr">RR (Right only)</option>
-              <option value="rl">RL (Swap)</option>
-              <option value="mono">Mono (L+R mix)</option>
+              {settings.channels === 2 ? (
+                <>
+                  <option value="lr">LR (Stereo)</option>
+                  <option value="ll">LL (Left only)</option>
+                  <option value="rr">RR (Right only)</option>
+                  <option value="rl">RL (Swap)</option>
+                  <option value="mono">Mono (L+R mix)</option>
+                </>
+              ) : (
+                <>
+                  <option value="ll">Left</option>
+                  <option value="rr">Right</option>
+                  <option value="mono">Mix (L+R)</option>
+                </>
+              )}
             </select>
           </label>
           <label className={styles.field}>
