@@ -287,9 +287,11 @@ export function AudioPage() {
                   type="checkbox"
                   checked={codecs.includes(c.id)}
                   onChange={() => {
-                    const updated = codecs.includes(c.id)
+                    const selected = codecs.includes(c.id)
                       ? codecs.filter((x) => x !== c.id)
                       : [...codecs, c.id];
+                    // Maintain ALL_CODECS display order
+                    const updated = ALL_CODECS.map((ac) => ac.id).filter((id) => selected.includes(id));
                     setCodecs(updated);
                     fetch("/api/sip/settings", {
                       method: "PUT",
