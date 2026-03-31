@@ -69,7 +69,11 @@ function App() {
           } else {
             setIpAddresses({ eth0: window.location.hostname });
           }
-          if (data.wifi_signal != null) setWifiSignal(data.wifi_signal);
+          if (data.wifi_signal != null) {
+            setWifiSignal((prev) =>
+              prev == null ? data.wifi_signal : Math.round(prev * 0.7 + data.wifi_signal * 0.3)
+            );
+          }
           if (data.public_ip) setPublicIp(data.public_ip);
         })
         .catch(() => {
