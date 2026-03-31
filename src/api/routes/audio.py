@@ -79,7 +79,7 @@ async def detected_devices():
                 )
                 if r.returncode == 0:
                     has_agc = True
-                    agc_on = "values=on" in r.stdout
+                    agc_on = "[on]" in r.stdout
             except Exception:
                 pass
 
