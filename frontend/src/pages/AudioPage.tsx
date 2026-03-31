@@ -110,7 +110,7 @@ function ChannelMapping({
         value={channel}
         onChange={(e) => onChannelChange(Number(e.target.value))}
       >
-        <option value={-1}>Mix</option>
+        {maxCh > 1 && <option value={-1}>Mix</option>}
         {Array.from({ length: maxCh }, (_, i) => (
           <option key={i} value={i}>
             Ch {i + 1}
