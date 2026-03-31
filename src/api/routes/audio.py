@@ -159,10 +159,29 @@ async def update_audio(settings: dict):
         "opus_frame_duration", "ec_tail",
     }
     if _restart_fields & settings.keys():
-        from src.sip.pjsua_manager import pjsua
-        await pjsua.restart()
+        from src.api.ws import telnet
+        from src.sip.telnet_client import CallState
+        if telnet.call_state != CallState.IDLE:
+            # Defer restart until call ends
+            set_restart_pending(True)
+        else:
+            from src.sip.pjsua_manager import pjsua
+            await pjsua.restart()
 
     return result
+
+
+# Deferred pjsua restart — applied when call ends
+_restart_pending = False
+
+
+def set_restart_pending(pending: bool):
+    global _restart_pending
+    _restart_pending = pending
+
+
+def is_restart_pending() -> bool:
+    return _restart_pending
 
 
 # ---------------------------------------------------------------------------

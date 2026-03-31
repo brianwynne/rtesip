@@ -109,6 +109,15 @@ async def on_pjsua_event(event: str, data: dict) -> None:
     """Handle events from pjsua telnet — broadcast to WebSocket clients."""
     await broadcast(event, data)
 
+    # Apply deferred pjsua restart when call ends
+    if event == "ended":
+        from src.api.routes.audio import is_restart_pending, set_restart_pending
+        if is_restart_pending():
+            set_restart_pending(False)
+            logger.info("Call ended — applying deferred pjsua restart")
+            from src.sip.pjsua_manager import pjsua
+            await pjsua.restart()
+
 
 async def start_meters() -> None:
     """Metering disabled."""
