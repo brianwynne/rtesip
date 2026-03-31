@@ -194,11 +194,28 @@ def _resolve_card_number(device_str: str) -> int | None:
     return None
 
 
+def _get_hw_channels(card_num: int, direction: str) -> int:
+    """Get the hardware channel count for a card."""
+    try:
+        cmd = "arecord" if direction == "capture" else "aplay"
+        args = [cmd, "--dump-hw-params", "-D", f"hw:{card_num},0", "-d", "0"]
+        if direction == "playback":
+            args.append("/dev/zero")
+        r = subprocess.run(args, capture_output=True, text=True, timeout=3)
+        for line in r.stderr.splitlines():
+            if "CHANNELS:" in line:
+                return int(line.split(":")[1].strip())
+    except Exception:
+        pass
+    return 2  # default assumption
+
+
 def _pcm_section(direction: str, left_dev: str, left_ch: int,
                  right_dev: str, right_ch: int, channels: int) -> str:
     """Generate ALSA PCM config for one direction (capture or playback).
 
     Returns ALSA config text defining rtesip_cap or rtesip_play.
+    Always wraps in a plug for automatic channel/rate conversion.
     """
     pcm_name = "rtesip_cap" if direction == "capture" else "rtesip_play"
     slave_type = "dsnoop" if direction == "capture" else "dmix"
@@ -211,45 +228,84 @@ def _pcm_section(direction: str, left_dev: str, left_ch: int,
     if right_card is None:
         right_card = left_card
 
+    hw_ch = _get_hw_channels(left_card, direction)
     lines = []
 
-    # Mono mode — single channel
+    # For single-channel hardware or simple passthrough, use plug directly
+    if channels == 1 and hw_ch == 1 and left_ch <= 0:
+        # 1ch hardware, 1ch SIP — simple plug, no routing needed
+        lines.append(f"pcm.{pcm_name} {{")
+        lines.append(f"    type plug")
+        lines.append(f"    slave {{")
+        lines.append(f'        pcm "{slave_type}:{left_card},0"')
+        lines.append(f"        rate 48000")
+        lines.append(f"    }}")
+        lines.append(f"}}")
+        return "\n".join(lines)
+
+    same_device = (left_card == right_card)
+
     if channels == 1:
-        if left_ch == -1:
-            # Mix all channels to mono
-            lines.append(f"pcm.{pcm_name} {{")
+        # Mono SIP mode — select one channel from hardware
+        route_name = f"{pcm_name}_route"
+        if left_ch == -1 and hw_ch > 1:
+            # Mix all hardware channels to mono
+            lines.append(f"pcm.{route_name} {{")
             lines.append(f"    type route")
             lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
-            lines.append(f"    slave.channels 2")
-            lines.append(f"    ttable.0.0 0.5")
-            lines.append(f"    ttable.0.1 0.5")
+            lines.append(f"    slave.channels {hw_ch}")
+            mix = 1.0 / hw_ch
+            for ch in range(hw_ch):
+                lines.append(f"    ttable.0.{ch} {mix}")
+            lines.append(f"}}")
+        elif hw_ch > 1:
+            # Pick specific channel from multi-channel hardware
+            lines.append(f"pcm.{route_name} {{")
+            lines.append(f"    type route")
+            lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
+            lines.append(f"    slave.channels {hw_ch}")
+            lines.append(f"    ttable.0.{min(left_ch, hw_ch - 1)} 1.0")
             lines.append(f"}}")
         else:
-            # Single channel from device
+            # 1ch hardware — passthrough
+            route_name = None
+
+        if route_name:
+            lines.append(f"")
             lines.append(f"pcm.{pcm_name} {{")
-            lines.append(f"    type route")
-            lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
-            lines.append(f"    slave.channels 2")
-            lines.append(f"    ttable.0.{left_ch} 1.0")
+            lines.append(f"    type plug")
+            lines.append(f'    slave.pcm "{route_name}"')
+            lines.append(f"}}")
+        else:
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type plug")
+            lines.append(f"    slave {{")
+            lines.append(f'        pcm "{slave_type}:{left_card},0"')
+            lines.append(f"        rate 48000")
+            lines.append(f"    }}")
             lines.append(f"}}")
         return "\n".join(lines)
 
-    # Stereo mode
-    same_device = (left_card == right_card)
-
+    # Stereo SIP mode
     if same_device:
         if left_ch == -1 or right_ch == -1:
             # Mix all to mono on both channels
-            lines.append(f"pcm.{pcm_name} {{")
+            route_name = f"{pcm_name}_route"
+            lines.append(f"pcm.{route_name} {{")
             lines.append(f"    type route")
             lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
-            lines.append(f"    slave.channels 2")
-            lines.append(f"    ttable.0.0 0.5")
-            lines.append(f"    ttable.0.1 0.5")
-            lines.append(f"    ttable.1.0 0.5")
-            lines.append(f"    ttable.1.1 0.5")
+            lines.append(f"    slave.channels {hw_ch}")
+            mix = 1.0 / max(hw_ch, 1)
+            for src in range(hw_ch):
+                lines.append(f"    ttable.0.{src} {mix}")
+                lines.append(f"    ttable.1.{src} {mix}")
             lines.append(f"}}")
-        elif left_ch == 0 and right_ch == 1:
+            lines.append(f"")
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type plug")
+            lines.append(f'    slave.pcm "{route_name}"')
+            lines.append(f"}}")
+        elif left_ch == 0 and right_ch == 1 and hw_ch >= 2:
             # Standard L/R — simple plug
             lines.append(f"pcm.{pcm_name} {{")
             lines.append(f"    type plug")
@@ -260,26 +316,33 @@ def _pcm_section(direction: str, left_dev: str, left_ch: int,
             lines.append(f"}}")
         else:
             # Remapped channels on same device
-            lines.append(f"pcm.{pcm_name} {{")
+            route_name = f"{pcm_name}_route"
+            lines.append(f"pcm.{route_name} {{")
             lines.append(f"    type route")
             lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
-            lines.append(f"    slave.channels 2")
-            lines.append(f"    ttable.0.{left_ch} 1.0")
-            lines.append(f"    ttable.1.{right_ch} 1.0")
+            lines.append(f"    slave.channels {hw_ch}")
+            lines.append(f"    ttable.0.{min(left_ch, hw_ch - 1)} 1.0")
+            lines.append(f"    ttable.1.{min(right_ch, hw_ch - 1)} 1.0")
+            lines.append(f"}}")
+            lines.append(f"")
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type plug")
+            lines.append(f'    slave.pcm "{route_name}"')
             lines.append(f"}}")
     else:
         # Cross-device — use ALSA multi plugin
+        hw_ch_right = _get_hw_channels(right_card, direction)
         multi_name = f"rtesip_multi_{pcm_name.split('_')[1]}"
         lines.append(f"pcm.{multi_name} {{")
         lines.append(f"    type multi")
         lines.append(f"    slaves.a.pcm \"{slave_type}:{left_card},0\"")
-        lines.append(f"    slaves.a.channels 2")
+        lines.append(f"    slaves.a.channels {hw_ch}")
         lines.append(f"    slaves.b.pcm \"{slave_type}:{right_card},0\"")
-        lines.append(f"    slaves.b.channels 2")
+        lines.append(f"    slaves.b.channels {hw_ch_right}")
         lines.append(f"    bindings.0.slave a")
-        lines.append(f"    bindings.0.channel {max(left_ch, 0)}")
+        lines.append(f"    bindings.0.channel {min(max(left_ch, 0), hw_ch - 1)}")
         lines.append(f"    bindings.1.slave b")
-        lines.append(f"    bindings.1.channel {max(right_ch, 0)}")
+        lines.append(f"    bindings.1.channel {min(max(right_ch, 0), hw_ch_right - 1)}")
         lines.append(f"}}")
         lines.append(f"")
         lines.append(f"pcm.{pcm_name} {{")
