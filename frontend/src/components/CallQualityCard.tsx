@@ -70,7 +70,7 @@ export function CallQualityCard({ callState, history, onClose }: Props) {
             {/* Bitrate */}
             {(q.rx_bitrate != null || q.tx_bitrate != null) && (
               <div className={styles.section}>
-                <div className={styles.sectionLabel}>Bitrate</div>
+                <div className={styles.sectionLabel}>Bitrate{q.target_bitrate ? ` (target ${q.target_bitrate} Kbps)` : ""}</div>
                 <div className={styles.row}>
                   <span className={styles.label}>RX</span>
                   <span className={styles.value}>{q.rx_bitrate != null ? `${q.rx_bitrate} Kbps` : "--"}</span>

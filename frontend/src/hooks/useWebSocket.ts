@@ -194,7 +194,7 @@ export function useWebSocket() {
                 "rx_packets", "rx_lost", "rx_loss_pct", "rx_bitrate", "rx_bitrate_ip",
                 "rx_jitter_avg", "rx_jitter_max", "rx_jitter_last",
                 "tx_jitter_avg", "tx_jitter_max", "tx_jitter_last",
-                "rtt_avg", "rtt_last"] as const) {
+                "rtt_avg", "rtt_last", "target_bitrate"] as const) {
                 if (k in msg) (q as Record<string, unknown>)[k] = msg[k];
               }
               return { ...prev, quality: q };

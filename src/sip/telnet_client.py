@@ -55,6 +55,8 @@ class PjsuaTelnet:
         self._quality_poll_task: Optional[asyncio.Task] = None
         self._dump_q_lines: list[str] = []
         self._collecting_dump_q = False
+        self._prev_quality: Optional[dict] = None
+        self._prev_quality_time: float = 0
 
         # Event callback
         self._on_event: Optional[Callable] = None
@@ -356,6 +358,8 @@ class PjsuaTelnet:
         self.call_quality = {}
         self._dump_q_lines = []
         self._collecting_dump_q = False
+        self._prev_quality = None
+        self._prev_quality_time = 0
 
     async def _quality_poll_loop(self) -> None:
         """Poll dump_q every 5 seconds while in a call."""
@@ -403,10 +407,17 @@ class PjsuaTelnet:
                 quality[f"{prefix}_lost"] = int(m.group(1))
                 quality[f"{prefix}_loss_pct"] = float(m.group(2))
 
-            # Bitrate: "@avg=12.6Kbps/28.0Kbps"
+            # Byte count: "total 835pkt 27.3KB" or "total 1.0Kpkt 97.7KB"
+            if prefix and (m := re.search(r"total\s+[\d.]+K?pkt\s+([\d.]+)(K?)B", line)):
+                bytes_val = float(m.group(1))
+                if m.group(2) == "K":
+                    bytes_val *= 1024
+                quality[f"{prefix}_bytes"] = bytes_val
+
+            # Avg bitrate (call-lifetime average): "@avg=12.6Kbps/28.0Kbps"
             if prefix and (m := re.search(r"@avg=([\d.]+)Kbps/([\d.]+)Kbps", line)):
-                quality[f"{prefix}_bitrate"] = float(m.group(1))
-                quality[f"{prefix}_bitrate_ip"] = float(m.group(2))
+                quality[f"{prefix}_bitrate_avg"] = float(m.group(1))
+                quality[f"{prefix}_bitrate_ip_avg"] = float(m.group(2))
 
             # Jitter: "jitter     :   0.229   6.822  20.208   3.250   4.523"
             # Columns:              min     avg     max     last    dev
@@ -420,6 +431,28 @@ class PjsuaTelnet:
                 if m := re.search(r"RTT\s+msec\s+:\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)", line):
                     quality["rtt_avg"] = float(m.group(2))
                     quality["rtt_last"] = float(m.group(4))
+
+        # Calculate instantaneous bitrate from byte count deltas
+        now = time.time()
+        if self._prev_quality and self._prev_quality_time:
+            dt = now - self._prev_quality_time
+            if dt > 0.5:  # guard against tiny intervals
+                for prefix in ("rx", "tx"):
+                    curr_bytes = quality.get(f"{prefix}_bytes")
+                    prev_bytes = self._prev_quality.get(f"{prefix}_bytes")
+                    if curr_bytes is not None and prev_bytes is not None:
+                        delta_bytes = curr_bytes - prev_bytes
+                        quality[f"{prefix}_bitrate"] = round(delta_bytes * 8 / dt / 1000, 1)  # Kbps
+        self._prev_quality = dict(quality)
+        self._prev_quality_time = now
+
+        # Remove internal byte counts from broadcast
+        quality.pop("rx_bytes", None)
+        quality.pop("tx_bytes", None)
+
+        # Include configured target bitrate
+        audio = get_section("audio")
+        quality["target_bitrate"] = audio.get("bitrate", 64000) / 1000  # Kbps
 
         if quality:
             self.call_quality = quality

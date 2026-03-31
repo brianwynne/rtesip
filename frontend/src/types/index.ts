@@ -37,6 +37,7 @@ export interface CallQuality {
   tx_jitter_last?: number;
   rtt_avg?: number;
   rtt_last?: number;
+  target_bitrate?: number;
 }
 
 export interface CallState {
