@@ -8,6 +8,7 @@
 
 import asyncio
 import logging
+import os
 import signal
 from pathlib import Path
 from typing import Optional
@@ -215,11 +216,19 @@ class PjsuaProcess:
             "--thread-cnt=3",
         ] + device_args
 
+        # Pass Opus bitrate via environment variable (read by patched pjsua)
+        env = dict(os.environ)
+        audio = get_section("audio")
+        bitrate = audio.get("bitrate", 64000)
+        if bitrate:
+            env["OPUS_BITRATE"] = str(bitrate)
+
         try:
             self._process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
+                env=env,
             )
         except FileNotFoundError:
             # Development mode — pjsua not installed
