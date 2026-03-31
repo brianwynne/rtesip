@@ -245,12 +245,14 @@ class PjsuaTelnet:
                 if not self.sip_ready:
                     self.sip_ready = True
                     asyncio.create_task(self.play_tone(1))
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": True})
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": True,
+                                             "sip_ready": self.sip_ready, "server_reachable": self.server_reachable})
             elif status > 200:
                 self.server_reachable = False
                 if not self.sip_ready:
                     asyncio.create_task(self.play_tone(2))
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": False})
+                self._emit_sync("account", {"id": account_id, "status": status, "registered": False,
+                                             "sip_ready": self.sip_ready, "server_reachable": self.server_reachable})
 
         # Audio device error
         elif "PJMEDIA_EAUD_SYSERR" in data:
