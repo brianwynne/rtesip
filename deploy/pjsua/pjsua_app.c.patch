@@ -1,0 +1,53 @@
+--- a/pjsip-apps/src/pjsua/pjsua_app.c
++++ b/pjsip-apps/src/pjsua/pjsua_app.c
+@@ -18,6 +18,9 @@
+  */
+ #include "pjsua_app.h"
+
++#include <pjmedia-codec/opus.h>
++#include <stdlib.h>
++
+ #define THIS_FILE       "pjsua_app.c"
+
+ //#define STEREO_DEMO
+@@ -2006,6 +2009,40 @@
+
+     app_running = PJ_TRUE;
+
++    /* Apply Opus bitrate from OPUS_BITRATE env var (rtesip patch) */
++    {
++        const char *opus_br = getenv("OPUS_BITRATE");
++        if (opus_br) {
++            unsigned bitrate = (unsigned)atoi(opus_br);
++            if (bitrate >= 6000 && bitrate <= 510000) {
++                pjmedia_codec_opus_config opus_cfg;
++                pj_status_t opus_st;
++                opus_st = pjmedia_codec_opus_get_config(&opus_cfg);
++                if (opus_st == PJ_SUCCESS) {
++                    pjmedia_codec_param param;
++                    pjmedia_codec_mgr *cmgr;
++                    const pjmedia_codec_info *ci;
++                    unsigned cnt = 1;
++                    opus_cfg.bit_rate = bitrate;
++                    cmgr = pjmedia_endpt_get_codec_mgr(pjsua_get_pjmedia_endpt());
++                    if (cmgr) {
++                        pj_str_t cid = pj_str("opus/48000/2");
++                        opus_st = pjmedia_codec_mgr_find_codecs_by_id(cmgr, &cid, &cnt, &ci, NULL);
++                        if (opus_st == PJ_SUCCESS && cnt > 0) {
++                            opus_st = pjmedia_codec_mgr_get_default_param(cmgr, ci, &param);
++                            if (opus_st == PJ_SUCCESS) {
++                                opus_st = pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
++                                if (opus_st == PJ_SUCCESS) {
++                                    PJ_LOG(3, (THIS_FILE, "Opus bitrate set to %u bps", bitrate));
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++
+     if (app_config.use_cli)
+         cli_main(wait_telnet_cli);
+     else
