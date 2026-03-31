@@ -45,10 +45,20 @@ DEFAULTS: dict[str, dict] = {
     "audio": {
         "channels": 1,
         "bitrate": 64000,
+        # Legacy device/routing fields (kept for backward compat)
         "input": "USB",
         "output": "USB",
         "input_routing": "lr",
         "output_routing": "lr",
+        # Per-channel device and channel selection
+        "input_left_device": "USB",
+        "input_left_channel": 0,
+        "input_right_device": "USB",
+        "input_right_channel": 1,
+        "output_left_device": "USB",
+        "output_left_channel": 0,
+        "output_right_device": "USB",
+        "output_right_channel": 1,
         "capture_latency": 10,
         "playback_latency": 10,
         "period_size": 5,
@@ -105,6 +115,52 @@ DEFAULTS: dict[str, dict] = {
 }
 
 
+_ROUTING_TO_CHANNELS = {
+    "lr": (0, 1),
+    "ll": (0, 0),
+    "rr": (1, 1),
+    "rl": (1, 0),
+    "mono": (-1, -1),  # -1 = mix all channels
+}
+
+
+def _migrate_audio_routing(config: dict) -> bool:
+    """Migrate old input/output + routing fields to per-channel model.
+
+    Returns True if migration was applied (caller should save).
+    """
+    audio = config.get("audio", {})
+
+    # Already migrated if any per-channel device is set to a non-default value,
+    # OR if old routing fields are absent
+    if audio.get("input_routing") is None:
+        return False
+    # Check if per-channel fields were explicitly saved before (not just defaults)
+    # by looking for the _migrated sentinel
+    if audio.get("_routing_migrated"):
+        return False
+
+    input_dev = audio.get("input", "USB")
+    output_dev = audio.get("output", "USB")
+    in_route = audio.get("input_routing", "lr")
+    out_route = audio.get("output_routing", "lr")
+
+    in_l, in_r = _ROUTING_TO_CHANNELS.get(in_route, (0, 1))
+    out_l, out_r = _ROUTING_TO_CHANNELS.get(out_route, (0, 1))
+
+    audio["input_left_device"] = input_dev
+    audio["input_left_channel"] = in_l
+    audio["input_right_device"] = input_dev
+    audio["input_right_channel"] = in_r
+    audio["output_left_device"] = output_dev
+    audio["output_left_channel"] = out_l
+    audio["output_right_device"] = output_dev
+    audio["output_right_channel"] = out_r
+    audio["_routing_migrated"] = True
+
+    return True
+
+
 def _config_path() -> Path:
     return DATA_DIR / "config.json"
 
@@ -130,6 +186,8 @@ def load() -> dict[str, Any]:
             merged = {}
             for section, defaults in DEFAULTS.items():
                 merged[section] = {**defaults, **(saved.get(section, {}))}
+            if _migrate_audio_routing(merged):
+                save(merged)
             return merged
         return {k: dict(v) for k, v in DEFAULTS.items()}
 

@@ -140,9 +140,16 @@ async def update_audio(settings: dict):
             await telnet.send("cc 0 0")
         # Note: disconnecting mic monitor requires pjsua restart
 
-    # Update ALSA routing if changed
-    if "input_routing" in settings or "output_routing" in settings:
-        _update_asound_routing()
+    # Update ALSA config if any channel routing fields changed
+    _channel_fields = {
+        "input_left_device", "input_left_channel",
+        "input_right_device", "input_right_channel",
+        "output_left_device", "output_left_channel",
+        "output_right_device", "output_right_channel",
+        "input_routing", "output_routing",
+    }
+    if _channel_fields & settings.keys():
+        generate_asound_conf()
 
     # Restart pjsua to apply device/routing/codec changes
     from src.sip.pjsua_manager import pjsua
@@ -150,34 +157,185 @@ async def update_audio(settings: dict):
     return result
 
 
-def _update_asound_routing():
-    """Update /etc/asound.conf default PCM based on routing settings."""
-    import re
+# ---------------------------------------------------------------------------
+# ALSA asound.conf generation
+# ---------------------------------------------------------------------------
+
+ASOUND_CONF = Path("/etc/asound.conf")
+
+
+def _resolve_card_number(device_str: str) -> int | None:
+    """Resolve a device string ('USB' or 'plughw:CARD=xxx,DEV=0') to ALSA card number."""
+    try:
+        cards_text = Path("/proc/asound/cards").read_text()
+    except Exception:
+        return None
+
+    for line in cards_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split()
+        if not parts[0].isdigit():
+            continue
+        card_num = int(parts[0])
+        card_id = parts[1].strip("[]")
+
+        if device_str == "USB":
+            if Path(f"/proc/asound/card{card_num}/usbid").exists():
+                return card_num
+        elif card_id in device_str:
+            return card_num
+
+    return None
+
+
+def _pcm_section(direction: str, left_dev: str, left_ch: int,
+                 right_dev: str, right_ch: int, channels: int) -> str:
+    """Generate ALSA PCM config for one direction (capture or playback).
+
+    Returns ALSA config text defining rtesip_cap or rtesip_play.
+    """
+    pcm_name = "rtesip_cap" if direction == "capture" else "rtesip_play"
+    slave_type = "dsnoop" if direction == "capture" else "dmix"
+
+    left_card = _resolve_card_number(left_dev)
+    right_card = _resolve_card_number(right_dev)
+
+    if left_card is None:
+        left_card = 0
+    if right_card is None:
+        right_card = left_card
+
+    lines = []
+
+    # Mono mode — single channel
+    if channels == 1:
+        if left_ch == -1:
+            # Mix all channels to mono
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type route")
+            lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
+            lines.append(f"    slave.channels 2")
+            lines.append(f"    ttable.0.0 0.5")
+            lines.append(f"    ttable.0.1 0.5")
+            lines.append(f"}}")
+        else:
+            # Single channel from device
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type route")
+            lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
+            lines.append(f"    slave.channels 2")
+            lines.append(f"    ttable.0.{left_ch} 1.0")
+            lines.append(f"}}")
+        return "\n".join(lines)
+
+    # Stereo mode
+    same_device = (left_card == right_card)
+
+    if same_device:
+        if left_ch == -1 or right_ch == -1:
+            # Mix all to mono on both channels
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type route")
+            lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
+            lines.append(f"    slave.channels 2")
+            lines.append(f"    ttable.0.0 0.5")
+            lines.append(f"    ttable.0.1 0.5")
+            lines.append(f"    ttable.1.0 0.5")
+            lines.append(f"    ttable.1.1 0.5")
+            lines.append(f"}}")
+        elif left_ch == 0 and right_ch == 1:
+            # Standard L/R — simple plug
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type plug")
+            lines.append(f"    slave {{")
+            lines.append(f'        pcm "{slave_type}:{left_card},0"')
+            lines.append(f"        rate 48000")
+            lines.append(f"    }}")
+            lines.append(f"}}")
+        else:
+            # Remapped channels on same device
+            lines.append(f"pcm.{pcm_name} {{")
+            lines.append(f"    type route")
+            lines.append(f'    slave.pcm "{slave_type}:{left_card},0"')
+            lines.append(f"    slave.channels 2")
+            lines.append(f"    ttable.0.{left_ch} 1.0")
+            lines.append(f"    ttable.1.{right_ch} 1.0")
+            lines.append(f"}}")
+    else:
+        # Cross-device — use ALSA multi plugin
+        multi_name = f"rtesip_multi_{pcm_name.split('_')[1]}"
+        lines.append(f"pcm.{multi_name} {{")
+        lines.append(f"    type multi")
+        lines.append(f"    slaves.a.pcm \"{slave_type}:{left_card},0\"")
+        lines.append(f"    slaves.a.channels 2")
+        lines.append(f"    slaves.b.pcm \"{slave_type}:{right_card},0\"")
+        lines.append(f"    slaves.b.channels 2")
+        lines.append(f"    bindings.0.slave a")
+        lines.append(f"    bindings.0.channel {max(left_ch, 0)}")
+        lines.append(f"    bindings.1.slave b")
+        lines.append(f"    bindings.1.channel {max(right_ch, 0)}")
+        lines.append(f"}}")
+        lines.append(f"")
+        lines.append(f"pcm.{pcm_name} {{")
+        lines.append(f"    type plug")
+        lines.append(f'    slave.pcm "{multi_name}"')
+        lines.append(f"}}")
+
+    return "\n".join(lines)
+
+
+def generate_asound_conf():
+    """Generate /etc/asound.conf from per-channel audio settings."""
     audio = get_section("audio")
-    in_route = audio.get("input_routing", "lr")
-    out_route = audio.get("output_routing", "lr")
+    channels = audio.get("channels", 1)
 
-    cap_pcm = "usb_cap" if in_route == "lr" else f"cap_{in_route}"
-    play_pcm = "usb_play" if out_route == "lr" else f"play_{out_route}"
-
-    asound_path = Path("/etc/asound.conf")
-    if not asound_path.exists():
-        return
-
-    content = asound_path.read_text()
-    # Replace the default PCM section
-    new_default = f"""pcm.!default {{
-    type asym
-    playback.pcm {play_pcm}
-    capture.pcm {cap_pcm}
-}}"""
-    content = re.sub(
-        r'pcm\.!default\s*\{[^}]*\}',
-        new_default,
-        content
+    cap_section = _pcm_section(
+        "capture",
+        audio.get("input_left_device", "USB"),
+        audio.get("input_left_channel", 0),
+        audio.get("input_right_device", "USB"),
+        audio.get("input_right_channel", 1),
+        channels,
     )
-    asound_path.write_text(content)
-    logger.info("ALSA routing updated: capture=%s playback=%s", cap_pcm, play_pcm)
+    play_section = _pcm_section(
+        "playback",
+        audio.get("output_left_device", "USB"),
+        audio.get("output_left_channel", 0),
+        audio.get("output_right_device", "USB"),
+        audio.get("output_right_channel", 1),
+        channels,
+    )
+
+    # Determine ctl device (use playback left card)
+    ctl_card = _resolve_card_number(audio.get("output_left_device", "USB"))
+    if ctl_card is None:
+        ctl_card = 0
+
+    conf = f"""# Auto-generated by rtesip — per-channel audio routing
+
+{cap_section}
+
+{play_section}
+
+pcm.!default {{
+    type asym
+    playback.pcm rtesip_play
+    capture.pcm rtesip_cap
+}}
+
+ctl.!default {{
+    type hw
+    card {ctl_card}
+}}
+"""
+
+    try:
+        ASOUND_CONF.write_text(conf)
+        logger.info("Generated %s", ASOUND_CONF)
+    except PermissionError:
+        logger.warning("Cannot write %s (permission denied)", ASOUND_CONF)
 
 
 # --- AES67 ---

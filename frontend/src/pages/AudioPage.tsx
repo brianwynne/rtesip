@@ -9,6 +9,15 @@ const ALL_CODECS = [
   { id: "PCMU/8000/1", label: "G.711 μ-law (PCMU)" },
 ];
 
+interface DetectedDevice {
+  card: number;
+  id: string;
+  name: string;
+  usb: boolean;
+  capture_channels: number;
+  playback_channels: number;
+}
+
 interface AudioSettings {
   channels: number;
   bitrate: number;
@@ -16,6 +25,14 @@ interface AudioSettings {
   output: string;
   input_routing: string;
   output_routing: string;
+  input_left_device: string;
+  input_left_channel: number;
+  input_right_device: string;
+  input_right_channel: number;
+  output_left_device: string;
+  output_left_channel: number;
+  output_right_device: string;
+  output_right_channel: number;
   capture_latency: number;
   playback_latency: number;
   period_size: number;
@@ -27,6 +44,83 @@ interface AudioSettings {
   phantom_power: boolean;
 }
 
+function deviceValue(dev: DetectedDevice): string {
+  return dev.usb ? "USB" : `plughw:CARD=${dev.id},DEV=0`;
+}
+
+function getMaxChannels(
+  devices: DetectedDevice[],
+  deviceStr: string,
+  direction: "capture" | "playback",
+): number {
+  const dev = devices.find(
+    (d) => deviceValue(d) === deviceStr,
+  );
+  if (!dev) return 2;
+  return direction === "capture" ? dev.capture_channels : dev.playback_channels;
+}
+
+function ChannelMapping({
+  label,
+  deviceStr,
+  channel,
+  devices,
+  direction,
+  onDeviceChange,
+  onChannelChange,
+}: {
+  label: string;
+  deviceStr: string;
+  channel: number;
+  devices: DetectedDevice[];
+  direction: "capture" | "playback";
+  onDeviceChange: (v: string) => void;
+  onChannelChange: (v: number) => void;
+}) {
+  const maxCh = getMaxChannels(devices, deviceStr, direction);
+  const filteredDevices =
+    direction === "capture"
+      ? devices.filter((d) => d.capture_channels > 0)
+      : devices.filter((d) => d.playback_channels > 0);
+
+  return (
+    <div className={styles.channelRow}>
+      <span className={styles.channelLabel}>{label}</span>
+      <select
+        className={styles.channelDevice}
+        value={deviceStr}
+        onChange={(e) => onDeviceChange(e.target.value)}
+      >
+        {filteredDevices.length > 0 ? (
+          filteredDevices.map((d) => (
+            <option key={d.card} value={deviceValue(d)}>
+              {d.name}
+            </option>
+          ))
+        ) : (
+          <>
+            <option value="USB">USB</option>
+            <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
+            <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+          </>
+        )}
+      </select>
+      <select
+        className={styles.channelSelect}
+        value={channel}
+        onChange={(e) => onChannelChange(Number(e.target.value))}
+      >
+        <option value={-1}>Mix</option>
+        {Array.from({ length: maxCh }, (_, i) => (
+          <option key={i} value={i}>
+            Ch {i + 1}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function AudioPage() {
   const [settings, setSettings] = useState<AudioSettings>({
     channels: 1,
@@ -35,6 +129,14 @@ export function AudioPage() {
     output: "USB",
     input_routing: "lr",
     output_routing: "lr",
+    input_left_device: "USB",
+    input_left_channel: 0,
+    input_right_device: "USB",
+    input_right_channel: 1,
+    output_left_device: "USB",
+    output_left_channel: 0,
+    output_right_device: "USB",
+    output_right_channel: 1,
     capture_latency: 10,
     playback_latency: 10,
     period_size: 5,
@@ -47,7 +149,7 @@ export function AudioPage() {
   });
   const [codecs, setCodecs] = useState<string[]>(["opus/48000/2", "G722/16000/1"]);
   const [saving, setSaving] = useState(false);
-  const [detectedDevices, setDetectedDevices] = useState<{ card: number; id: string; name: string; usb: boolean; capture_channels: number; playback_channels: number }[]>([]);
+  const [detectedDevices, setDetectedDevices] = useState<DetectedDevice[]>([]);
 
   useEffect(() => {
     fetch("/api/audio/settings")
@@ -79,6 +181,8 @@ export function AudioPage() {
       setSaving(false);
     }
   };
+
+  const isStereo = settings.channels === 2;
 
   return (
     <div className={styles.page}>
@@ -145,52 +249,38 @@ export function AudioPage() {
         {/* Input */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Input</h3>
-          <label className={styles.field}>
-            <span>Input Device</span>
-            <select
-              value={settings.input}
-              onChange={(e) => save({ input: e.target.value })}
-            >
-              {detectedDevices.length > 0 ? (
-                detectedDevices
-                  .filter((d) => d.capture_channels > 0)
-                  .map((d) => (
-                    <option key={d.card} value={d.usb ? "USB" : `plughw:CARD=${d.id},DEV=0`}>
-                      {d.name} ({d.capture_channels}ch)
-                    </option>
-                  ))
-              ) : (
-                <>
-                  <option value="USB">First USB Device</option>
-                  <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
-                  <option value="plughw:CARD=AES67,DEV=0">AES67</option>
-                </>
-              )}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span>Routing</span>
-            <select
-              value={settings.input_routing}
-              onChange={(e) => save({ input_routing: e.target.value })}
-            >
-              {settings.channels === 2 ? (
-                <>
-                  <option value="lr">LR (Stereo)</option>
-                  <option value="ll">LL (Left only)</option>
-                  <option value="rr">RR (Right only)</option>
-                  <option value="rl">RL (Swap)</option>
-                  <option value="mono">Mono (L+R mix)</option>
-                </>
-              ) : (
-                <>
-                  <option value="ll">Left</option>
-                  <option value="rr">Right</option>
-                  <option value="mono">Mix (L+R)</option>
-                </>
-              )}
-            </select>
-          </label>
+          {isStereo ? (
+            <>
+              <ChannelMapping
+                label="Left"
+                deviceStr={settings.input_left_device}
+                channel={settings.input_left_channel}
+                devices={detectedDevices}
+                direction="capture"
+                onDeviceChange={(v) => save({ input_left_device: v })}
+                onChannelChange={(v) => save({ input_left_channel: v })}
+              />
+              <ChannelMapping
+                label="Right"
+                deviceStr={settings.input_right_device}
+                channel={settings.input_right_channel}
+                devices={detectedDevices}
+                direction="capture"
+                onDeviceChange={(v) => save({ input_right_device: v })}
+                onChannelChange={(v) => save({ input_right_channel: v })}
+              />
+            </>
+          ) : (
+            <ChannelMapping
+              label="Channel"
+              deviceStr={settings.input_left_device}
+              channel={settings.input_left_channel}
+              devices={detectedDevices}
+              direction="capture"
+              onDeviceChange={(v) => save({ input_left_device: v })}
+              onChannelChange={(v) => save({ input_left_channel: v })}
+            />
+          )}
           <label className={styles.field}>
             <span>Capture Latency</span>
             <div className={styles.fieldWithUnit}>
@@ -222,52 +312,38 @@ export function AudioPage() {
         {/* Output */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Output</h3>
-          <label className={styles.field}>
-            <span>Output Device</span>
-            <select
-              value={settings.output}
-              onChange={(e) => save({ output: e.target.value })}
-            >
-              {detectedDevices.length > 0 ? (
-                detectedDevices
-                  .filter((d) => d.playback_channels > 0)
-                  .map((d) => (
-                    <option key={d.card} value={d.usb ? "USB" : `plughw:CARD=${d.id},DEV=0`}>
-                      {d.name} ({d.playback_channels}ch)
-                    </option>
-                  ))
-              ) : (
-                <>
-                  <option value="USB">First USB Device</option>
-                  <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
-                  <option value="plughw:CARD=AES67,DEV=0">AES67</option>
-                </>
-              )}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span>Routing</span>
-            <select
-              value={settings.output_routing}
-              onChange={(e) => save({ output_routing: e.target.value })}
-            >
-              {settings.channels === 2 ? (
-                <>
-                  <option value="lr">LR (Stereo)</option>
-                  <option value="ll">LL (Left only)</option>
-                  <option value="rr">RR (Right only)</option>
-                  <option value="rl">RL (Swap)</option>
-                  <option value="mono">Mono (L+R mix)</option>
-                </>
-              ) : (
-                <>
-                  <option value="ll">Left</option>
-                  <option value="rr">Right</option>
-                  <option value="mono">Mix (L+R)</option>
-                </>
-              )}
-            </select>
-          </label>
+          {isStereo ? (
+            <>
+              <ChannelMapping
+                label="Left"
+                deviceStr={settings.output_left_device}
+                channel={settings.output_left_channel}
+                devices={detectedDevices}
+                direction="playback"
+                onDeviceChange={(v) => save({ output_left_device: v })}
+                onChannelChange={(v) => save({ output_left_channel: v })}
+              />
+              <ChannelMapping
+                label="Right"
+                deviceStr={settings.output_right_device}
+                channel={settings.output_right_channel}
+                devices={detectedDevices}
+                direction="playback"
+                onDeviceChange={(v) => save({ output_right_device: v })}
+                onChannelChange={(v) => save({ output_right_channel: v })}
+              />
+            </>
+          ) : (
+            <ChannelMapping
+              label="Channel"
+              deviceStr={settings.output_left_device}
+              channel={settings.output_left_channel}
+              devices={detectedDevices}
+              direction="playback"
+              onDeviceChange={(v) => save({ output_left_device: v })}
+              onChannelChange={(v) => save({ output_left_channel: v })}
+            />
+          )}
           <label className={styles.field}>
             <span>Output Latency</span>
             <div className={styles.fieldWithUnit}>

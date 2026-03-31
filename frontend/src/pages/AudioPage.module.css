@@ -92,6 +92,36 @@
   white-space: nowrap;
 }
 
+/* Per-channel routing */
+.channelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.channelLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 3rem;
+  flex-shrink: 0;
+}
+
+.channelDevice {
+  flex: 1;
+  min-width: 0;
+  height: 2rem;
+  font-size: 0.7rem;
+}
+
+.channelSelect {
+  width: 4rem;
+  flex-shrink: 0;
+  height: 2rem;
+  font-size: 0.7rem;
+  text-align: right;
+}
+
 .hint {
   font-size: 0.6rem;
   color: var(--amber);

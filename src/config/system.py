@@ -252,9 +252,16 @@ def apply_aes67_config() -> None:
     else:
         # Check if AES67 device is in use before disabling
         audio = get_section("audio")
-        if "AES67" in audio.get("input", "") or "AES67" in audio.get("output", ""):
+        aes67_fields = ("input", "output",
+                        "input_left_device", "input_right_device",
+                        "output_left_device", "output_right_device")
+        if any("AES67" in audio.get(f, "") for f in aes67_fields):
             # Switch audio back to USB
-            update_section("audio", {"input": "USB", "output": "USB"})
+            update_section("audio", {
+                "input": "USB", "output": "USB",
+                "input_left_device": "USB", "input_right_device": "USB",
+                "output_left_device": "USB", "output_right_device": "USB",
+            })
 
         subprocess.run(["systemctl", "disable", "aes67.service"], capture_output=True, timeout=10)
         subprocess.run(["systemctl", "stop", "aes67.service"], capture_output=True, timeout=10)

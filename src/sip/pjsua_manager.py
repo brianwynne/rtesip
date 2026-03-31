@@ -198,6 +198,11 @@ class PjsuaProcess:
             return
 
         self._stopping = False
+
+        # Regenerate ALSA config from saved per-channel settings
+        from src.api.routes.audio import generate_asound_conf
+        generate_asound_conf()
+
         write_config()
         device_args = get_device_string()
 
