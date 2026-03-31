@@ -23,7 +23,7 @@ EnvironmentFile=-/etc/rtesip/env
 
 # Hardening
 ProtectSystem=full
-ReadWritePaths=/var/lib/rtesip /run/rtesip /boot /var/log/rtesip
+ReadWritePaths=/var/lib/rtesip /run/rtesip /boot /var/log/rtesip /etc/asound.conf
 NoNewPrivileges=false  # Required for sudo reboot/shutdown from web UI
 ProtectHome=true
 # PrivateTmp=true  # Disabled — wpa_cli needs shared /tmp for response socket
