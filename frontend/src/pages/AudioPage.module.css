@@ -36,15 +36,6 @@
   color: var(--text-secondary);
 }
 
-.detectedDevice {
-  font-size: 0.7rem;
-  font-family: var(--font-mono);
-  color: var(--accent);
-  padding: 0.2rem 0.4rem;
-  background: var(--accent-dim);
-  border-radius: var(--radius);
-}
-
 .field {
   display: flex;
   justify-content: space-between;

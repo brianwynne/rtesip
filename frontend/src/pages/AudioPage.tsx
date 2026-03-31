@@ -151,19 +151,23 @@ export function AudioPage() {
               value={settings.input}
               onChange={(e) => save({ input: e.target.value })}
             >
-              <option value="USB">First USB Device</option>
-              <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
-              <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+              {detectedDevices.length > 0 ? (
+                detectedDevices
+                  .filter((d) => d.capture_channels > 0)
+                  .map((d) => (
+                    <option key={d.card} value={d.usb ? "USB" : `plughw:CARD=${d.id},DEV=0`}>
+                      {d.name} ({d.capture_channels}ch)
+                    </option>
+                  ))
+              ) : (
+                <>
+                  <option value="USB">First USB Device</option>
+                  <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
+                  <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+                </>
+              )}
             </select>
           </label>
-          {(() => {
-            const dev = detectedDevices.find((d) => settings.input === "USB" ? d.usb : d.id === settings.input);
-            return dev ? (
-              <div className={styles.detectedDevice}>
-                {dev.name} — {dev.capture_channels > 0 ? `${dev.capture_channels}ch capture` : "no capture"}
-              </div>
-            ) : null;
-          })()}
           <label className={styles.field}>
             <span>Routing</span>
             <select
@@ -224,19 +228,23 @@ export function AudioPage() {
               value={settings.output}
               onChange={(e) => save({ output: e.target.value })}
             >
-              <option value="USB">First USB Device</option>
-              <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
-              <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+              {detectedDevices.length > 0 ? (
+                detectedDevices
+                  .filter((d) => d.playback_channels > 0)
+                  .map((d) => (
+                    <option key={d.card} value={d.usb ? "USB" : `plughw:CARD=${d.id},DEV=0`}>
+                      {d.name} ({d.playback_channels}ch)
+                    </option>
+                  ))
+              ) : (
+                <>
+                  <option value="USB">First USB Device</option>
+                  <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
+                  <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+                </>
+              )}
             </select>
           </label>
-          {(() => {
-            const dev = detectedDevices.find((d) => settings.output === "USB" ? d.usb : d.id === settings.output);
-            return dev ? (
-              <div className={styles.detectedDevice}>
-                {dev.name} — {dev.playback_channels > 0 ? `${dev.playback_channels}ch playback` : "no playback"}
-              </div>
-            ) : null;
-          })()}
           <label className={styles.field}>
             <span>Routing</span>
             <select

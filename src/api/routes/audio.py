@@ -144,10 +144,6 @@ async def update_audio(settings: dict):
     if "input_routing" in settings or "output_routing" in settings:
         _update_asound_routing()
 
-    # Update ALSA routing if changed
-    if "input_routing" in settings or "output_routing" in settings:
-        _update_asound_routing()
-
     # Restart pjsua to apply device/routing/codec changes
     from src.sip.pjsua_manager import pjsua
     await pjsua.restart()
