@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import styles from "./AudioPage.module.css";
 
 const ALL_CODECS = [
-  { id: "opus/48000/2", label: "Opus 48kHz Stereo" },
+  { id: "opus/48000/2", label: "Opus 48kHz" },
   { id: "L16/44100/1", label: "L16 44.1kHz (Linear PCM)" },
   { id: "G722/16000/1", label: "G.722 16kHz" },
   { id: "PCMA/8000/1", label: "G.711 A-law (PCMA)" },
@@ -428,7 +428,9 @@ export function AudioPage() {
                   }}
                 />
                 <span className={styles.codecName}>{c.label}</span>
-                <span className={styles.codecId}>{c.id}</span>
+                <span className={styles.codecId}>
+                  {c.id.startsWith("L16/") ? `L16/44100/${isStereo ? 2 : 1}` : c.id}
+                </span>
               </label>
             ))}
           </div>
