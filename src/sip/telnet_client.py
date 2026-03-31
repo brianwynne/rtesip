@@ -50,6 +50,12 @@ class PjsuaTelnet:
         self.srtp_active: bool = False
         self.srtp_suite: Optional[str] = None
 
+        # Call quality metrics (from dump_q)
+        self.call_quality: dict = {}
+        self._quality_poll_task: Optional[asyncio.Task] = None
+        self._dump_q_lines: list[str] = []
+        self._collecting_dump_q = False
+
         # Event callback
         self._on_event: Optional[Callable] = None
 
@@ -169,6 +175,27 @@ class PjsuaTelnet:
         # Strip null bytes and bell chars from pjsua output
         data = data.replace("\x00", "").replace("\x07", "").strip()
         if not data or (data.endswith(">") and " " not in data):
+            # End of dump_q block — parse collected lines
+            if self._collecting_dump_q and self._dump_q_lines:
+                self._collecting_dump_q = False
+                self._parse_dump_q(self._dump_q_lines)
+                self._dump_q_lines = []
+            return
+
+        # Collect dump_q multi-line output (pjsua 2.14 format)
+        if self._collecting_dump_q:
+            self._dump_q_lines.append(data)
+            # dump_q ends with RTT line
+            if re.search(r"RTT\s+msec", data):
+                self._collecting_dump_q = False
+                self._parse_dump_q(self._dump_q_lines)
+                self._dump_q_lines = []
+            return
+
+        # Start collecting dump_q output — RX pt= is the first stats line
+        if re.search(r"RX pt=\d+,\s*last update", data):
+            self._collecting_dump_q = True
+            self._dump_q_lines = [data]
             return
 
         # Call state: CONFIRMED
@@ -178,6 +205,7 @@ class PjsuaTelnet:
 
         elif m := re.search(r"Current call id\=[0-9] to (.+) \[CONFIRMED\]", data):
             self.call_state = CallState.CONNECTED
+            self._start_quality_poll()
             self._emit_sync("connected", {"destination": self.current_contact, "codec": self.current_codec, "connected_at": time.time()})
 
         # Codec from call dump_q: "#0 audio G722 @16kHz" or "#0 audio PCMU @8kHz"
@@ -195,6 +223,7 @@ class PjsuaTelnet:
 
         # Call state: DISCONNECTED (pjsua 2.9 uses DISCONNCTD, 2.14 uses DISCONNECTED)
         elif m := re.search(r"\[DISCONN[A-Z]*\] t\: ([^;]+)", data):
+            self._stop_quality_poll()
             self.call_state = CallState.IDLE
             self._emit_sync("ended", {"destination": m.group(1)})
             self.current_contact = None
@@ -204,6 +233,7 @@ class PjsuaTelnet:
 
         # pjsua 2.14 format: Call 0 is DISCONNECTED [reason=...]
         elif m := re.search(r"Call [0-9] is DISCONNECTED", data):
+            self._stop_quality_poll()
             self.call_state = CallState.IDLE
             self._emit_sync("ended", {"destination": self.current_contact or ""})
             self.current_contact = None
@@ -211,12 +241,16 @@ class PjsuaTelnet:
             self.srtp_active = False
             self.srtp_suite = None
 
-        # Incoming call
-        elif (m := re.search(r"From\: (.+)", data)) or              (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]", data)):
+        # Incoming call (pjsua 2.14: "Incoming call for account..." or state change to INCOMING)
+        elif (m := re.search(r"Incoming call for account .+From: (.+)", data)) or              (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]", data)):
             self.call_state = CallState.INCOMING
             contact = self._resolve_contact(m.group(1))
             self.current_contact = contact
             self._emit_sync("incoming", {"destination": contact})
+        elif re.search(r"Call [0-9] state changed to INCOMING", data):
+            self.call_state = CallState.INCOMING
+            self._emit_sync("incoming", {"destination": self.current_contact or "Unknown"})
+            asyncio.create_task(self.send("call list"))
 
             # Auto answer — if enabled, automatically answer incoming calls
             audio = get_section("audio")
@@ -280,6 +314,8 @@ class PjsuaTelnet:
         # Debug/other output
         else:
             if data:
+                if self.call_state == CallState.CONNECTED:
+                    logger.info("pjsua unhandled (in-call): %s", data[:120])
                 self._emit_sync("debug", {"data": data})
 
     def _resolve_contact(self, raw: str) -> str:
@@ -306,6 +342,93 @@ class PjsuaTelnet:
                 return f"{display} <sip:{address}>"
             return address
         return raw
+
+    # --- Call quality polling ---
+
+    def _start_quality_poll(self) -> None:
+        """Start periodic dump_q polling during a call."""
+        self._stop_quality_poll()
+        self._quality_poll_task = asyncio.create_task(self._quality_poll_loop())
+
+    def _stop_quality_poll(self) -> None:
+        """Stop quality polling."""
+        if self._quality_poll_task:
+            self._quality_poll_task.cancel()
+            self._quality_poll_task = None
+        self.call_quality = {}
+        self._dump_q_lines = []
+        self._collecting_dump_q = False
+
+    async def _quality_poll_loop(self) -> None:
+        """Poll dump_q every 5 seconds while in a call."""
+        try:
+            await asyncio.sleep(2)  # initial delay — let call settle
+            while self.call_state == CallState.CONNECTED:
+                await self.send("call dump_q")
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            pass
+
+    def _parse_dump_q(self, lines: list[str]) -> None:
+        """Parse pjsua 2.14 dump_q output into quality metrics.
+
+        Format: RX block first, then TX block, then RTT.
+        Each block has: total Npkt, pkt loss=N (N.N%), jitter columns, etc.
+        Jitter/RTT lines use space-separated columns: min avg max last dev
+        """
+        quality: dict = {}
+
+        # Track which block we're in (RX comes first, then TX)
+        in_rx = False
+        in_tx = False
+
+        for line in lines:
+            # Block markers
+            if re.search(r"RX pt=", line):
+                in_rx, in_tx = True, False
+            elif re.search(r"TX pt=", line):
+                in_rx, in_tx = False, True
+            elif re.search(r"RTT\s+msec", line):
+                in_rx, in_tx = False, False
+
+            prefix = "rx" if in_rx else "tx" if in_tx else None
+
+            # Packet count: "total 835pkt" or "total 1.0Kpkt"
+            if prefix and (m := re.search(r"total\s+([\d.]+)(K?)pkt", line)):
+                count = float(m.group(1))
+                if m.group(2) == "K":
+                    count *= 1000
+                quality[f"{prefix}_packets"] = int(count)
+
+            # Packet loss: "pkt loss=0 (0.0%)"
+            if prefix and (m := re.search(r"pkt loss\s*=\s*(\d+)\s+\(([\d.]+)%\)", line)):
+                quality[f"{prefix}_lost"] = int(m.group(1))
+                quality[f"{prefix}_loss_pct"] = float(m.group(2))
+
+            # Bitrate: "@avg=12.6Kbps/28.0Kbps"
+            if prefix and (m := re.search(r"@avg=([\d.]+)Kbps/([\d.]+)Kbps", line)):
+                quality[f"{prefix}_bitrate"] = float(m.group(1))
+                quality[f"{prefix}_bitrate_ip"] = float(m.group(2))
+
+            # Jitter: "jitter     :   0.229   6.822  20.208   3.250   4.523"
+            # Columns:              min     avg     max     last    dev
+            if prefix and (m := re.search(r"jitter\s+:\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)", line)):
+                quality[f"{prefix}_jitter_avg"] = float(m.group(2))
+                quality[f"{prefix}_jitter_max"] = float(m.group(3))
+                quality[f"{prefix}_jitter_last"] = float(m.group(4))
+
+            # RTT: "RTT msec      :  21.438  33.245  59.448  25.894  15.245"
+            if re.search(r"RTT\s+msec", line):
+                if m := re.search(r"RTT\s+msec\s+:\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)", line):
+                    quality["rtt_avg"] = float(m.group(2))
+                    quality["rtt_last"] = float(m.group(4))
+
+        if quality:
+            logger.info("Quality parsed: %s", quality)
+            self.call_quality = quality
+            self._emit_sync("quality", quality)
+        else:
+            logger.info("dump_q parsed but no metrics found in %d lines", len(lines))
 
     def _emit_sync(self, event: str, data: dict) -> None:
         if self._on_event:

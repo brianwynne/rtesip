@@ -1,6 +1,8 @@
+import { useState, useEffect, useRef } from "react";
 import { Globe, Shield, ShieldOff, Sun, Moon, Cable, Wifi, WifiLow, WifiOff } from "lucide-react";
 import { Logo } from "./Logo";
-import type { AccountStatus, CallState } from "../types";
+import { CallQualityCard } from "./CallQualityCard";
+import type { AccountStatus, CallState, CallQuality } from "../types";
 import styles from "./StatusBar.module.css";
 
 interface Props {
@@ -17,6 +19,27 @@ interface Props {
 }
 
 export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal, publicIp }: Props) {
+  const [showQuality, setShowQuality] = useState(false);
+  const isConnected = callState.state === "connected";
+
+  // Accumulate quality history (survives card open/close, clears on call end)
+  const MAX_HISTORY = 120; // 2 minutes at 1s intervals
+  const qualityHistory = useRef<{ t: number; q: CallQuality }[]>([]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setShowQuality(false);
+      qualityHistory.current = [];
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (callState.quality && isConnected) {
+      const hist = qualityHistory.current;
+      hist.push({ t: Date.now() / 1000, q: callState.quality });
+      if (hist.length > MAX_HISTORY) hist.shift();
+    }
+  }, [callState.quality, isConnected]);
   const accountList = Object.values(accounts);
   const hasWifi = "wlan0" in ipAddresses;
   const WifiIcon = wifiSignal == null || !hasWifi ? WifiOff : wifiSignal > -50 ? Wifi : wifiSignal > -70 ? WifiLow : WifiOff;
@@ -79,10 +102,18 @@ export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onTog
             <WifiIcon size={22} className={wifiColor} />
           </div>
         )}
-        <div className={styles.indicator} title={serverReachable ? "SIP Server Reachable" : "SIP Server Unreachable"}>
+        <div
+          className={`${styles.indicator} ${isConnected ? styles.indicatorClickable : ""}`}
+          title={isConnected ? "Call Quality" : serverReachable ? "SIP Server Reachable" : "SIP Server Unreachable"}
+          onClick={isConnected ? () => setShowQuality((v) => !v) : undefined}
+        >
           <Globe size={22} className={serverReachable ? styles.iconGreen : styles.iconRed} />
         </div>
       </div>
+
+      {showQuality && isConnected && (
+        <CallQualityCard callState={callState} history={qualityHistory.current} onClose={() => setShowQuality(false)} />
+      )}
     </div>
   );
 }

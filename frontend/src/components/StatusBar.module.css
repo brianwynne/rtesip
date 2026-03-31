@@ -124,6 +124,16 @@
 }
 .themeToggle:hover { background: var(--border); }
 
+.indicatorClickable {
+  cursor: pointer;
+  border-radius: 0.3rem;
+  padding: 0.2rem;
+  transition: background 0.15s;
+}
+.indicatorClickable:hover {
+  background: var(--bg-elevated);
+}
+
 .iconGreen { color: var(--green); }
 .iconRed { color: var(--red); }
 .iconAmber { color: var(--amber); }

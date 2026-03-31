@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CallState, VolumeState, AccountStatus, WsMessage } from "../types";
+import type { CallState, CallQuality, VolumeState, AccountStatus, WsMessage } from "../types";
 
 const WS_URL = `ws://${window.location.host}/ws`;
 
@@ -186,6 +186,19 @@ export function useWebSocket() {
             break;
           case "srtp":
             setCallState((prev) => ({ ...prev, srtpActive: msg.active as boolean, srtpSuite: msg.suite as string }));
+            break;
+          case "quality":
+            setCallState((prev) => {
+              const q: CallQuality = {};
+              for (const k of ["tx_packets", "tx_lost", "tx_loss_pct", "tx_bitrate", "tx_bitrate_ip",
+                "rx_packets", "rx_lost", "rx_loss_pct", "rx_bitrate", "rx_bitrate_ip",
+                "rx_jitter_avg", "rx_jitter_max", "rx_jitter_last",
+                "tx_jitter_avg", "tx_jitter_max", "tx_jitter_last",
+                "rtt_avg", "rtt_last"] as const) {
+                if (k in msg) (q as Record<string, unknown>)[k] = msg[k];
+              }
+              return { ...prev, quality: q };
+            });
             break;
           case "ended":
             setCallState({ state: "idle" });
