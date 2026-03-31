@@ -314,8 +314,6 @@ class PjsuaTelnet:
         # Debug/other output
         else:
             if data:
-                if self.call_state == CallState.CONNECTED:
-                    logger.info("pjsua unhandled (in-call): %s", data[:120])
                 self._emit_sync("debug", {"data": data})
 
     def _resolve_contact(self, raw: str) -> str:
@@ -365,7 +363,7 @@ class PjsuaTelnet:
             await asyncio.sleep(2)  # initial delay — let call settle
             while self.call_state == CallState.CONNECTED:
                 await self.send("call dump_q")
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
         except asyncio.CancelledError:
             pass
 
@@ -424,11 +422,8 @@ class PjsuaTelnet:
                     quality["rtt_last"] = float(m.group(4))
 
         if quality:
-            logger.info("Quality parsed: %s", quality)
             self.call_quality = quality
             self._emit_sync("quality", quality)
-        else:
-            logger.info("dump_q parsed but no metrics found in %d lines", len(lines))
 
     def _emit_sync(self, event: str, data: dict) -> None:
         if self._on_event:
