@@ -8,8 +8,10 @@ import hashlib
 import ipaddress
 import json
 import logging
+import re
 import secrets
 import subprocess
+from pathlib import Path
 from typing import Optional, Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -29,6 +31,23 @@ challenges: dict[WebSocket, str] = {}
 # Shared state
 telnet: PjsuaTelnet = PjsuaTelnet()
 mixer_state = MixerState()
+
+# Frontend asset version — extracted from index.html JS bundle hash
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+_asset_version: str | None = None
+
+
+def _get_asset_version() -> str:
+    """Return the JS bundle hash from index.html (cached)."""
+    global _asset_version
+    if _asset_version is None:
+        try:
+            html = (_FRONTEND_DIR / "index.html").read_text()
+            m = re.search(r'index-([A-Za-z0-9]+)\.js', html)
+            _asset_version = m.group(1) if m else "unknown"
+        except Exception:
+            _asset_version = "unknown"
+    return _asset_version
 
 
 async def broadcast(event: str, data: dict, authed_only: bool = True) -> None:
@@ -73,6 +92,7 @@ async def _send_initial_state(ws: WebSocket) -> None:
         "sip_ready": telnet.sip_ready,
         "server_reachable": telnet.server_reachable,
         "connected_at": telnet.connected_at,
+        "asset_version": _get_asset_version(),
     }))
     await ws.send_text(json.dumps({
         "event": "levels",

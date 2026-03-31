@@ -30,6 +30,16 @@ async function hashChallenge(pw: string, challenge: string): Promise<string> {
   return djb2Hash(input);
 }
 
+// Extract asset version from current JS bundle filename (e.g. index-C7URIrYh.js → C7URIrYh)
+const LOCAL_ASSET_VERSION = (() => {
+  const scripts = document.querySelectorAll("script[src]");
+  for (const s of scripts) {
+    const m = s.getAttribute("src")?.match(/index-([A-Za-z0-9]+)\.js/);
+    if (m) return m[1];
+  }
+  return "unknown";
+})();
+
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<number>();
@@ -97,6 +107,15 @@ export function useWebSocket() {
           }
 
           case "state":
+            // Auto-reload if backend has a newer frontend build
+            if (msg.asset_version && msg.asset_version !== "unknown"
+                && LOCAL_ASSET_VERSION !== "unknown"
+                && msg.asset_version !== LOCAL_ASSET_VERSION) {
+              console.info("Asset version mismatch (local=%s, server=%s), reloading",
+                LOCAL_ASSET_VERSION, msg.asset_version);
+              window.location.reload();
+              return;
+            }
             setAuthed(true);
             setAuthFailed(false);
             setSipReady(msg.sip_ready as boolean);
