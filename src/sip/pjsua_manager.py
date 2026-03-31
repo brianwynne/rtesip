@@ -50,17 +50,21 @@ def generate_config() -> str:
         "--no-cli-console",
     ]
 
+    # Audio settings
+    stereo = audio.get("channels", 1) == 2
+    if stereo:
+        lines.append("--stereo")
+
     # Codecs — enable wanted, disable unwanted
     # pjsua assigns higher priority to later --add-codec lines, so reverse the list
     # so the first codec in the user's list gets the highest priority
     for codec in reversed(sip.get("codecs", ["opus/48000/2", "L16/44100/1", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1"])):
+        # Adapt L16 channel count to match mono/stereo setting
+        if codec.startswith("L16/"):
+            codec = f"L16/44100/{'2' if stereo else '1'}"
         lines.append(f"--add-codec={codec}")
     for codec in ["iLBC", "speex", "GSM"]:
         lines.append(f"--dis-codec={codec}")
-
-    # Audio settings
-    if audio.get("channels", 1) == 2:
-        lines.append("--stereo")
 
     # Audio device selection is handled via ALSA default device
     # (set in /etc/asound.conf or ~/.asoundrc) rather than pjsua --capture-dev/--playback-dev,
