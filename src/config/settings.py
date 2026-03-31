@@ -45,6 +45,7 @@ DEFAULTS: dict[str, dict] = {
     "audio": {
         "channels": 1,
         "bitrate": 64000,
+        "ec_tail": 200,
         "opus_complexity": 10,
         "opus_cbr": False,
         "opus_fec": False,

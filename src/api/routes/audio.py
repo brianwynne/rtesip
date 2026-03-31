@@ -156,7 +156,7 @@ async def update_audio(settings: dict):
     _restart_fields = _channel_fields | {
         "channels", "bitrate", "capture_latency", "playback_latency",
         "opus_complexity", "opus_cbr", "opus_fec", "opus_packet_loss",
-        "opus_frame_duration",
+        "opus_frame_duration", "ec_tail",
     }
     if _restart_fields & settings.keys():
         from src.sip.pjsua_manager import pjsua

@@ -33,6 +33,7 @@ interface AudioSettings {
   output_left_channel: number;
   output_right_device: string;
   output_right_channel: number;
+  ec_tail: number;
   opus_complexity: number;
   opus_cbr: boolean;
   opus_fec: boolean;
@@ -142,6 +143,7 @@ export function AudioPage() {
     output_left_channel: 0,
     output_right_device: "USB",
     output_right_channel: 1,
+    ec_tail: 200,
     opus_complexity: 10,
     opus_cbr: false,
     opus_fec: false,
@@ -232,6 +234,22 @@ export function AudioPage() {
                 max={50}
                 onChange={(e) => save({ period_size: Number(e.target.value) })}
               />
+              <span className={styles.unit}>ms</span>
+            </div>
+          </label>
+          <label className={styles.field}>
+            <span>Echo Cancel Tail</span>
+            <div className={styles.fieldWithUnit}>
+              <select
+                value={settings.ec_tail}
+                onChange={(e) => save({ ec_tail: Number(e.target.value) })}
+              >
+                <option value={0}>Off</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+                <option value={400}>400</option>
+              </select>
               <span className={styles.unit}>ms</span>
             </div>
           </label>
