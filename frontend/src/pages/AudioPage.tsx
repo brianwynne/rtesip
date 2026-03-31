@@ -47,6 +47,7 @@ export function AudioPage() {
   });
   const [codecs, setCodecs] = useState<string[]>(["opus/48000/2", "G722/16000/1"]);
   const [saving, setSaving] = useState(false);
+  const [detectedDevices, setDetectedDevices] = useState<{ card: number; id: string; name: string; usb: boolean; capture_channels: number; playback_channels: number }[]>([]);
 
   useEffect(() => {
     fetch("/api/audio/settings")
@@ -56,6 +57,10 @@ export function AudioPage() {
     fetch("/api/sip/settings")
       .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => { if (data.codecs) setCodecs(data.codecs); })
+      .catch(() => {});
+    fetch("/api/audio/detected-devices")
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
+      .then((data) => { if (data.devices) setDetectedDevices(data.devices); })
       .catch(() => {});
   }, []);
 
@@ -151,6 +156,14 @@ export function AudioPage() {
               <option value="plughw:CARD=AES67,DEV=0">AES67</option>
             </select>
           </label>
+          {(() => {
+            const dev = detectedDevices.find((d) => settings.input === "USB" ? d.usb : d.id === settings.input);
+            return dev ? (
+              <div className={styles.detectedDevice}>
+                {dev.name} — {dev.capture_channels > 0 ? `${dev.capture_channels}ch capture` : "no capture"}
+              </div>
+            ) : null;
+          })()}
           <label className={styles.field}>
             <span>Routing</span>
             <select
@@ -216,6 +229,14 @@ export function AudioPage() {
               <option value="plughw:CARD=AES67,DEV=0">AES67</option>
             </select>
           </label>
+          {(() => {
+            const dev = detectedDevices.find((d) => settings.output === "USB" ? d.usb : d.id === settings.output);
+            return dev ? (
+              <div className={styles.detectedDevice}>
+                {dev.name} — {dev.playback_channels > 0 ? `${dev.playback_channels}ch playback` : "no playback"}
+              </div>
+            ) : null;
+          })()}
           <label className={styles.field}>
             <span>Routing</span>
             <select

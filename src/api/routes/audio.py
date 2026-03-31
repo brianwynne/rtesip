@@ -1,10 +1,16 @@
 """Audio control endpoints — volume, devices, AES67."""
 
+import logging
+import subprocess
+from pathlib import Path
+
 from fastapi import APIRouter, Depends
 
 from src.api.auth import require_api_key
 from src.audio.mixer import get_volume, discover_mixers, list_devices, toggle_phantom_power
 from src.audio.devices import discover_devices
+
+logger = logging.getLogger(__name__)
 from src.audio.aes67 import (
     get_ptp_status, get_sources, get_remote_sources, get_sinks,
     update_source, update_sink, has_aes67,
@@ -17,6 +23,62 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 @router.get("/volume")
 async def get_vol():
     return {"input": get_volume("Capture"), "output": get_volume("Master")}
+
+
+@router.get("/detected-devices")
+async def detected_devices():
+    """Return detected audio hardware with channel counts."""
+    devices = []
+    try:
+        cards = Path("/proc/asound/cards").read_text()
+        for line in cards.splitlines():
+            line = line.strip()
+            if not line or line.startswith(" "):
+                continue
+            parts = line.split()
+            if not parts[0].isdigit():
+                continue
+            card_num = int(parts[0])
+            card_id = parts[1].strip("[]")
+            # Get full name
+            name = line.split(" - ", 1)[1] if " - " in line else card_id
+
+            # Get channel counts
+            cap_ch = 0
+            play_ch = 0
+            try:
+                r = subprocess.run(
+                    ["arecord", "--dump-hw-params", "-D", f"hw:{card_num},0", "-d", "0"],
+                    capture_output=True, text=True, timeout=3
+                )
+                for l in r.stderr.splitlines():
+                    if "CHANNELS:" in l:
+                        cap_ch = int(l.split(":")[1].strip())
+            except Exception:
+                pass
+            try:
+                r = subprocess.run(
+                    ["aplay", "--dump-hw-params", "-D", f"hw:{card_num},0", "-d", "0", "/dev/zero"],
+                    capture_output=True, text=True, timeout=3
+                )
+                for l in r.stderr.splitlines():
+                    if "CHANNELS:" in l:
+                        play_ch = int(l.split(":")[1].strip())
+            except Exception:
+                pass
+
+            is_usb = Path(f"/proc/asound/card{card_num}/usbid").exists()
+            devices.append({
+                "card": card_num,
+                "id": card_id,
+                "name": name,
+                "usb": is_usb,
+                "capture_channels": cap_ch,
+                "playback_channels": play_ch,
+            })
+    except Exception as e:
+        logger.warning("Failed to detect audio devices: %s", e)
+    return {"devices": devices}
 
 
 @router.get("/devices")
@@ -77,6 +139,10 @@ async def update_audio(settings: dict):
         if settings["mic_monitor"]:
             await telnet.send("cc 0 0")
         # Note: disconnecting mic monitor requires pjsua restart
+
+    # Update ALSA routing if changed
+    if "input_routing" in settings or "output_routing" in settings:
+        _update_asound_routing()
 
     # Update ALSA routing if changed
     if "input_routing" in settings or "output_routing" in settings:
