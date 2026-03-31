@@ -36,6 +36,7 @@ def generate_config() -> str:
     lines = [
         # Base config
         f"--log-level={sip.get('log_level', 3)}",
+        f"--app-log-level={sip.get('log_level', 3)}",
         "--clock-rate=48000",
         "--snd-clock-rate=48000",
         "--quality=10",
