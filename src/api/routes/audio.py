@@ -151,9 +151,13 @@ async def update_audio(settings: dict):
     if _channel_fields & settings.keys():
         generate_asound_conf()
 
-    # Restart pjsua to apply device/routing/codec changes
-    from src.sip.pjsua_manager import pjsua
-    await pjsua.restart()
+    # Only restart pjsua for settings that require it (device/channel/codec changes)
+    # Volume, phantom power, mic monitor, hardware mixer are applied live above
+    _restart_fields = _channel_fields | {"channels"}
+    if _restart_fields & settings.keys():
+        from src.sip.pjsua_manager import pjsua
+        await pjsua.restart()
+
     return result
 
 
