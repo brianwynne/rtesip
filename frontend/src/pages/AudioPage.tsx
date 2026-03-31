@@ -187,7 +187,7 @@ export function AudioPage() {
                 max={100}
                 onChange={(e) => save({ capture_volume: Number(e.target.value) })}
               />
-              <span className={styles.unit}>0-10</span>
+              <span className={styles.unit}>%</span>
             </div>
           </label>
         </div>
@@ -242,7 +242,7 @@ export function AudioPage() {
                 max={100}
                 onChange={(e) => save({ playback_volume: Number(e.target.value) })}
               />
-              <span className={styles.unit}>0-10</span>
+              <span className={styles.unit}>%</span>
             </div>
           </label>
         </div>
