@@ -3,7 +3,7 @@ import styles from "./AudioPage.module.css";
 
 const ALL_CODECS = [
   { id: "opus/48000/2", label: "Opus 48kHz Stereo" },
-  { id: "L16/48000/1", label: "L16 48kHz (Linear PCM)" },
+  { id: "L16/44100/1", label: "L16 44.1kHz (Linear PCM)" },
   { id: "G722/16000/1", label: "G.722 16kHz" },
   { id: "PCMA/8000/1", label: "G.711 A-law (PCMA)" },
   { id: "PCMU/8000/1", label: "G.711 μ-law (PCMU)" },
