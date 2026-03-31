@@ -137,61 +137,6 @@ export function AudioPage() {
           </label>
         </div>
 
-        {/* Output */}
-        <div className={styles.card}>
-          <h3 className={styles.cardTitle}>Output</h3>
-          <label className={styles.field}>
-            <span>Output Device</span>
-            <select
-              value={settings.output}
-              onChange={(e) => save({ output: e.target.value })}
-            >
-              <option value="USB">First USB Device</option>
-              <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
-              <option value="plughw:CARD=AES67,DEV=0">AES67</option>
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span>Routing</span>
-            <select
-              value={settings.output_routing}
-              onChange={(e) => save({ output_routing: e.target.value })}
-            >
-              <option value="lr">LR (Stereo)</option>
-              <option value="ll">LL (Left only)</option>
-              <option value="rr">RR (Right only)</option>
-              <option value="rl">RL (Swap)</option>
-              <option value="mono">Mono (L+R mix)</option>
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span>Output Latency</span>
-            <div className={styles.fieldWithUnit}>
-              <input
-                type="number"
-                value={settings.playback_latency}
-                min={2}
-                max={200}
-                onChange={(e) => save({ playback_latency: Number(e.target.value) })}
-              />
-              <span className={styles.unit}>ms</span>
-            </div>
-          </label>
-          <label className={styles.field}>
-            <span>System Volume</span>
-            <div className={styles.fieldWithUnit}>
-              <input
-                type="number"
-                value={settings.playback_volume}
-                min={0}
-                max={100}
-                onChange={(e) => save({ playback_volume: Number(e.target.value) })}
-              />
-              <span className={styles.unit}>0-10</span>
-            </div>
-          </label>
-        </div>
-
         {/* Input */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>Input</h3>
@@ -241,6 +186,61 @@ export function AudioPage() {
                 min={0}
                 max={100}
                 onChange={(e) => save({ capture_volume: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>0-10</span>
+            </div>
+          </label>
+        </div>
+
+        {/* Output */}
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle}>Output</h3>
+          <label className={styles.field}>
+            <span>Output Device</span>
+            <select
+              value={settings.output}
+              onChange={(e) => save({ output: e.target.value })}
+            >
+              <option value="USB">First USB Device</option>
+              <option value="plughw:CARD=sndrpihifiberry,DEV=0">HiFiBerry</option>
+              <option value="plughw:CARD=AES67,DEV=0">AES67</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Routing</span>
+            <select
+              value={settings.output_routing}
+              onChange={(e) => save({ output_routing: e.target.value })}
+            >
+              <option value="lr">LR (Stereo)</option>
+              <option value="ll">LL (Left only)</option>
+              <option value="rr">RR (Right only)</option>
+              <option value="rl">RL (Swap)</option>
+              <option value="mono">Mono (L+R mix)</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Output Latency</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.playback_latency}
+                min={2}
+                max={200}
+                onChange={(e) => save({ playback_latency: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>ms</span>
+            </div>
+          </label>
+          <label className={styles.field}>
+            <span>System Volume</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.playback_volume}
+                min={0}
+                max={100}
+                onChange={(e) => save({ playback_volume: Number(e.target.value) })}
               />
               <span className={styles.unit}>0-10</span>
             </div>
