@@ -43,7 +43,8 @@ def generate_config() -> str:
         "--use-ice",  # Re-enabled for Twilio — causes Bad Request errors with some STUN servers
         "--max-calls=1",
         "--no-vad",
-        "--ec-tail=200",
+        f"--ec-tail={audio.get('ec_tail', 200)}",
+        f"--ptime={audio.get('opus_frame_duration', 20)}",
         "--snd-auto-close=0",
         f"--use-cli",
         f"--cli-telnet-port={CLI_PORT}",
@@ -220,12 +221,14 @@ class PjsuaProcess:
             "--thread-cnt=3",
         ] + device_args
 
-        # Pass Opus bitrate via environment variable (read by patched pjsua)
+        # Pass Opus settings via environment variables (read by patched pjsua)
         env = dict(os.environ)
         audio = get_section("audio")
-        bitrate = audio.get("bitrate", 64000)
-        if bitrate:
-            env["OPUS_BITRATE"] = str(bitrate)
+        env["OPUS_BITRATE"] = str(audio.get("bitrate", 64000))
+        env["OPUS_COMPLEXITY"] = str(audio.get("opus_complexity", 10))
+        env["OPUS_CBR"] = "1" if audio.get("opus_cbr") else "0"
+        env["OPUS_FEC"] = "1" if audio.get("opus_fec") else "0"
+        env["OPUS_PACKET_LOSS"] = str(audio.get("opus_packet_loss", 0) if audio.get("opus_fec") else 0)
 
         try:
             self._process = await asyncio.create_subprocess_exec(

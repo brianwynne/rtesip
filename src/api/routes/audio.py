@@ -153,7 +153,11 @@ async def update_audio(settings: dict):
 
     # Only restart pjsua for settings that require it (device/channel/codec changes)
     # Volume, phantom power, mic monitor, hardware mixer are applied live above
-    _restart_fields = _channel_fields | {"channels", "bitrate", "capture_latency", "playback_latency"}
+    _restart_fields = _channel_fields | {
+        "channels", "bitrate", "capture_latency", "playback_latency",
+        "opus_complexity", "opus_cbr", "opus_fec", "opus_packet_loss",
+        "opus_frame_duration",
+    }
     if _restart_fields & settings.keys():
         from src.sip.pjsua_manager import pjsua
         await pjsua.restart()

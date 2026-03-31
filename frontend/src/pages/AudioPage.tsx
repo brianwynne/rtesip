@@ -33,6 +33,11 @@ interface AudioSettings {
   output_left_channel: number;
   output_right_device: string;
   output_right_channel: number;
+  opus_complexity: number;
+  opus_cbr: boolean;
+  opus_fec: boolean;
+  opus_packet_loss: number;
+  opus_frame_duration: number;
   capture_latency: number;
   playback_latency: number;
   period_size: number;
@@ -137,6 +142,11 @@ export function AudioPage() {
     output_left_channel: 0,
     output_right_device: "USB",
     output_right_channel: 1,
+    opus_complexity: 10,
+    opus_cbr: false,
+    opus_fec: false,
+    opus_packet_loss: 10,
+    opus_frame_duration: 20,
     capture_latency: 10,
     playback_latency: 10,
     period_size: 5,
@@ -213,7 +223,25 @@ export function AudioPage() {
             </select>
           </label>
           <label className={styles.field}>
-            <span>Opus Bandwidth</span>
+            <span>Buffer Period Size</span>
+            <div className={styles.fieldWithUnit}>
+              <input
+                type="number"
+                value={settings.period_size}
+                min={1}
+                max={50}
+                onChange={(e) => save({ period_size: Number(e.target.value) })}
+              />
+              <span className={styles.unit}>ms</span>
+            </div>
+          </label>
+        </div>
+
+        {/* Opus */}
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle}>Opus</h3>
+          <label className={styles.field}>
+            <span>Bitrate</span>
             <div className={styles.fieldWithUnit}>
               <select
                 value={settings.bitrate}
@@ -232,18 +260,62 @@ export function AudioPage() {
             </div>
           </label>
           <label className={styles.field}>
-            <span>Buffer Period Size</span>
+            <span>Frame Duration</span>
             <div className={styles.fieldWithUnit}>
-              <input
-                type="number"
-                value={settings.period_size}
-                min={1}
-                max={50}
-                onChange={(e) => save({ period_size: Number(e.target.value) })}
-              />
+              <select
+                value={settings.opus_frame_duration}
+                onChange={(e) => save({ opus_frame_duration: Number(e.target.value) })}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={40}>40</option>
+                <option value={60}>60</option>
+              </select>
               <span className={styles.unit}>ms</span>
             </div>
           </label>
+          <label className={styles.field}>
+            <span>Complexity</span>
+            <select
+              value={settings.opus_complexity}
+              onChange={(e) => save({ opus_complexity: Number(e.target.value) })}
+            >
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.toggle}>
+            <span>Constant Bitrate</span>
+            <input
+              type="checkbox"
+              checked={settings.opus_cbr}
+              onChange={(e) => save({ opus_cbr: e.target.checked })}
+            />
+          </label>
+          <label className={styles.toggle}>
+            <span>FEC</span>
+            <input
+              type="checkbox"
+              checked={settings.opus_fec}
+              onChange={(e) => save({ opus_fec: e.target.checked })}
+            />
+          </label>
+          {settings.opus_fec && (
+            <label className={styles.field}>
+              <span>Expected Loss</span>
+              <div className={styles.fieldWithUnit}>
+                <input
+                  type="number"
+                  value={settings.opus_packet_loss}
+                  min={1}
+                  max={100}
+                  onChange={(e) => save({ opus_packet_loss: Number(e.target.value) })}
+                />
+                <span className={styles.unit}>%</span>
+              </div>
+            </label>
+          )}
         </div>
 
         {/* Input */}

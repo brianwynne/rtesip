@@ -10,36 +10,63 @@
  #define THIS_FILE       "pjsua_app.c"
 
  //#define STEREO_DEMO
-@@ -2006,6 +2009,40 @@
+@@ -2006,6 +2009,62 @@
 
      app_running = PJ_TRUE;
 
-+    /* Apply Opus bitrate from OPUS_BITRATE env var (rtesip patch) */
++    /* Apply Opus settings from environment variables (rtesip patch) */
 +    {
-+        const char *opus_br = getenv("OPUS_BITRATE");
-+        if (opus_br) {
-+            unsigned bitrate = (unsigned)atoi(opus_br);
-+            if (bitrate >= 6000 && bitrate <= 510000) {
-+                pjmedia_codec_opus_config opus_cfg;
-+                pj_status_t opus_st;
-+                opus_st = pjmedia_codec_opus_get_config(&opus_cfg);
-+                if (opus_st == PJ_SUCCESS) {
-+                    pjmedia_codec_param param;
-+                    pjmedia_codec_mgr *cmgr;
-+                    const pjmedia_codec_info *ci;
-+                    unsigned cnt = 1;
-+                    opus_cfg.bit_rate = bitrate;
-+                    cmgr = pjmedia_endpt_get_codec_mgr(pjsua_get_pjmedia_endpt());
-+                    if (cmgr) {
-+                        pj_str_t cid = pj_str("opus/48000/2");
-+                        opus_st = pjmedia_codec_mgr_find_codecs_by_id(cmgr, &cid, &cnt, &ci, NULL);
-+                        if (opus_st == PJ_SUCCESS && cnt > 0) {
-+                            opus_st = pjmedia_codec_mgr_get_default_param(cmgr, ci, &param);
++        const char *env_br = getenv("OPUS_BITRATE");
++        const char *env_cx = getenv("OPUS_COMPLEXITY");
++        const char *env_cbr = getenv("OPUS_CBR");
++        const char *env_fec = getenv("OPUS_FEC");
++        const char *env_pl = getenv("OPUS_PACKET_LOSS");
++
++        if (env_br || env_cx || env_cbr || env_fec || env_pl) {
++            pjmedia_codec_opus_config opus_cfg;
++            pj_status_t opus_st;
++            opus_st = pjmedia_codec_opus_get_config(&opus_cfg);
++            if (opus_st == PJ_SUCCESS) {
++                pjmedia_codec_param param;
++                pjmedia_codec_mgr *cmgr;
++                const pjmedia_codec_info *ci;
++                unsigned cnt = 1;
++
++                if (env_br) {
++                    unsigned v = (unsigned)atoi(env_br);
++                    if (v >= 6000 && v <= 510000) opus_cfg.bit_rate = v;
++                }
++                if (env_cx) {
++                    unsigned v = (unsigned)atoi(env_cx);
++                    if (v <= 10) opus_cfg.complexity = v;
++                }
++                if (env_cbr) {
++                    opus_cfg.cbr = (atoi(env_cbr) != 0);
++                }
++                if (env_pl) {
++                    unsigned v = (unsigned)atoi(env_pl);
++                    if (v <= 100) opus_cfg.packet_loss = v;
++                }
++
++                cmgr = pjmedia_endpt_get_codec_mgr(pjsua_get_pjmedia_endpt());
++                if (cmgr) {
++                    pj_str_t cid = pj_str("opus/48000/2");
++                    opus_st = pjmedia_codec_mgr_find_codecs_by_id(cmgr, &cid, &cnt, &ci, NULL);
++                    if (opus_st == PJ_SUCCESS && cnt > 0) {
++                        opus_st = pjmedia_codec_mgr_get_default_param(cmgr, ci, &param);
++                        if (opus_st == PJ_SUCCESS) {
++                            /* Enable FEC via fmtp if requested */
++                            if (env_fec && atoi(env_fec) != 0) {
++                                param.setting.dec_fmtp.cnt = 1;
++                                pj_strset2(&param.setting.dec_fmtp.param[0].name, "useinbandfec");
++                                pj_strset2(&param.setting.dec_fmtp.param[0].val, "1");
++                            }
++                            opus_st = pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
 +                            if (opus_st == PJ_SUCCESS) {
-+                                opus_st = pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
-+                                if (opus_st == PJ_SUCCESS) {
-+                                    PJ_LOG(3, (THIS_FILE, "Opus bitrate set to %u bps", bitrate));
-+                                }
++                                PJ_LOG(3, (THIS_FILE, "Opus config: br=%u cx=%u cbr=%d pl=%u fec=%s",
++                                    opus_cfg.bit_rate, opus_cfg.complexity,
++                                    opus_cfg.cbr, opus_cfg.packet_loss,
++                                    (env_fec && atoi(env_fec)) ? "on" : "off"));
 +                            }
 +                        }
 +                    }
