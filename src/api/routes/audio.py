@@ -334,8 +334,8 @@ ctl.!default {{
     try:
         ASOUND_CONF.write_text(conf)
         logger.info("Generated %s", ASOUND_CONF)
-    except PermissionError:
-        logger.warning("Cannot write %s (permission denied)", ASOUND_CONF)
+    except OSError as e:
+        logger.warning("Cannot write %s: %s", ASOUND_CONF, e)
 
 
 # --- AES67 ---

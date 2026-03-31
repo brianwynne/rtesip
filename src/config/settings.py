@@ -168,6 +168,7 @@ def _config_path() -> Path:
 def load() -> dict[str, Any]:
     """Load config, merging saved values over defaults."""
     path = _config_path()
+    needs_save = False
     with _config_lock:
         if path.exists():
             try:
@@ -186,10 +187,13 @@ def load() -> dict[str, Any]:
             merged = {}
             for section, defaults in DEFAULTS.items():
                 merged[section] = {**defaults, **(saved.get(section, {}))}
-            if _migrate_audio_routing(merged):
-                save(merged)
-            return merged
-        return {k: dict(v) for k, v in DEFAULTS.items()}
+            needs_save = _migrate_audio_routing(merged)
+        else:
+            merged = {k: dict(v) for k, v in DEFAULTS.items()}
+    # Save outside the lock to avoid deadlock (save() acquires _config_lock)
+    if needs_save:
+        save(merged)
+    return merged
 
 
 def save(config: dict[str, Any]) -> None:
