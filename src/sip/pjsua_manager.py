@@ -165,14 +165,9 @@ def get_device_string() -> list[str]:
         args.append(f"--capture-lat={audio['capture_latency']}")
     if audio.get("playback_latency"):
         args.append(f"--playback-lat={audio['playback_latency']}")
-    if audio.get("period_size"):
-        pass  # args.append(f"--period-size={audio['period_size']}")  # removed for pjsip 2.14
-
-    # Jitter buffer — tighter for wired, wider for WiFi
-    if audio.get("wifi_mode"):
-        args.extend(["--jb-max-size=720"])
-    else:
-        args.extend(["--jb-max-size=360"])
+    # Jitter buffer size (ms)
+    jb_max = audio.get("jitter_buffer", 360)
+    args.append(f"--jb-max-size={jb_max}")
 
     return args
 

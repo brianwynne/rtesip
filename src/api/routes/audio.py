@@ -189,7 +189,7 @@ async def update_audio(settings: dict):
     _restart_fields = _channel_fields | {
         "channels", "bitrate", "capture_latency", "playback_latency",
         "opus_complexity", "opus_cbr", "opus_fec", "opus_packet_loss",
-        "opus_frame_duration", "ec_tail",
+        "opus_frame_duration", "ec_tail", "jitter_buffer",
     }
     if _restart_fields & settings.keys():
         from src.api.ws import telnet

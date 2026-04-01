@@ -67,7 +67,7 @@ DEFAULTS: dict[str, dict] = {
         "output_right_channel": 1,
         "capture_latency": 10,
         "playback_latency": 10,
-        "period_size": 5,
+        "jitter_buffer": 360,
         "capture_volume": 40,
         "playback_volume": 40,
         "auto_answer": False,

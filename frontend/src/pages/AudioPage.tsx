@@ -43,7 +43,7 @@ interface AudioSettings {
   opus_frame_duration: number;
   capture_latency: number;
   playback_latency: number;
-  period_size: number;
+  jitter_buffer: number;
   capture_volume: number;
   playback_volume: number;
   auto_answer: boolean;
@@ -153,7 +153,7 @@ export function AudioPage() {
     opus_frame_duration: 20,
     capture_latency: 10,
     playback_latency: 10,
-    period_size: 5,
+    jitter_buffer: 360,
     capture_volume: 100,
     playback_volume: 100,
     auto_answer: false,
@@ -227,14 +227,15 @@ export function AudioPage() {
             </select>
           </label>
           <label className={styles.field}>
-            <span>Buffer Period Size</span>
+            <span>Jitter Buffer</span>
             <div className={styles.fieldWithUnit}>
               <input
                 type="number"
-                value={settings.period_size}
-                min={1}
-                max={50}
-                onChange={(e) => save({ period_size: Number(e.target.value) })}
+                value={settings.jitter_buffer}
+                min={60}
+                max={1000}
+                step={20}
+                onChange={(e) => save({ jitter_buffer: Number(e.target.value) })}
               />
               <span className={styles.unit}>ms</span>
             </div>
