@@ -51,8 +51,8 @@ export function useWebSocket() {
   const [callState, setCallState] = useState<CallState>({ state: "idle" });
   const [accounts, setAccounts] = useState<Record<string, AccountStatus>>({});
   const [volume, setVolume] = useState<VolumeState>({
-    cl: 100, cr: 100, clink: false,
-    pl: 100, pr: 100, plink: true,
+    cl: 40, cr: 40, clink: false,
+    pl: 40, pr: 40, plink: true,
   });
   const [sipReady, setSipReady] = useState(false);
   const [serverReachable, setServerReachable] = useState(false);
