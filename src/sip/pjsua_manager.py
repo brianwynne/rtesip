@@ -232,6 +232,7 @@ class PjsuaProcess:
         env["OPUS_CBR"] = "1" if audio.get("opus_cbr") else "0"
         env["OPUS_FEC"] = "1" if audio.get("opus_fec") else "0"
         env["OPUS_PACKET_LOSS"] = str(audio.get("opus_packet_loss", 0) if audio.get("opus_fec") else 0)
+        env["OPUS_STEREO"] = "1" if audio.get("channels", 1) == 2 else "0"
 
         try:
             self._process = await asyncio.create_subprocess_exec(

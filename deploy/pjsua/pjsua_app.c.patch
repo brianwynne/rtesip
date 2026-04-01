@@ -10,7 +10,7 @@
  #define THIS_FILE       "pjsua_app.c"
  
  //#define STEREO_DEMO
-@@ -2006,6 +2009,67 @@
+@@ -2006,6 +2009,80 @@
  
      app_running = PJ_TRUE;
  
@@ -21,8 +21,9 @@
 +        const char *env_cbr = getenv("OPUS_CBR");
 +        const char *env_fec = getenv("OPUS_FEC");
 +        const char *env_pl = getenv("OPUS_PACKET_LOSS");
++        const char *env_stereo = getenv("OPUS_STEREO");
 +
-+        if (env_br || env_cx || env_cbr || env_fec || env_pl) {
++        if (env_br || env_cx || env_cbr || env_fec || env_pl || env_stereo) {
 +            pjmedia_codec_opus_config opus_cfg;
 +            pj_status_t opus_st;
 +            opus_st = pjmedia_codec_opus_get_config(&opus_cfg);
@@ -31,6 +32,7 @@
 +                pjmedia_codec_mgr *cmgr;
 +                const pjmedia_codec_info *ci;
 +                unsigned cnt = 1;
++                unsigned fmtp_idx = 0;
 +
 +                if (env_br) {
 +                    unsigned v = (unsigned)atoi(env_br);
@@ -55,18 +57,29 @@
 +                    if (opus_st == PJ_SUCCESS && cnt > 0) {
 +                        opus_st = pjmedia_codec_mgr_get_default_param(cmgr, ci, &param);
 +                        if (opus_st == PJ_SUCCESS) {
-+                            /* Enable FEC via fmtp if requested */
++                            /* Build fmtp parameters */
++                            fmtp_idx = 0;
 +                            if (env_fec && atoi(env_fec) != 0) {
-+                                param.setting.dec_fmtp.cnt = 1;
-+                                pj_strset2(&param.setting.dec_fmtp.param[0].name, "useinbandfec");
-+                                pj_strset2(&param.setting.dec_fmtp.param[0].val, "1");
++                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].name, "useinbandfec");
++                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].val, "1");
++                                fmtp_idx++;
 +                            }
++                            if (env_stereo && atoi(env_stereo) != 0) {
++                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].name, "stereo");
++                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].val, "1");
++                                fmtp_idx++;
++                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].name, "sprop-stereo");
++                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].val, "1");
++                                fmtp_idx++;
++                            }
++                            param.setting.dec_fmtp.cnt = fmtp_idx;
 +                            opus_st = pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
 +                            if (opus_st == PJ_SUCCESS) {
-+                                PJ_LOG(3, (THIS_FILE, "Opus config: br=%u cx=%u cbr=%d pl=%u fec=%s",
++                                PJ_LOG(3, (THIS_FILE, "Opus config: br=%u cx=%u cbr=%d pl=%u fec=%s stereo=%s",
 +                                    opus_cfg.bit_rate, opus_cfg.complexity,
 +                                    opus_cfg.cbr, opus_cfg.packet_loss,
-+                                    (env_fec && atoi(env_fec)) ? "on" : "off"));
++                                    (env_fec && atoi(env_fec)) ? "on" : "off",
++                                    (env_stereo && atoi(env_stereo)) ? "on" : "off"));
 +                            }
 +                        }
 +                    }
