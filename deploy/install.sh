@@ -533,11 +533,14 @@ if [ "$ARCH" = "armhf" ]; then
 fi
 
 if [ -n "$PJSUA_BUNDLE" ]; then
-    # Extract pjsua binary and shared libraries
-    tar xzf "$PJSUA_BUNDLE" -C /usr/local/lib/ --exclude=pjsua
-    tar xzf "$PJSUA_BUNDLE" -C /usr/local/bin/ pjsua
+    # Extract to temp dir, then install binary and libs separately
+    PJSUA_TMP=$(mktemp -d)
+    tar xzf "$PJSUA_BUNDLE" -C "$PJSUA_TMP"
+    cp "$PJSUA_TMP"/lib*.so.* /usr/local/lib/ 2>/dev/null || true
+    cp "$PJSUA_TMP"/pjsua /usr/local/bin/pjsua
     chmod +x /usr/local/bin/pjsua
-    ldconfig
+    rm -rf "$PJSUA_TMP"
+    ldconfig 2>/dev/null || true
 
     # Install pjsua runtime dependencies
     info "Installing pjsua dependencies..."
