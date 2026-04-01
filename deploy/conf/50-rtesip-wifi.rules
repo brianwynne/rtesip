@@ -1,0 +1,7 @@
+// Allow rtesip user to manage WiFi via NetworkManager
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 &&
+        subject.user === "rtesip") {
+        return polkit.Result.YES;
+    }
+});

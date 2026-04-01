@@ -58,9 +58,9 @@ def apply_network_config() -> None:
     if network.get("hostname"):
         hostname = _validate_hostname(network["hostname"])
         Path("/etc/hostname").write_text(hostname)
-        subprocess.run(["hostname", hostname], timeout=5)
+        subprocess.run(["sudo", "hostname", hostname], timeout=5)
 
-    subprocess.run(["systemctl", "restart", "dhcpcd"], timeout=30)
+    subprocess.run(["sudo", "systemctl", "restart", "dhcpcd"], timeout=30)
 
 
 # --- WiFi ---
@@ -192,12 +192,12 @@ def apply_8021x_config() -> None:
             "}\n"
         )
         Path("/etc/wpa_supplicant/wpa_supplicant-wired-eth0.conf").write_text(conf)
-        subprocess.run(["systemctl", "enable", "wpa_supplicant-wired@eth0.service"], timeout=10)
-        subprocess.run(["systemctl", "restart", "wpa_supplicant-wired@eth0.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "enable", "wpa_supplicant-wired@eth0.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "restart", "wpa_supplicant-wired@eth0.service"], timeout=10)
     else:
-        subprocess.run(["systemctl", "disable", "wpa_supplicant-wired@eth0.service"],
+        subprocess.run(["sudo", "systemctl", "disable", "wpa_supplicant-wired@eth0.service"],
                        capture_output=True, timeout=10)
-        subprocess.run(["systemctl", "stop", "wpa_supplicant-wired@eth0.service"],
+        subprocess.run(["sudo", "systemctl", "stop", "wpa_supplicant-wired@eth0.service"],
                        capture_output=True, timeout=10)
 
 
@@ -206,7 +206,7 @@ def apply_8021x_config() -> None:
 def apply_timezone() -> None:
     system = get_section("system")
     tz = system.get("timezone", "Europe/Dublin")
-    subprocess.run(["timedatectl", "set-timezone", tz], timeout=10)
+    subprocess.run(["sudo", "timedatectl", "set-timezone", tz], timeout=10)
 
 
 # --- Chrony/NTP (from updateChrony block) ---
@@ -223,7 +223,7 @@ def apply_ntp_config() -> None:
                 servers += f"server {server.strip()}\n"
         base = chrony_base.read_text() if chrony_base.exists() else ""
         Path("/etc/chrony/chrony.conf").write_text(servers + base)
-        subprocess.run(["systemctl", "restart", "chrony"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "restart", "chrony"], timeout=10)
 
 
 # --- PTP (from configurePTP block) ---
@@ -232,11 +232,11 @@ def apply_ptp_config() -> None:
     """Enable/disable PTP clock for AES67."""
     aes67 = get_section("aes67")
     if aes67.get("ptp_clock"):
-        subprocess.run(["systemctl", "enable", "ptp4l.service"], timeout=10)
-        subprocess.run(["systemctl", "start", "ptp4l.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "enable", "ptp4l.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "start", "ptp4l.service"], timeout=10)
     else:
-        subprocess.run(["systemctl", "disable", "ptp4l.service"], capture_output=True, timeout=10)
-        subprocess.run(["systemctl", "stop", "ptp4l.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "disable", "ptp4l.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "stop", "ptp4l.service"], capture_output=True, timeout=10)
 
 
 # --- AES67 (from configureAES67 block) ---
@@ -245,10 +245,10 @@ def apply_aes67_config() -> None:
     """Enable/disable AES67 Ravenna daemon."""
     aes67 = get_section("aes67")
     if aes67.get("enabled"):
-        subprocess.run(["systemctl", "enable", "avahi-daemon.service"], timeout=10)
-        subprocess.run(["systemctl", "restart", "avahi-daemon.service"], timeout=10)
-        subprocess.run(["systemctl", "enable", "aes67.service"], timeout=10)
-        subprocess.run(["systemctl", "restart", "aes67.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "enable", "avahi-daemon.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "restart", "avahi-daemon.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "enable", "aes67.service"], timeout=10)
+        subprocess.run(["sudo", "systemctl", "restart", "aes67.service"], timeout=10)
     else:
         # Check if AES67 device is in use before disabling
         audio = get_section("audio")
@@ -263,10 +263,10 @@ def apply_aes67_config() -> None:
                 "output_left_device": "USB", "output_right_device": "USB",
             })
 
-        subprocess.run(["systemctl", "disable", "aes67.service"], capture_output=True, timeout=10)
-        subprocess.run(["systemctl", "stop", "aes67.service"], capture_output=True, timeout=10)
-        subprocess.run(["systemctl", "disable", "avahi-daemon.service"], capture_output=True, timeout=10)
-        subprocess.run(["systemctl", "stop", "avahi-daemon.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "disable", "aes67.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "stop", "aes67.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "disable", "avahi-daemon.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "stop", "avahi-daemon.service"], capture_output=True, timeout=10)
 
 
 # --- Boot config (from reconfigureBoot block) ---
@@ -341,23 +341,23 @@ def apply_firewall_config() -> None:
     try:
         if enabled:
             # Enable ufw
-            subprocess.run(["ufw", "--force", "enable"],
+            subprocess.run(["sudo", "ufw", "--force", "enable"],
                            capture_output=True, timeout=10)
 
             # Reset to defaults
-            subprocess.run(["ufw", "default", "deny", "incoming"],
+            subprocess.run(["sudo", "ufw", "default", "deny", "incoming"],
                            capture_output=True, timeout=10)
-            subprocess.run(["ufw", "default", "allow", "outgoing"],
+            subprocess.run(["sudo", "ufw", "default", "allow", "outgoing"],
                            capture_output=True, timeout=10)
 
             # Always allow SSH and HTTP
-            subprocess.run(["ufw", "allow", "22/tcp"],
+            subprocess.run(["sudo", "ufw", "allow", "22/tcp"],
                            capture_output=True, timeout=10)
-            subprocess.run(["ufw", "allow", "80/tcp"],
+            subprocess.run(["sudo", "ufw", "allow", "80/tcp"],
                            capture_output=True, timeout=10)
 
             # AES67 multicast
-            subprocess.run(["ufw", "allow", "52002/udp"],
+            subprocess.run(["sudo", "ufw", "allow", "52002/udp"],
                            capture_output=True, timeout=10)
 
             # Add trusted networks — allow all traffic from these CIDRs
@@ -373,7 +373,7 @@ def apply_firewall_config() -> None:
             logger.info("Firewall enabled with %d trusted networks",
                         len([l for l in trusted.strip().split("\n") if l.strip()]))
         else:
-            subprocess.run(["ufw", "--force", "disable"],
+            subprocess.run(["sudo", "ufw", "--force", "disable"],
                            capture_output=True, timeout=10)
             logger.info("Firewall disabled")
 
@@ -413,14 +413,14 @@ def factory_reset() -> None:
 
     # Reset system config
     Path("/etc/hostname").write_text("rtesip")
-    subprocess.run(["hostname", "rtesip"], timeout=5)
+    subprocess.run(["sudo", "hostname", "rtesip"], timeout=5)
 
     apply_ntp_config()
     apply_network_config()
 
     # Disable optional services
     for svc in ["wpa_supplicant-wired@eth0", "aes67", "avahi-daemon", "ptp4l"]:
-        subprocess.run(["systemctl", "disable", f"{svc}.service"], capture_output=True, timeout=10)
-        subprocess.run(["systemctl", "stop", f"{svc}.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "disable", f"{svc}.service"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "stop", f"{svc}.service"], capture_output=True, timeout=10)
 
     logger.info("Factory reset complete")

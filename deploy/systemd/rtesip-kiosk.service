@@ -1,0 +1,20 @@
+[Unit]
+Description=rtesip Kiosk Display
+After=rtesip.service
+Requires=rtesip.service
+ConditionPathExists=/usr/bin/cage
+
+[Service]
+Type=simple
+User=rtesip
+Group=rtesip
+SupplementaryGroups=video render input tty
+Environment=WLR_LIBINPUT_NO_DEVICES=1
+Environment=XDG_RUNTIME_DIR=/run/user/0
+ExecStart=/usr/bin/cage -- chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-translate --disable-features=TranslateUI --disable-application-cache --disk-cache-size=0 --check-for-update-interval=31536000 http://127.0.0.1/?kiosk=1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

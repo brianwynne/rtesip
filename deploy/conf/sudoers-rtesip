@@ -1,1 +1,18 @@
-rtesip ALL=(ALL) NOPASSWD: /bin/systemctl
+# rtesip — sudo permissions for system management from web UI
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl poweroff, /bin/systemctl reboot
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl restart rtesip, /bin/systemctl stop rtesip
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl restart rtesip-kiosk, /bin/systemctl stop rtesip-kiosk
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl restart dhcpcd, /bin/systemctl restart chrony
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl enable wpa_supplicant-wired@eth0.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl disable wpa_supplicant-wired@eth0.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl restart wpa_supplicant-wired@eth0.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl stop wpa_supplicant-wired@eth0.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl enable ptp4l.service, /bin/systemctl start ptp4l.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl disable ptp4l.service, /bin/systemctl stop ptp4l.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl enable avahi-daemon.service, /bin/systemctl restart avahi-daemon.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl disable avahi-daemon.service, /bin/systemctl stop avahi-daemon.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl enable aes67.service, /bin/systemctl restart aes67.service
+rtesip ALL=(ALL) NOPASSWD: /bin/systemctl disable aes67.service, /bin/systemctl stop aes67.service
+rtesip ALL=(ALL) NOPASSWD: /usr/bin/timedatectl set-timezone *
+rtesip ALL=(ALL) NOPASSWD: /usr/bin/hostname *
+rtesip ALL=(ALL) NOPASSWD: /usr/sbin/ufw *

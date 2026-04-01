@@ -103,7 +103,9 @@ class DisplayManager:
             return
 
         # Build browser command — kiosk mode, pointing at local web UI
-        url = "http://127.0.0.1:8000?kiosk=1"
+        import os
+        port = os.environ.get("RTESIP_PORT", "80")
+        url = f"http://127.0.0.1:{port}?kiosk=1"
         if "chromium" in browser:
             browser_cmd = (
                 f"{browser} --kiosk --noerrdialogs --disable-infobars "

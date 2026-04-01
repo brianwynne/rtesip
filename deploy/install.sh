@@ -96,12 +96,16 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
 
     # Phase 1: Services and code
-    info "Stopping and disabling service..."
+    info "Stopping and disabling services..."
     systemctl stop "$SERVICE_NAME" 2>/dev/null || true
     systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+    systemctl stop rtesip-kiosk 2>/dev/null || true
+    systemctl disable rtesip-kiosk 2>/dev/null || true
     rm -f "/etc/systemd/system/$SERVICE_NAME.service"
+    rm -f /etc/systemd/system/rtesip-kiosk.service
+    rm -f /etc/systemd/system/plymouth-cleanup.service
     systemctl daemon-reload
-    ok "Service removed"
+    ok "Services removed"
 
     info "Removing application code ($INSTALL_DIR)..."
     rm -rf "$INSTALL_DIR"
@@ -114,8 +118,11 @@ if [[ "$UNINSTALL" == "true" ]]; then
         ok "Firewall rules removed (SSH rule preserved)"
     fi
 
-    # Remove tmpfiles.d config
+    # Remove system integration files
     rm -f /etc/tmpfiles.d/rtesip.conf
+    rm -f /etc/sudoers.d/rtesip
+    rm -f /etc/polkit-1/rules.d/50-rtesip-wifi.rules
+    rm -f /etc/udev/rules.d/99-rtesip-audio.rules
 
     # Phase 2: Prompt for data removal
     echo ""
@@ -230,11 +237,14 @@ ok "Python: $($PYTHON --version)"
 info "Installing system dependencies..."
 apt-get update -qq
 apt-get install -y -qq python3-venv python3-dev build-essential \
-    ufw alsa-utils wget curl > /dev/null 2>&1 \
+    ufw alsa-utils wget curl rfkill iproute2 \
+    network-manager chrony > /dev/null 2>&1 \
     || apt-get install -y -qq python3.12-venv python3.12-dev build-essential \
-    ufw alsa-utils wget curl > /dev/null 2>&1 \
+    ufw alsa-utils wget curl rfkill iproute2 \
+    network-manager chrony > /dev/null 2>&1 \
     || apt-get install -y -qq python3.11-venv python3.11-dev build-essential \
-    ufw alsa-utils wget curl > /dev/null 2>&1 \
+    ufw alsa-utils wget curl rfkill iproute2 \
+    network-manager chrony > /dev/null 2>&1 \
     || fatal "Could not install dependencies. Install manually and retry."
 ok "System dependencies installed"
 
@@ -283,8 +293,16 @@ mkdir -p "$RUN_DIR"
 
 # tmpfiles.d entry so /run/rtesip survives reboot
 cat > /etc/tmpfiles.d/rtesip.conf <<TMPEOF
-d /run/rtesip 0755 root root -
+d /run/rtesip 0755 rtesip rtesip -
 TMPEOF
+
+# Create default environment file if not present
+if [[ ! -f "$CONFIG_DIR/env" ]]; then
+    cat > "$CONFIG_DIR/env" <<ENVEOF
+# rtesip environment overrides (loaded by systemd)
+# RTESIP_PORT=80
+ENVEOF
+fi
 
 ok "FHS directories created"
 
@@ -319,6 +337,17 @@ fi
 # Copy conf templates if present
 if [[ -d "$LOCAL_DIR/conf" ]]; then
     cp -r "$LOCAL_DIR/conf" "$INSTALL_DIR/"
+fi
+
+# Copy deploy directory (scripts, conf, systemd, pjsua, etc.)
+if [[ -d "$LOCAL_DIR/deploy" ]]; then
+    mkdir -p "$INSTALL_DIR/deploy"
+    for subdir in scripts conf systemd pjsua bin udev splash; do
+        if [[ -d "$LOCAL_DIR/deploy/$subdir" ]]; then
+            rm -rf "$INSTALL_DIR/deploy/$subdir"
+            cp -r "$LOCAL_DIR/deploy/$subdir" "$INSTALL_DIR/deploy/$subdir"
+        fi
+    done
 fi
 
 ok "Application code installed"
@@ -431,6 +460,26 @@ fi
 systemctl daemon-reload
 ok "Systemd service installed"
 
+# ── Install kiosk service (optional — for 7" touchscreen) ────
+KIOSK_SRC=""
+for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
+    if [ -f "$d/deploy/systemd/rtesip-kiosk.service" ]; then
+        KIOSK_SRC="$d/deploy/systemd/rtesip-kiosk.service"
+        break
+    fi
+done
+if [ -n "$KIOSK_SRC" ]; then
+    cp "$KIOSK_SRC" /etc/systemd/system/rtesip-kiosk.service
+    systemctl daemon-reload
+    # Only enable if cage and a browser are available
+    if command -v cage &>/dev/null && (command -v chromium-browser &>/dev/null || command -v chromium &>/dev/null); then
+        systemctl enable rtesip-kiosk.service > /dev/null 2>&1
+        ok "Kiosk service installed and enabled"
+    else
+        ok "Kiosk service installed (not enabled — cage or chromium not found)"
+    fi
+fi
+
 # ── Install audio detection script ────────────────────────────
 # Detects USB audio device on service start and generates /etc/asound.conf
 # with dmix/dsnoop to avoid buzzing in pjsua.
@@ -497,18 +546,60 @@ if [ -n "$PJSUA_BUNDLE" ]; then
         || apt-get -qq install -y libasound2 2>/dev/null \
         || true
 
-    ok "pjsua 2.14 installed at /usr/local/bin/pjsua"
+    # Verify pjsua binary runs
+    if OPUS_BITRATE=64000 timeout 3 /usr/local/bin/pjsua --version > /dev/null 2>&1; then
+        ok "pjsua 2.14 installed and verified at /usr/local/bin/pjsua"
+    else
+        ok "pjsua 2.14 installed at /usr/local/bin/pjsua (could not verify — may need runtime libs)"
+    fi
 else
-    warn "No pjsua bundle found for architecture $ARCH — SIP calls will not work until pjsua is installed"
+    # Fallback: try raw binary from deploy/pjsua/
+    PJSUA_RAW=""
+    for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
+        if [ -f "$d/deploy/pjsua/pjsua-armhf" ] && [ "$ARCH" = "armhf" ]; then
+            PJSUA_RAW="$d/deploy/pjsua/pjsua-armhf"
+            break
+        fi
+    done
+
+    if [ -n "$PJSUA_RAW" ]; then
+        cp "$PJSUA_RAW" /usr/local/bin/pjsua
+        chmod +x /usr/local/bin/pjsua
+
+        # Install runtime dependencies
+        apt-get -qq install -y libopus0 libsrtp2-1 uuid-runtime 2>/dev/null || true
+        apt-get -qq install -y libasound2t64 2>/dev/null \
+            || apt-get -qq install -y libasound2 2>/dev/null \
+            || true
+
+        ok "pjsua installed from raw binary (no shared libs — may need system pjsip)"
+    else
+        warn "No pjsua binary found for architecture $ARCH — SIP calls will not work until pjsua is installed"
+    fi
 fi
 
-# ── Sudoers for reboot/shutdown from web UI ──────────────────
+# ── Sudoers for system management from web UI ────────────────
 info "Installing sudoers for rtesip..."
-cp "$INSTALL_DIR/deploy/conf/sudoers-rtesip" /etc/sudoers.d/rtesip 2>/dev/null \
-    || cp "$LOCAL_DIR/deploy/conf/sudoers-rtesip" /etc/sudoers.d/rtesip 2>/dev/null \
-    || echo 'rtesip ALL=(ALL) NOPASSWD: /bin/systemctl' > /etc/sudoers.d/rtesip
+for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
+    if [ -f "$d/deploy/conf/sudoers-rtesip" ]; then
+        cp "$d/deploy/conf/sudoers-rtesip" /etc/sudoers.d/rtesip
+        break
+    fi
+done
 chmod 440 /etc/sudoers.d/rtesip
+visudo -c -f /etc/sudoers.d/rtesip > /dev/null 2>&1 || warn "Sudoers syntax check failed — verify /etc/sudoers.d/rtesip"
 ok "Sudoers installed"
+
+# ── Polkit rule for WiFi management via NetworkManager ───────
+info "Installing polkit rules..."
+for d in "$LOCAL_DIR" "$INSTALL_DIR"; do
+    if [ -f "$d/deploy/conf/50-rtesip-wifi.rules" ]; then
+        mkdir -p /etc/polkit-1/rules.d
+        cp "$d/deploy/conf/50-rtesip-wifi.rules" /etc/polkit-1/rules.d/50-rtesip-wifi.rules
+        break
+    fi
+done
+ok "Polkit rules installed"
 
 # ── Set file ownership ───────────────────────────────────────
 info "Setting file ownership..."
@@ -600,11 +691,13 @@ if [[ -f "$GOVERNOR_PATH" ]]; then
         echo "performance" > "$gov" 2>/dev/null || true
     done
 
-    # Make it persistent via /etc/rc.local if not already there
-    if [[ -f /etc/rc.local ]]; then
-        if ! grep -q "scaling_governor" /etc/rc.local; then
-            sed -i '/^exit 0/i for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$gov" 2>/dev/null || true; done' /etc/rc.local
-        fi
+    # Make it persistent via /etc/rc.local
+    if [[ ! -f /etc/rc.local ]]; then
+        printf '#!/bin/sh -e\nexit 0\n' > /etc/rc.local
+        chmod +x /etc/rc.local
+    fi
+    if ! grep -q "scaling_governor" /etc/rc.local; then
+        sed -i '/^exit 0/i for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$gov" 2>/dev/null || true; done' /etc/rc.local
     fi
     ok "CPU governor set to performance (all CPUs)"
 else
