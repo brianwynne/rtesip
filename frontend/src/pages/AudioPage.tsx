@@ -581,14 +581,16 @@ export function AudioPage() {
               onChange={(e) => save({ mic_monitor: e.target.checked })}
             />
           </label>
-          <label className={styles.toggle}>
-            <span>48V Phantom Power</span>
-            <input
-              type="checkbox"
-              checked={settings.phantom_power}
-              onChange={(e) => save({ phantom_power: e.target.checked })}
-            />
-          </label>
+          {detectedDevices.some((d) => d.id.toLowerCase().includes("hifiberry") || d.name.toLowerCase().includes("xlr")) && (
+            <label className={styles.toggle}>
+              <span>48V Phantom Power</span>
+              <input
+                type="checkbox"
+                checked={settings.phantom_power}
+                onChange={(e) => save({ phantom_power: e.target.checked })}
+              />
+            </label>
+          )}
           {settings.mic_monitor && (
             <div className={styles.hint}>Optimise latency before using mic monitoring.</div>
           )}
