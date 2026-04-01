@@ -337,6 +337,7 @@ export function AudioPage() {
                 value={settings.bitrate}
                 onChange={(e) => save({ bitrate: Number(e.target.value) })}
               >
+                <option value={0}>Auto</option>
                 <option value={32000}>32</option>
                 <option value={48000}>48</option>
                 <option value={64000}>64</option>
