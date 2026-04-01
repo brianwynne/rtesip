@@ -233,8 +233,8 @@ export function useWebSocket() {
 
   // --- Volume control with local-first state ---
 
-  const preMuteGain = useRef<{ l: number; r: number }>({ l: 100, r: 100 });
-  const preMuteVol = useRef<{ l: number; r: number }>({ l: 100, r: 100 });
+  const preMuteGain = useRef<{ l: number; r: number }>({ l: 40, r: 40 });
+  const preMuteVol = useRef<{ l: number; r: number }>({ l: 40, r: 40 });
 
   const setLevel = useCallback((type: "vol" | "gain", channel: "l" | "r", level: number) => {
     const clamped = Math.max(0, Math.min(150, level));

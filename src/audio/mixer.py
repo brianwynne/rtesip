@@ -28,13 +28,13 @@ class MixerControl:
 @dataclass
 class MixerState:
     """Volume state — capture/playback levels, mute buffers, and link flags."""
-    capture_left: int = 100
-    capture_right: int = 100
+    capture_left: int = 40
+    capture_right: int = 40
     capture_left_mute_buf: int = 0
     capture_right_mute_buf: int = 0
     capture_linked: bool = False
-    playback_left: int = 100
-    playback_right: int = 100
+    playback_left: int = 40
+    playback_right: int = 40
     playback_left_mute_buf: int = 0
     playback_right_mute_buf: int = 0
     playback_linked: bool = True
