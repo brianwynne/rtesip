@@ -7,6 +7,7 @@ ConditionPathExists=/usr/bin/labwc
 [Service]
 Type=simple
 User=brian
+Nice=10
 SupplementaryGroups=video render input tty
 Environment=WLR_LIBINPUT_NO_DEVICES=1
 Environment=XDG_RUNTIME_DIR=/run/user/1000
