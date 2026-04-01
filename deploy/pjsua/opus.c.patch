@@ -16,3 +16,27 @@
      pj_bool_t enc_use_plc = PJ_FALSE;
  
      PJ_ASSERT_RETURN(codec && attr && opus_data, PJ_EINVAL);
+@@ -769,6 +778,23 @@
+     opus_encoder_ctl(opus_data->enc,
+                      OPUS_SET_VBR(opus_data->cfg.cbr ? 0 : 1));
+ 
++    /* rtesip: write actual encoder state to file */
++    {
++        pj_int32_t enc_br, enc_cx, enc_vbr, enc_fec, enc_pl;
++        FILE *ef;
++        opus_encoder_ctl(opus_data->enc, OPUS_GET_BITRATE(&enc_br));
++        opus_encoder_ctl(opus_data->enc, OPUS_GET_COMPLEXITY(&enc_cx));
++        opus_encoder_ctl(opus_data->enc, OPUS_GET_VBR(&enc_vbr));
++        opus_encoder_ctl(opus_data->enc, OPUS_GET_INBAND_FEC(&enc_fec));
++        opus_encoder_ctl(opus_data->enc, OPUS_GET_PACKET_LOSS_PERC(&enc_pl));
++        ef = fopen("/tmp/opus_encoder_state.txt", "w");
++        if (ef) {
++            fprintf(ef, "bitrate=%d complexity=%d vbr=%d fec=%d packet_loss=%d channels=%d\n",
++                enc_br, enc_cx, enc_vbr, enc_fec, enc_pl, (int)attr->info.channel_cnt);
++            fclose(ef);
++        }
++    }
++
+     PJ_LOG(4, (THIS_FILE, "Initialize Opus encoder, sample rate: %d, ch: %d, "
+                           "avg bitrate: %d%s, vad: %d, plc: %d, pkt loss: %d, "
+                           "complexity: %d, constant bit rate: %d, "
