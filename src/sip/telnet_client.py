@@ -106,6 +106,10 @@ class PjsuaTelnet:
             except Exception:
                 pass
         self._connected = False
+        # Clear state so reconnection emits fresh events
+        self.active_accounts.clear()
+        self.sip_ready = False
+        self.server_reachable = False
 
     async def send(self, command: str) -> None:
         """Send command to pjsua CLI."""
@@ -180,11 +184,17 @@ class PjsuaTelnet:
                 except asyncio.TimeoutError:
                     logger.warning("pjsua CLI read timeout (60s) — reconnecting")
                     self._connected = False
+                    self.active_accounts.clear()
+                    self.sip_ready = False
+                    self.server_reachable = False
                     await self._emit("backend_disconnected", {})
                     break
                 if not data:
                     logger.warning("pjsua CLI connection closed")
                     self._connected = False
+                    self.active_accounts.clear()
+                    self.sip_ready = False
+                    self.server_reachable = False
                     await self._emit("backend_disconnected", {})
                     break
                 # Strip telnet negotiation bytes (IAC sequences)
