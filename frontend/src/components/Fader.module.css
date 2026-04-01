@@ -61,7 +61,7 @@
   height: 2.5rem;
   border-radius: var(--radius);
   background: var(--bg-mute-btn, #d8dde5);
-  color: #333333;
+  color: var(--text-fader);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -78,7 +78,7 @@
   height: 2.5rem;
   border-radius: var(--radius);
   background: transparent;
-  color: #333333;
+  color: var(--text-fader);
   display: flex;
   align-items: center;
   justify-content: center;
