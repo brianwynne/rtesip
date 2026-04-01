@@ -162,6 +162,13 @@
   box-shadow: 0 0 0.8rem rgba(74, 222, 128, 0.1);
 }
 .quickBtn:active { transform: scale(0.98); }
+.quickBtnActive {
+  background: var(--green);
+  color: #000;
+  border-color: var(--green);
+}
+.quickBtnActive .quickIcon { color: #000; }
+.quickBtnActive .quickName { color: #000; }
 
 .quickIcon { color: var(--text-primary); flex-shrink: 0; }
 

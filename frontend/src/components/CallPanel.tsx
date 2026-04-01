@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneForwarded, X, Keyboard, User, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { SoftKeyboard } from "./SoftKeyboard";
 import { CallInfo } from "./CallInfo";
@@ -23,10 +23,21 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
   const [page, setPage] = useState(0);
   const [savingContact, setSavingContact] = useState(false);
   const [contactName, setContactName] = useState("");
+  const [activeQuickDial, setActiveQuickDial] = useState<string | null>(null);
+  const prevCallState = useRef(callState.state);
+
+  // Clear active quick dial when call ends
+  useEffect(() => {
+    if (prevCallState.current !== "idle" && callState.state === "idle") {
+      setActiveQuickDial(null);
+    }
+    prevCallState.current = callState.state;
+  }, [callState.state]);
 
   const handleCall = (addr?: string) => {
     const target = addr || address.trim();
     if (target) {
+      setActiveQuickDial(addr || null);
       onCall(target);
       setAddress("");
       setMode("idle");
@@ -87,10 +98,11 @@ export function CallPanel({ callState, sipReady, onCall, onHangup, onAnswer, onR
                 const allContacts = quickDials.length > 0 ? quickDials : contacts;
                 const contact = allContacts[idx];
                 if (contact) {
+                  const isActive = activeQuickDial === contact.address && callState.state !== "idle";
                   return (
                     <button
                       key={contact.id}
-                      className={styles.quickBtn}
+                      className={`${styles.quickBtn} ${isActive ? styles.quickBtnActive : ""}`}
                       onClick={() => handleCall(contact.address)}
                     >
                       <PhoneForwarded size={18} className={styles.quickIcon} />
