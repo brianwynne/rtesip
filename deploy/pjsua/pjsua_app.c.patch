@@ -10,7 +10,7 @@
  #define THIS_FILE       "pjsua_app.c"
  
  //#define STEREO_DEMO
-@@ -2134,6 +2137,80 @@
+@@ -2134,6 +2137,121 @@
  
      app_running = PJ_TRUE;
  
@@ -32,7 +32,10 @@
 +                pjmedia_codec_mgr *cmgr;
 +                const pjmedia_codec_info *ci;
 +                unsigned cnt = 1;
-+                unsigned fmtp_idx = 0;
++                unsigned dec_idx = 0;
++                unsigned enc_idx = 0;
++                static char maxbr_dec_buf[16];
++                static char maxbr_enc_buf[16];
 +
 +                if (env_br) {
 +                    unsigned v = (unsigned)atoi(env_br);
@@ -57,29 +60,67 @@
 +                    if (opus_st == PJ_SUCCESS && cnt > 0) {
 +                        opus_st = pjmedia_codec_mgr_get_default_param(cmgr, ci, &param);
 +                        if (opus_st == PJ_SUCCESS) {
-+                            /* Build fmtp parameters */
-+                            fmtp_idx = 0;
++                            /* Set avg_bps directly — this controls the encoder bitrate */
++                            if (env_br) {
++                                param.info.avg_bps = (unsigned)atoi(env_br);
++                            }
++
++                            /* Build dec_fmtp — SDP offer/answer to remote side */
++                            dec_idx = 0;
++                            if (env_br) {
++                                snprintf(maxbr_dec_buf, sizeof(maxbr_dec_buf), "%s", env_br);
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].name, "maxaveragebitrate");
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].val, maxbr_dec_buf);
++                                dec_idx++;
++                            }
++                            if (env_cbr && atoi(env_cbr) != 0) {
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].name, "cbr");
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].val, "1");
++                                dec_idx++;
++                            }
 +                            if (env_fec && atoi(env_fec) != 0) {
-+                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].name, "useinbandfec");
-+                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].val, "1");
-+                                fmtp_idx++;
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].name, "useinbandfec");
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].val, "1");
++                                dec_idx++;
 +                            }
 +                            if (env_stereo && atoi(env_stereo) != 0) {
-+                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].name, "stereo");
-+                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].val, "1");
-+                                fmtp_idx++;
-+                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].name, "sprop-stereo");
-+                                pj_strset2(&param.setting.dec_fmtp.param[fmtp_idx].val, "1");
-+                                fmtp_idx++;
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].name, "stereo");
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].val, "1");
++                                dec_idx++;
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].name, "sprop-stereo");
++                                pj_strset2(&param.setting.dec_fmtp.param[dec_idx].val, "1");
++                                dec_idx++;
 +                            }
-+                            param.setting.dec_fmtp.cnt = fmtp_idx;
++                            param.setting.dec_fmtp.cnt = dec_idx;
++
++                            /* Build enc_fmtp — controls our local encoder */
++                            enc_idx = 0;
++                            if (env_br) {
++                                snprintf(maxbr_enc_buf, sizeof(maxbr_enc_buf), "%s", env_br);
++                                pj_strset2(&param.setting.enc_fmtp.param[enc_idx].name, "maxaveragebitrate");
++                                pj_strset2(&param.setting.enc_fmtp.param[enc_idx].val, maxbr_enc_buf);
++                                enc_idx++;
++                            }
++                            if (env_cbr && atoi(env_cbr) != 0) {
++                                pj_strset2(&param.setting.enc_fmtp.param[enc_idx].name, "cbr");
++                                pj_strset2(&param.setting.enc_fmtp.param[enc_idx].val, "1");
++                                enc_idx++;
++                            }
++                            if (env_stereo && atoi(env_stereo) != 0) {
++                                pj_strset2(&param.setting.enc_fmtp.param[enc_idx].name, "stereo");
++                                pj_strset2(&param.setting.enc_fmtp.param[enc_idx].val, "1");
++                                enc_idx++;
++                            }
++                            param.setting.enc_fmtp.cnt = enc_idx;
++
 +                            opus_st = pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
 +                            if (opus_st == PJ_SUCCESS) {
-+                                PJ_LOG(3, (THIS_FILE, "Opus config: br=%u cx=%u cbr=%d pl=%u fec=%s stereo=%s",
++                                PJ_LOG(3, (THIS_FILE, "Opus config: br=%u cx=%u cbr=%d pl=%u fec=%s stereo=%s avg_bps=%u",
 +                                    opus_cfg.bit_rate, opus_cfg.complexity,
 +                                    opus_cfg.cbr, opus_cfg.packet_loss,
 +                                    (env_fec && atoi(env_fec)) ? "on" : "off",
-+                                    (env_stereo && atoi(env_stereo)) ? "on" : "off"));
++                                    (env_stereo && atoi(env_stereo)) ? "on" : "off",
++                                    param.info.avg_bps));
 +                            }
 +                        }
 +                    }

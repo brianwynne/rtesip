@@ -35,6 +35,7 @@ class PjsuaTelnet:
         self._writer: Optional[asyncio.StreamWriter] = None
         self._connected = False
         self._read_task: Optional[asyncio.Task] = None
+        self._keepalive_task: Optional[asyncio.Task] = None
 
         # Read buffer for line splitting
         self._buffer = ""
@@ -88,8 +89,9 @@ class PjsuaTelnet:
             await self.send("acc show")
             await self.send("call list")
 
-            # Start reading
+            # Start reading and keepalive
             self._read_task = asyncio.create_task(self._read_loop())
+            self._keepalive_task = asyncio.create_task(self._keepalive_loop())
             return True
         except (ConnectionRefusedError, asyncio.TimeoutError, OSError) as e:
             logger.warning("Cannot connect to pjsua CLI: %s", e)
@@ -99,6 +101,8 @@ class PjsuaTelnet:
     async def disconnect(self) -> None:
         if self._read_task:
             self._read_task.cancel()
+        if hasattr(self, '_keepalive_task') and self._keepalive_task:
+            self._keepalive_task.cancel()
         if self._writer:
             self._writer.close()
             try:
@@ -149,6 +153,16 @@ class PjsuaTelnet:
         """Play tone — disabled until WAV files are available."""
         pass
 
+    async def _keepalive_loop(self) -> None:
+        """Periodically poll acc show to get registration state and keep connection alive."""
+        try:
+            while self._connected:
+                await asyncio.sleep(30)
+                if self._connected:
+                    await self.send("acc show")
+        except asyncio.CancelledError:
+            pass
+
     async def _hangup_timeout(self) -> None:
         """Force-reset call state if hangup doesn't complete within 5 seconds.
 
@@ -179,16 +193,7 @@ class PjsuaTelnet:
         """Read and parse pjsua telnet output."""
         try:
             while self._connected:
-                try:
-                    data = await asyncio.wait_for(self._reader.read(16384), timeout=60)
-                except asyncio.TimeoutError:
-                    logger.warning("pjsua CLI read timeout (60s) — reconnecting")
-                    self._connected = False
-                    self.active_accounts.clear()
-                    self.sip_ready = False
-                    self.server_reachable = False
-                    await self._emit("backend_disconnected", {})
-                    break
+                data = await self._reader.read(16384)
                 if not data:
                     logger.warning("pjsua CLI connection closed")
                     self._connected = False

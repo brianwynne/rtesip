@@ -1,0 +1,18 @@
+--- a/pjmedia/src/pjmedia-codec/opus.c
++++ b/pjmedia/src/pjmedia-codec/opus.c
+@@ -641,6 +641,15 @@
+     struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
+     int idx, err;
+     pj_bool_t auto_bit_rate = PJ_TRUE;
++
++    /* rtesip: use configured bitrate as baseline, allow SDP to cap lower */
++    if (opus_cfg.bit_rate > 0) {
++        auto_bit_rate = PJ_FALSE;
++        if (attr->info.avg_bps == 0 || attr->info.avg_bps > (unsigned)opus_cfg.bit_rate) {
++            attr->info.avg_bps = opus_cfg.bit_rate;
++        }
++        /* attr->info.avg_bps may still be lowered by enc_fmtp/dec_fmtp checks below */
++    }
+     pj_bool_t enc_use_plc = PJ_FALSE;
+ 
+     PJ_ASSERT_RETURN(codec && attr && opus_data, PJ_EINVAL);

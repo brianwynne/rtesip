@@ -23,13 +23,19 @@ wget -q "https://github.com/pjsip/pjproject/archive/refs/tags/$PJPROJECT_VERSION
 tar xzf pjproject.tar.gz
 cd "pjproject-$PJPROJECT_VERSION"
 
-# Apply rtesip patch
-echo "Applying Opus bitrate patch..."
+# Apply rtesip patches
+echo "Applying pjsua_app.c patch..."
 if [ -f "$PATCH_FILE" ]; then
     patch -p1 < "$PATCH_FILE"
 else
     echo "ERROR: Patch file not found at $PATCH_FILE"
     exit 1
+fi
+
+OPUS_PATCH="$SCRIPT_DIR/../pjsua/opus.c.patch"
+if [ -f "$OPUS_PATCH" ]; then
+    echo "Applying opus.c bitrate patch..."
+    patch -p1 < "$OPUS_PATCH"
 fi
 
 # Configure
