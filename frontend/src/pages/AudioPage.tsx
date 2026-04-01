@@ -198,6 +198,62 @@ export function AudioPage() {
 
   const isStereo = settings.channels === 2;
 
+  const presets: Record<string, Partial<AudioSettings>> = {
+    "Studio LAN": {
+      bitrate: 128000,
+      opus_complexity: 7,
+      opus_cbr: true,
+      opus_fec: false,
+      opus_packet_loss: 10,
+      opus_frame_duration: 20,
+      jitter_buffer: 120,
+      capture_latency: 10,
+      playback_latency: 10,
+      ec_tail: 0,
+    },
+    "Field WiFi": {
+      bitrate: 64000,
+      opus_complexity: 5,
+      opus_cbr: true,
+      opus_fec: true,
+      opus_packet_loss: 20,
+      opus_frame_duration: 20,
+      jitter_buffer: 360,
+      capture_latency: 20,
+      playback_latency: 20,
+      ec_tail: 0,
+    },
+    "Music / High Quality": {
+      bitrate: 256000,
+      opus_complexity: 10,
+      opus_cbr: false,
+      opus_fec: false,
+      opus_packet_loss: 10,
+      opus_frame_duration: 20,
+      jitter_buffer: 200,
+      capture_latency: 10,
+      playback_latency: 10,
+      ec_tail: 0,
+    },
+    "Low Bandwidth": {
+      bitrate: 32000,
+      opus_complexity: 5,
+      opus_cbr: true,
+      opus_fec: true,
+      opus_packet_loss: 20,
+      opus_frame_duration: 40,
+      jitter_buffer: 500,
+      capture_latency: 20,
+      playback_latency: 20,
+      ec_tail: 0,
+    },
+  };
+
+  const applyPreset = (name: string) => {
+    const preset = presets[name];
+    if (preset) save(preset);
+  };
+
   return (
     <div className={styles.page}>
       <h2 className={styles.heading}>Audio Configuration</h2>
@@ -206,6 +262,18 @@ export function AudioPage() {
         {/* General */}
         <div className={styles.card}>
           <h3 className={styles.cardTitle}>General</h3>
+          <label className={styles.field}>
+            <span>Preset</span>
+            <select
+              value=""
+              onChange={(e) => { if (e.target.value) applyPreset(e.target.value); }}
+            >
+              <option value="">Select preset...</option>
+              {Object.keys(presets).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </label>
           <label className={styles.field}>
             <span>Auto Answer</span>
             <select
