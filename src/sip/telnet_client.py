@@ -323,19 +323,24 @@ class PjsuaTelnet:
         elif (m := re.search(r"\[.?[0-9]\] sip\:([^\:]+)\: ([0-9]{3})\/[A-z\s]+ \(expires\=(-?[0-9]+)\)", data)) or              (m := re.search(r"sip\:([^\:]+)\: registration.+status\=([0-9]{1,3}) \([A-z]+\)", data)) or              (m := re.search(r"sip\:([^@]+)@[^:]+\: ([0-9]{3})\/", data)):
             account_id = m.group(1)
             status = int(m.group(2))
-            self.active_accounts[account_id] = (status == 200)
+            was_registered = self.active_accounts.get(account_id)
+            is_registered = (status == 200)
+            self.active_accounts[account_id] = is_registered
 
-            if status == 200:
+            if is_registered:
                 self.server_reachable = True
                 if not self.sip_ready:
                     self.sip_ready = True
                     asyncio.create_task(self.play_tone(1))
-                self._emit_sync("account", {"id": account_id, "status": status, "registered": True,
-                                             "sip_ready": self.sip_ready, "server_reachable": self.server_reachable})
+                # Only emit if state changed (suppress duplicate re-registration events)
+                if was_registered != is_registered or was_registered is None:
+                    self._emit_sync("account", {"id": account_id, "status": status, "registered": True,
+                                                 "sip_ready": self.sip_ready, "server_reachable": self.server_reachable})
             elif status > 200:
                 self.server_reachable = False
                 if not self.sip_ready:
                     asyncio.create_task(self.play_tone(2))
+                # Always emit failures so UI shows disconnection
                 self._emit_sync("account", {"id": account_id, "status": status, "registered": False,
                                              "sip_ready": self.sip_ready, "server_reachable": self.server_reachable})
 
