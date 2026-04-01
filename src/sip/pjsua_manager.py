@@ -58,7 +58,9 @@ def generate_config() -> str:
         lines.append("--stereo")
 
     # Codecs — enable wanted, disable unwanted
-    for codec in sip.get("codecs", ["opus/48000/2", "L16/44100/1", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1"]):
+    # pjsua assigns higher priority to later --add-codec lines, so reverse the list
+    # so the first codec in the user's list gets the highest priority
+    for codec in reversed(sip.get("codecs", ["opus/48000/2", "L16/44100/1", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1"])):
         # Adapt L16 channel count to match mono/stereo setting
         if codec.startswith("L16/"):
             codec = f"L16/44100/{'2' if stereo else '1'}"
