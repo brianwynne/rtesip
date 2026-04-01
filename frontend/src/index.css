@@ -44,6 +44,10 @@
   --shadow: 0 0.1rem 0.6rem rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 0.2rem 1.5rem rgba(0, 0, 0, 0.4);
 
+  /* Fader buttons */
+  --bg-mute-btn: #3a4555;
+  --bg-mute-btn-hover: #4a5565;
+
   /* Fader knob (dark) */
   --knob-top: #555;
   --knob-mid: #3a3a3a;
@@ -91,6 +95,10 @@
 
   --shadow: 0 1px 4px rgba(27, 32, 48, 0.08), 0 0 1px rgba(27, 32, 48, 0.12);
   --shadow-lg: 0 4px 16px rgba(27, 32, 48, 0.10), 0 0 1px rgba(27, 32, 48, 0.14);
+
+  /* Fader buttons */
+  --bg-mute-btn: #C8CDD8;
+  --bg-mute-btn-hover: #B8BEC8;
 
   /* Fader knobs: brushed aluminium */
   --knob-top: #D4D8E0;

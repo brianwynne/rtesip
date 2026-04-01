@@ -60,14 +60,14 @@
   flex: 1;
   height: 2.5rem;
   border-radius: var(--radius);
-  background: #f0f0f0;
-  color: #000000;
+  background: var(--bg-mute-btn, #d8dde5);
+  color: #333333;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
 }
-.muteBtn:hover { background: #e0e0e0; }
+.muteBtn:hover { background: var(--bg-mute-btn-hover, #c8cdd5); }
 .muteBtnActive {
   background: var(--red-dim);
   color: var(--red);
