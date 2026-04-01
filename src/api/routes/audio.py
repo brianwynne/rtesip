@@ -157,10 +157,10 @@ async def update_audio(settings: dict):
         if "playback_volume" in settings:
             mixer_state.playback_left = settings["playback_volume"]
             mixer_state.playback_right = settings["playback_volume"]
-        # Send to pjsua if using software mixer
+        # Send to pjsua if using software mixer (scale 0-100 to 0.0-2.0x)
         if not mixer_state.hardware_mixer and telnet.connected:
-            capture = mixer_state.capture_left / 100
-            playback = mixer_state.playback_left / 100
+            capture = mixer_state.capture_left / 100 * 2.0
+            playback = mixer_state.playback_left / 100 * 2.0
             await telnet.set_volume(capture, playback)
 
     # Apply hardware mixer change

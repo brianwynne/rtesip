@@ -58,9 +58,7 @@ def generate_config() -> str:
         lines.append("--stereo")
 
     # Codecs — enable wanted, disable unwanted
-    # pjsua assigns higher priority to later --add-codec lines, so reverse the list
-    # so the first codec in the user's list gets the highest priority
-    for codec in reversed(sip.get("codecs", ["opus/48000/2", "L16/44100/1", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1"])):
+    for codec in sip.get("codecs", ["opus/48000/2", "L16/44100/1", "G722/16000/1", "PCMA/8000/1", "PCMU/8000/1"]):
         # Adapt L16 channel count to match mono/stereo setting
         if codec.startswith("L16/"):
             codec = f"L16/44100/{'2' if stereo else '1'}"
@@ -127,7 +125,9 @@ def generate_config() -> str:
             keying = account.get("keying", 0)
             if keying:
                 lines.append("--use-srtp=2")
-                lines.append(f"--srtp-keying={keying - 1}")
+                # keying: 1=SDES (pjsua 0), 2=DTLS (pjsua 1)
+                srtp_keying_map = {1: 0, 2: 1}
+                lines.append(f"--srtp-keying={srtp_keying_map.get(keying, 0)}")
             lines.append("--tls-ca-file=/etc/ssl/certs/ca-certificates.crt")
             lines.append("--tls-verify-server")
 
@@ -226,7 +226,7 @@ class PjsuaProcess:
         env = dict(os.environ)
         audio = get_section("audio")
         env["OPUS_BITRATE"] = str(audio.get("bitrate", 64000))
-        env["OPUS_COMPLEXITY"] = str(audio.get("opus_complexity", 10))
+        env["OPUS_COMPLEXITY"] = str(audio.get("opus_complexity", 7))
         env["OPUS_CBR"] = "1" if audio.get("opus_cbr") else "0"
         env["OPUS_FEC"] = "1" if audio.get("opus_fec") else "0"
         env["OPUS_PACKET_LOSS"] = str(audio.get("opus_packet_loss", 0) if audio.get("opus_fec") else 0)

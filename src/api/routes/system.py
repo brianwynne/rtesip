@@ -226,26 +226,41 @@ async def update_ntp(settings: dict):
 
 # --- System actions ---
 
+_system_action_in_progress = False
+
+
 @router.post("/reboot")
 async def reboot():
-    os.system("/usr/bin/sudo /bin/systemctl reboot &")
+    global _system_action_in_progress
+    if _system_action_in_progress:
+        return {"status": "action already in progress"}
+    _system_action_in_progress = True
+    subprocess.Popen(["sudo", "systemctl", "reboot"])
     return {"status": "rebooting"}
 
 
 @router.post("/restart-services")
 async def restart_services():
-    os.system("/usr/bin/sudo /bin/systemctl restart rtesip &")
+    subprocess.Popen(["sudo", "systemctl", "restart", "rtesip"])
     return {"status": "restarting"}
 
 
 @router.post("/shutdown")
 async def shutdown():
-    os.system("/usr/bin/sudo /bin/systemctl poweroff &")
+    global _system_action_in_progress
+    if _system_action_in_progress:
+        return {"status": "action already in progress"}
+    _system_action_in_progress = True
+    subprocess.Popen(["sudo", "systemctl", "poweroff"])
     return {"status": "shutting down"}
 
 
 @router.post("/factory-reset")
 async def do_factory_reset():
+    global _system_action_in_progress
+    if _system_action_in_progress:
+        return {"status": "action already in progress"}
+    _system_action_in_progress = True
     await asyncio.to_thread(factory_reset)
-    subprocess.Popen(["/usr/bin/sudo", "/sbin/shutdown", "-r", "+0", "rtesip factory reset"])
+    subprocess.Popen(["sudo", "shutdown", "-r", "+0", "rtesip factory reset"])
     return {"status": "reset complete, rebooting"}

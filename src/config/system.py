@@ -363,12 +363,18 @@ def apply_firewall_config() -> None:
             # Add trusted networks — allow all traffic from these CIDRs
             for line in trusted.strip().split("\n"):
                 cidr = line.strip()
-                if cidr and re.match(r'^[0-9./]+$', cidr):
-                    subprocess.run(
-                        ["ufw", "allow", "from", cidr],
-                        capture_output=True, timeout=10,
-                    )
-                    logger.info("Firewall: trusted network %s", cidr)
+                if not cidr:
+                    continue
+                try:
+                    ipaddress.ip_network(cidr, strict=False)
+                except ValueError:
+                    logger.warning("Invalid CIDR '%s', skipping", cidr)
+                    continue
+                subprocess.run(
+                    ["sudo", "ufw", "allow", "from", cidr],
+                    capture_output=True, timeout=10,
+                )
+                logger.info("Firewall: trusted network %s", cidr)
 
             logger.info("Firewall enabled with %d trusted networks",
                         len([l for l in trusted.strip().split("\n") if l.strip()]))

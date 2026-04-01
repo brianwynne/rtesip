@@ -53,12 +53,16 @@ def _get_asset_version() -> str:
 async def broadcast(event: str, data: dict, authed_only: bool = True) -> None:
     """Send event to all connected WebSocket clients."""
     global clients, authed_clients
-    message = json.dumps({"event": event, **data})
+    try:
+        message = json.dumps({"event": event, **data})
+    except (TypeError, ValueError) as e:
+        logger.error("Broadcast data not JSON serializable: %s", e)
+        return
     target = authed_clients if authed_only else clients
     disconnected = set()
     for ws in list(target):
         try:
-            await ws.send_text(message)
+            await asyncio.wait_for(ws.send_text(message), timeout=5)
         except Exception:
             disconnected.add(ws)
     clients -= disconnected
@@ -131,8 +135,10 @@ async def stop_meters() -> None:
 async def connect_telnet() -> None:
     """Connect to pjsua telnet CLI with retry and reconnection on disconnect."""
     telnet.on_event(on_pjsua_event)
+    backoff = 2
     while True:
         if await telnet.connect():
+            backoff = 2  # reset on successful connect
             # Apply initial audio state from config on each connect
             await _apply_initial_audio_state()
             # Wait for the read task to finish (i.e. disconnection)
@@ -141,7 +147,8 @@ async def connect_telnet() -> None:
             logger.info("pjsua CLI disconnected, reconnecting...")
         else:
             logger.info("Waiting for pjsua CLI...")
-        await asyncio.sleep(2)
+            backoff = min(backoff * 2, 30)
+        await asyncio.sleep(backoff)
 
 
 async def _apply_initial_audio_state() -> None:
@@ -187,7 +194,11 @@ async def websocket_endpoint(ws: WebSocket):
     try:
         while True:
             text = await ws.receive_text()
-            msg = json.loads(text)
+            try:
+                msg = json.loads(text)
+            except json.JSONDecodeError:
+                logger.warning("Malformed JSON from WebSocket client, ignoring")
+                continue
             command = msg.get("command") or msg.get("action", "")
             # --- Auth (challenge-response with SHA256) ---
             # TODO: Add rate limiting for production — limit auth attempts per IP
@@ -253,7 +264,10 @@ async def websocket_endpoint(ws: WebSocket):
             elif command == "getContacts":
                 contacts_file = DATA_DIR / "contacts.json"
                 if contacts_file.exists():
-                    contacts = json.loads(contacts_file.read_text())
+                    try:
+                        contacts = json.loads(contacts_file.read_text())
+                    except json.JSONDecodeError:
+                        contacts = []
                     await ws.send_text(json.dumps({"event": "contactList", "contacts": contacts}))
 
             # --- Display control ---

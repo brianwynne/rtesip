@@ -107,14 +107,14 @@ class DisplayManager:
         port = os.environ.get("RTESIP_PORT", "80")
         url = f"http://127.0.0.1:{port}?kiosk=1"
         if "chromium" in browser:
-            browser_cmd = (
-                f"{browser} --kiosk --noerrdialogs --disable-infobars "
-                f"--disable-session-crashed-bubble --no-first-run "
-                f"--disable-translate --disable-features=TranslateUI "
-                f"--check-for-update-interval=31536000 {url}"
-            )
+            browser_args = [
+                browser, "--kiosk", "--noerrdialogs", "--disable-infobars",
+                "--disable-session-crashed-bubble", "--no-first-run",
+                "--disable-translate", "--disable-features=TranslateUI",
+                f"--check-for-update-interval=31536000", url,
+            ]
         else:
-            browser_cmd = f"{browser} --kiosk {url}"
+            browser_args = [browser, "--kiosk", url]
 
         # Rotation
         rotation = config.get("rotation", 0)
@@ -125,13 +125,13 @@ class DisplayManager:
         if rotation:
             env["WLR_OUTPUT_TRANSFORM"] = "90"
 
-        cage_cmd = f"cage -- {browser_cmd}"
-        logger.info("Starting: %s", cage_cmd)
+        cage_args = ["cage", "--"] + browser_args
+        logger.info("Starting: %s", " ".join(cage_args))
 
         try:
-            self._process = await asyncio.create_subprocess_shell(
-                cage_cmd,
-                env={**dict(__import__("os").environ), **env},
+            self._process = await asyncio.create_subprocess_exec(
+                *cage_args,
+                env={**dict(os.environ), **env},
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )

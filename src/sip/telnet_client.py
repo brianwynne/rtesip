@@ -50,6 +50,9 @@ class PjsuaTelnet:
         self.srtp_active: bool = False
         self.srtp_suite: Optional[str] = None
 
+        # Incoming call multi-line parsing
+        self._incoming_pending = False
+
         # Call quality metrics (from dump_q)
         self.call_quality: dict = {}
         self._quality_poll_task: Optional[asyncio.Task] = None
@@ -145,7 +148,13 @@ class PjsuaTelnet:
         """Read and parse pjsua telnet output."""
         try:
             while self._connected:
-                data = await self._reader.read(16384)
+                try:
+                    data = await asyncio.wait_for(self._reader.read(16384), timeout=60)
+                except asyncio.TimeoutError:
+                    logger.warning("pjsua CLI read timeout (60s) — reconnecting")
+                    self._connected = False
+                    await self._emit("backend_disconnected", {})
+                    break
                 if not data:
                     logger.warning("pjsua CLI connection closed")
                     self._connected = False
@@ -156,7 +165,7 @@ class PjsuaTelnet:
                 i = 0
                 raw = data
                 while i < len(raw):
-                    if raw[i] == 0xff and i + 2 < len(raw):
+                    if raw[i] == 0xff and i + 2 <= len(raw) - 1:
                         i += 3  # skip IAC + command + option
                     else:
                         cleaned.append(raw[i])
@@ -191,6 +200,11 @@ class PjsuaTelnet:
             if re.search(r"RTT\s+msec", data):
                 self._collecting_dump_q = False
                 self._parse_dump_q(self._dump_q_lines)
+                self._dump_q_lines = []
+            elif len(self._dump_q_lines) > 100:
+                # Guard against unbounded growth if pjsua crashes mid-output
+                logger.warning("dump_q collection exceeded 100 lines, resetting")
+                self._collecting_dump_q = False
                 self._dump_q_lines = []
             return
 

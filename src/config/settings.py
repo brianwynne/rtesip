@@ -46,7 +46,7 @@ DEFAULTS: dict[str, dict] = {
         "channels": 1,
         "bitrate": 64000,
         "ec_tail": 200,
-        "opus_complexity": 10,
+        "opus_complexity": 7,
         "opus_cbr": False,
         "opus_fec": False,
         "opus_packet_loss": 10,

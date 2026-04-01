@@ -38,14 +38,16 @@ async def lifespan(app: FastAPI):
     await pjsua.start()
 
     # Connect to pjsua telnet CLI (with retry)
-    asyncio.create_task(connect_telnet())
+    telnet_task = asyncio.create_task(connect_telnet())
 
     # Start live audio metering
-    asyncio.create_task(start_meters())
+    meters_task = asyncio.create_task(start_meters())
 
     yield
 
     logger.info("rtesip shutting down")
+    telnet_task.cancel()
+    meters_task.cancel()
     await stop_meters()
     await pjsua.stop()
 
@@ -94,7 +96,9 @@ if FRONTEND_DIR.exists():
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         """Serve index.html for all non-API, non-WS, non-asset paths (SPA routing)."""
-        file_path = FRONTEND_DIR / full_path
-        if full_path and file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
+        if full_path:
+            file_path = (FRONTEND_DIR / full_path).resolve()
+            # Prevent path traversal outside FRONTEND_DIR
+            if file_path.is_relative_to(FRONTEND_DIR.resolve()) and file_path.is_file():
+                return FileResponse(file_path)
         return FileResponse(FRONTEND_DIR / "index.html")
