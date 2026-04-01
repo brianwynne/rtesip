@@ -10,7 +10,7 @@
  #define THIS_FILE       "pjsua_app.c"
  
  //#define STEREO_DEMO
-@@ -2006,6 +2009,80 @@
+@@ -2134,6 +2137,80 @@
  
      app_running = PJ_TRUE;
  

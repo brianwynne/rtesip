@@ -3,7 +3,7 @@
 # Run on the Raspberry Pi: sudo bash build-pjsua.sh
 set -e
 
-PJPROJECT_VERSION="2.14.1"
+PJPROJECT_VERSION="2.16"
 BUILD_DIR="/tmp/pjproject-build"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PATCH_FILE="$SCRIPT_DIR/../pjsua/pjsua_app.c.patch"

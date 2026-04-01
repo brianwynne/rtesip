@@ -106,7 +106,7 @@ def generate_config() -> str:
 
         lines.append(f"--id=sip:{username}@{realm}")
         lines.append(f"--registrar=sip:{registrar}")
-        lines.append(f"--realm={realm}")
+        lines.append("--realm=*")
         lines.append(f"--username={username}")
         # Password wrapped in double quotes for pjsua config file format.
         # Note: passwords containing double quotes will break pjsua parsing —
