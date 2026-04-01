@@ -3,17 +3,17 @@
 @@ -18,6 +18,9 @@
   */
  #include "pjsua_app.h"
-
+ 
 +#include <pjmedia-codec/opus.h>
 +#include <stdlib.h>
 +
  #define THIS_FILE       "pjsua_app.c"
-
+ 
  //#define STEREO_DEMO
-@@ -2006,6 +2009,62 @@
-
+@@ -2006,6 +2009,67 @@
+ 
      app_running = PJ_TRUE;
-
+ 
 +    /* Apply Opus settings from environment variables (rtesip patch) */
 +    {
 +        const char *env_br = getenv("OPUS_BITRATE");
@@ -76,5 +76,5 @@
 +    }
 +
      if (app_config.use_cli)
-         cli_main(wait_telnet_cli);
+         cli_main(wait_telnet_cli);      
      else

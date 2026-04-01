@@ -243,21 +243,29 @@ class PjsuaTelnet:
             self.srtp_active = False
             self.srtp_suite = None
 
-        # Incoming call (pjsua 2.14: "Incoming call for account..." or state change to INCOMING)
-        elif (m := re.search(r"Incoming call for account .+From: (.+)", data)) or              (m := re.search(r"Current call id\=[0-9] to (.+) \[INCOMING\]", data)):
+        # Incoming call (pjsua 2.14 outputs on separate lines:
+        #   "Incoming call for account 3!"
+        #   "From: "user1" <sip:user1@sip.rtegroup.ie>"
+        #   "Press ca a to answer or g to reject call")
+        elif re.search(r"Incoming call for account", data):
             self.call_state = CallState.INCOMING
+            self._incoming_pending = True
+        elif (m := re.search(r'^From:\s*(.+)', data)) and getattr(self, '_incoming_pending', False):
+            self._incoming_pending = False
             contact = self._resolve_contact(m.group(1))
             self.current_contact = contact
             self._emit_sync("incoming", {"destination": contact})
-        elif re.search(r"Call [0-9] state changed to INCOMING", data):
-            self.call_state = CallState.INCOMING
-            self._emit_sync("incoming", {"destination": self.current_contact or "Unknown"})
-            asyncio.create_task(self.send("call list"))
-
-            # Auto answer — if enabled, automatically answer incoming calls
+            # Auto answer
             audio = get_section("audio")
             if audio.get("auto_answer", False):
                 logger.info("Auto-answer enabled, answering incoming call from %s", contact)
+                asyncio.create_task(self.answer())
+        elif re.search(r"Call [0-9] state changed to INCOMING", data):
+            self.call_state = CallState.INCOMING
+            self._emit_sync("incoming", {"destination": self.current_contact or "Unknown"})
+            audio = get_section("audio")
+            if audio.get("auto_answer", False):
+                logger.info("Auto-answer enabled, answering incoming call from %s", self.current_contact)
                 asyncio.create_task(self.answer())
 
         # Call state: CALLING
