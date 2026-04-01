@@ -130,6 +130,9 @@ class PjsuaTelnet:
 
     async def hangup(self) -> None:
         await self.send("call hangup")
+        # Start a timeout — if call doesn't end within 5s (e.g. broken transport),
+        # force-reset call state so the UI isn't stuck
+        asyncio.create_task(self._hangup_timeout())
 
     async def reject(self) -> None:
         await self.send("call answer 486")
@@ -141,6 +144,30 @@ class PjsuaTelnet:
     async def play_tone(self, tone_id: int) -> None:
         """Play tone — disabled until WAV files are available."""
         pass
+
+    async def _hangup_timeout(self) -> None:
+        """Force-reset call state if hangup doesn't complete within 5 seconds.
+
+        When the SIP transport is broken, pjsua can't send BYE and the call
+        stays in CONNECTED state. This forces a local reset and pjsua restart.
+        """
+        try:
+            await asyncio.sleep(5)
+            if self.call_state not in (CallState.IDLE, CallState.DISCONNECTED):
+                logger.warning("Hangup timeout — forcing call state reset and pjsua restart")
+                self._stop_quality_poll()
+                old_contact = self.current_contact
+                self.call_state = CallState.IDLE
+                self.current_contact = None
+                self.current_codec = None
+                self.srtp_active = False
+                self.srtp_suite = None
+                self._emit_sync("ended", {"destination": old_contact or ""})
+                # Restart pjsua to clear the stuck call
+                from src.sip.pjsua_manager import pjsua
+                await pjsua.restart()
+        except asyncio.CancelledError:
+            pass
 
     # --- Output parsing ---
 
