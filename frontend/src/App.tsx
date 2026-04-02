@@ -21,6 +21,7 @@ function App() {
   const [ipAddresses, setIpAddresses] = useState<Record<string, string>>({});
   const [wifiSignal, setWifiSignal] = useState<number | null>(null);
   const [publicIp, setPublicIp] = useState<string | null>(null);
+  const [activeInterface, setActiveInterface] = useState<string | null>(null);
   const [deviceLocked, setDeviceLocked] = useState(true);
   const [lockChecked, setLockChecked] = useState(false);
   const ws = useWebSocket();
@@ -75,6 +76,7 @@ function App() {
             );
           }
           if (data.public_ip) setPublicIp(data.public_ip);
+          if (data.active_interface != null) setActiveInterface(data.active_interface);
         })
         .catch(() => {
           setIpAddresses({ eth0: window.location.hostname });
@@ -125,6 +127,7 @@ function App() {
         callState={ws.callState}
         wifiSignal={wifiSignal}
         publicIp={publicIp}
+        activeInterface={activeInterface}
       />
       <main className={styles.content}>
         {page === "call" && (

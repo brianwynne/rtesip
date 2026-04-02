@@ -16,9 +16,10 @@ interface Props {
   callState: CallState;
   wifiSignal: number | null;
   publicIp: string | null;
+  activeInterface: string | null;
 }
 
-export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal, publicIp }: Props) {
+export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal, publicIp, activeInterface }: Props) {
   const [showQuality, setShowQuality] = useState(false);
   const isConnected = callState.state === "connected";
 
@@ -51,12 +52,24 @@ export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onTog
       {/* Left: branding + IP */}
       <div className={styles.left}>
         <Logo size="small" />
-        {Object.entries(ipAddresses).map(([iface, ip]) => (
-          <span key={iface} className={styles.ip}>
-            {iface.startsWith("wlan") ? <Wifi size={14} /> : <Cable size={14} />}
-            {ip}
-          </span>
-        ))}
+        {Object.entries(ipAddresses).map(([iface, ip]) => {
+          if (iface === "bond0") {
+            const icon = activeInterface === "wlan0" ? <Wifi size={14} /> : <Cable size={14} />;
+            const label = activeInterface === "wlan0" ? "WiFi" : "Eth";
+            return (
+              <span key={iface} className={styles.ip} title={`Active: ${activeInterface || "unknown"}`}>
+                {icon}
+                {ip} ({label})
+              </span>
+            );
+          }
+          return (
+            <span key={iface} className={styles.ip}>
+              {iface.startsWith("wlan") ? <Wifi size={14} /> : <Cable size={14} />}
+              {ip}
+            </span>
+          );
+        })}
         {publicIp && (
           <span className={styles.ip} title="Public IP">
             <Globe size={14} />
