@@ -6,11 +6,13 @@ ConditionPathExists=/usr/bin/labwc
 
 [Service]
 Type=simple
-User=brian
+User=kiosk
+Group=kiosk
 Nice=10
-SupplementaryGroups=video render input tty
+SupplementaryGroups=video render input tty audio
 Environment=WLR_LIBINPUT_NO_DEVICES=1
-Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=XDG_RUNTIME_DIR=/run/user/997
+Environment=HOME=/home/kiosk
 ExecStart=/usr/bin/labwc -s "chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-translate --disable-features=TranslateUI --disable-application-cache --disk-cache-size=0 --check-for-update-interval=31536000 http://127.0.0.1/?kiosk=1"
 Restart=on-failure
 RestartSec=5

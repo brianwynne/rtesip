@@ -266,6 +266,28 @@ else
     ok "System user exists: $SERVICE_USER"
 fi
 
+# ── Create kiosk user (for display service) ────────────────
+if ! id -u kiosk &>/dev/null; then
+    info "Creating kiosk user..."
+    useradd --system --create-home --shell /usr/sbin/nologin \
+        --groups video,render,input,tty,audio kiosk
+    # Create XDG runtime dir
+    KIOSK_UID=$(id -u kiosk)
+    mkdir -p "/run/user/$KIOSK_UID"
+    chown kiosk:kiosk "/run/user/$KIOSK_UID"
+    chmod 700 "/run/user/$KIOSK_UID"
+    echo "d /run/user/$KIOSK_UID 0700 kiosk kiosk -" > /etc/tmpfiles.d/kiosk.conf
+    # Copy labwc config if available
+    if [[ -d "$LOCAL_DIR/deploy/conf/labwc" ]]; then
+        mkdir -p /home/kiosk/.config/labwc
+        cp "$LOCAL_DIR/deploy/conf/labwc/"* /home/kiosk/.config/labwc/
+        chown -R kiosk:kiosk /home/kiosk/.config
+    fi
+    ok "Kiosk user created"
+else
+    ok "Kiosk user exists"
+fi
+
 # ── Stop service (upgrade) ──────────────────────────────────
 if [[ "$UPGRADE" == "true" ]]; then
     info "Stopping service for upgrade..."
