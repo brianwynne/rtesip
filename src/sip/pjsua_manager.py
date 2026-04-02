@@ -47,7 +47,7 @@ def generate_config() -> str:
         f"--ec-tail={audio.get('ec_tail', 200)}",
         f"--ptime={audio.get('opus_frame_duration', 20)}",
         "--snd-auto-close=0",
-        "--auto-update-nat=0",  # Disable NAT IP change detection (breaks auth on 2.16)
+        "--auto-update-nat=1",  # Enable NAT traversal (required for correct Contact behind NAT)
         f"--use-cli",
         f"--cli-telnet-port={CLI_PORT}",
         "--no-cli-console",
