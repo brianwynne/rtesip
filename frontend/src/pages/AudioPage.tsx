@@ -303,7 +303,7 @@ export function AudioPage() {
                 min={20}
                 max={1000}
                 step={20}
-                onChange={(e) => save({ jitter_buffer: Number(e.target.value) })}
+                onChange={(e) => save({ jitter_buffer: Math.max(20, Math.min(1000, Number(e.target.value))) })}
               />
               <span className={styles.unit}>ms</span>
             </div>
