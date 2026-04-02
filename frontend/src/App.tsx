@@ -83,7 +83,7 @@ function App() {
         });
     };
     fetchStatus();
-    const t = setInterval(fetchStatus, 30000);
+    const t = setInterval(fetchStatus, 5000);
     return () => clearInterval(t);
   }, []);
 

@@ -122,6 +122,30 @@ async def on_pjsua_event(event: str, data: dict) -> None:
             from src.sip.pjsua_manager import pjsua
             await pjsua.restart()
 
+        # Reselect primary bond interface (eth0) if available
+        asyncio.create_task(_reselect_bond_primary())
+
+
+async def _reselect_bond_primary() -> None:
+    """Switch bond back to primary (eth0) if it's available but not active."""
+    try:
+        bond_path = Path("/proc/net/bonding/bond0")
+        if not bond_path.exists():
+            return
+        bond_status = bond_path.read_text()
+        # Check if currently on WiFi backup
+        if "Currently Active Slave: wlan0" not in bond_status:
+            return
+        # Check if eth0 is up in the bond
+        if "Slave Interface: eth0\nMII Status: up" not in bond_status:
+            return
+        # Trigger reselection by writing to sysfs
+        subprocess.run(["sudo", "bash", "-c", "echo eth0 > /sys/class/net/bond0/bonding/active_slave"],
+                       capture_output=True, timeout=5)
+        logger.info("Bond reselected eth0 as active interface")
+    except Exception as e:
+        logger.debug("Bond reselect skipped: %s", e)
+
 
 async def start_meters() -> None:
     """Metering disabled."""
