@@ -54,10 +54,11 @@ export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onTog
         <Logo size="small" />
         {Object.entries(ipAddresses).map(([iface, ip]) => {
           if (iface === "bond0") {
-            const icon = activeInterface === "wlan0" ? <Wifi size={14} /> : <Cable size={14} />;
-            const label = activeInterface === "wlan0" ? "WiFi" : "Eth";
+            const onWifi = activeInterface === "wlan0";
+            const icon = onWifi ? <Wifi size={14} /> : <Cable size={14} />;
+            const label = onWifi ? "WiFi" : "Eth";
             return (
-              <span key={iface} className={styles.ip} title={`Active: ${activeInterface || "unknown"}`}>
+              <span key={iface} className={`${styles.ip} ${onWifi ? styles.ipWarn : ""}`} title={`Active: ${activeInterface || "unknown"}`}>
                 {icon}
                 {ip} ({label})
               </span>
