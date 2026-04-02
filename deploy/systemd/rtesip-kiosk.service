@@ -1,7 +1,7 @@
 [Unit]
 Description=rtesip Kiosk Display
 After=rtesip.service
-Requires=rtesip.service
+Wants=rtesip.service
 ConditionPathExists=/usr/bin/labwc
 
 [Service]
