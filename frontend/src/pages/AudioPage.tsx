@@ -300,7 +300,7 @@ export function AudioPage() {
               <input
                 type="number"
                 value={settings.jitter_buffer}
-                min={60}
+                min={20}
                 max={1000}
                 step={20}
                 onChange={(e) => save({ jitter_buffer: Number(e.target.value) })}
