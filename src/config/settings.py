@@ -45,11 +45,11 @@ DEFAULTS: dict[str, dict] = {
     "audio": {
         "channels": 1,
         "bitrate": 64000,
-        "ec_tail": 200,
-        "opus_complexity": 7,
-        "opus_cbr": False,
-        "opus_fec": False,
-        "opus_packet_loss": 10,
+        "ec_tail": 0,
+        "opus_complexity": 10,
+        "opus_cbr": True,
+        "opus_fec": True,
+        "opus_packet_loss": 20,
         "opus_frame_duration": 20,
         # Legacy device/routing fields (kept for backward compat)
         "input": "USB",
