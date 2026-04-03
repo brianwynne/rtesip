@@ -129,6 +129,64 @@
 +        }
 +    }
 +
++    /* Create failover transport + account for dual-interface registration (rtesip patch)
++     *
++     * When FAILOVER_BIND_ADDR is set (e.g. wlan0's IP), create a second TLS
++     * transport bound to that address and clone the first SIP account onto it
++     * with reg-id=2. This gives RFC 5626 dual-flow registration so Kamailio
++     * knows both paths and can failover signalling automatically.
++     */
++    {
++        const char *fo_addr = getenv("FAILOVER_BIND_ADDR");
++        if (fo_addr && fo_addr[0] && app_config.acc_cnt > 0) {
++            pjsua_transport_config fo_tp_cfg;
++            pjsua_transport_id fo_tp_id = PJSUA_INVALID_ID;
++            pj_status_t fo_st;
++
++            /* Create TLS transport bound to the failover interface */
++            pjsua_transport_config_default(&fo_tp_cfg);
++            pj_strset2(&fo_tp_cfg.bound_addr, (char *)fo_addr);
++            fo_tp_cfg.port = 0; /* ephemeral port */
++
++            /* Copy TLS settings from existing config */
++            fo_tp_cfg.tls_setting.ca_list_file =
++                app_config.udp_cfg.tls_setting.ca_list_file;
++            fo_tp_cfg.tls_setting.verify_server =
++                app_config.udp_cfg.tls_setting.verify_server;
++
++            fo_st = pjsua_transport_create(PJSIP_TRANSPORT_TLS,
++                                           &fo_tp_cfg, &fo_tp_id);
++            if (fo_st == PJ_SUCCESS && fo_tp_id != PJSUA_INVALID_ID) {
++                /* Clone the first user account with the failover transport */
++                pjsua_acc_config fo_acc;
++                pjsua_acc_id fo_acc_id;
++                unsigned src = app_config.acc_cnt - 1; /* last configured account */
++
++                fo_acc = app_config.acc_cfg[src]; /* struct copy */
++                fo_acc.transport_id = fo_tp_id;
++
++                /* RFC 5626: same instance, different reg-id */
++                fo_acc.use_rfc5626 = PJ_TRUE;
++                fo_acc.rfc5626_reg_id = pj_str("2");
++                /* instance_id is auto-generated if empty — same device = same instance */
++
++                fo_st = pjsua_acc_add(&fo_acc, PJ_FALSE, &fo_acc_id);
++                if (fo_st == PJ_SUCCESS) {
++                    PJ_LOG(3, (THIS_FILE,
++                        "Failover: created TLS transport on %s, "
++                        "account %d (reg-id=2)", fo_addr, fo_acc_id));
++                } else {
++                    PJ_LOG(2, (THIS_FILE,
++                        "Failover: account add failed (status=%d)", fo_st));
++                }
++            } else {
++                PJ_LOG(2, (THIS_FILE,
++                    "Failover: TLS transport on %s failed (status=%d)",
++                    fo_addr, fo_st));
++            }
++        }
++    }
++
      if (app_config.use_cli)
-         cli_main(wait_telnet_cli);      
+         cli_main(wait_telnet_cli);
      else

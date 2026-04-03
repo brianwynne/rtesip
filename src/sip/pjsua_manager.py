@@ -28,6 +28,44 @@ READY_WAV = Path("/opt/rtesip/assets/rdy.wav")
 ERROR_WAV = Path("/opt/rtesip/assets/err.wav")
 
 
+def _get_failover_addr() -> str | None:
+    """Detect a secondary network interface IP for dual-path failover.
+
+    Returns the IP of the non-primary interface (wlan0 if primary is eth0,
+    or eth0 if primary is wlan0). Returns None if only one interface is up
+    or if bonding is active (bond handles failover instead).
+    """
+    import socket
+    import fcntl
+    import struct
+
+    # Don't use failover if bonding is active — bond handles it
+    if Path("/proc/net/bonding/bond0").exists():
+        return None
+
+    ips = {}
+    for iface in ("eth0", "wlan0"):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            addr = fcntl.ioctl(s.fileno(), 0x8915,  # SIOCGIFADDR
+                               struct.pack('256s', iface.encode()))
+            ips[iface] = socket.inet_ntoa(addr[20:24])
+        except (OSError, IOError):
+            pass
+
+    if len(ips) < 2:
+        return None  # Only one interface up — no failover needed
+
+    # Primary is the one pjsua registers on (first in config).
+    # Return the other one as the failover address.
+    # pjsua binds to 0.0.0.0 by default, so primary is determined by routing.
+    # We return wlan0 as failover (eth0 is typically primary).
+    if "wlan0" in ips and "eth0" in ips:
+        return ips["wlan0"]
+
+    return None
+
+
 def generate_config() -> str:
     """Generate pjsua config from current settings."""
     sip = get_section("sip")
@@ -229,6 +267,12 @@ class PjsuaProcess:
         env["OPUS_FEC"] = "1" if audio.get("opus_fec") else "0"
         env["OPUS_PACKET_LOSS"] = str(audio.get("opus_packet_loss", 0) if audio.get("opus_fec") else 0)
         env["OPUS_STEREO"] = "1" if audio.get("channels", 1) == 2 else "0"
+
+        # Failover: detect secondary interface for dual-path registration
+        failover_addr = _get_failover_addr()
+        if failover_addr:
+            env["FAILOVER_BIND_ADDR"] = failover_addr
+            logger.info("Failover interface detected: %s", failover_addr)
 
         try:
             self._process = await asyncio.create_subprocess_exec(
