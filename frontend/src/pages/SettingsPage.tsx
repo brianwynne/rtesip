@@ -29,6 +29,7 @@ const DEFAULT_WIFI: WifiConfig = {
 
 interface NetworkConfig {
   mode: string;
+  dual_path_failover: boolean;
   hostname: string;
   address: string;
   netmask: string;
@@ -39,6 +40,7 @@ interface NetworkConfig {
 
 const DEFAULT_NETWORK: NetworkConfig = {
   mode: "dhcp",
+  dual_path_failover: false,
   hostname: "sip-reporter",
   address: "",
   netmask: "",
@@ -358,6 +360,21 @@ export function SettingsPage() {
               <option value="static">Static IP</option>
             </select>
           </label>
+          <label className={styles.toggle}>
+            <span>Dual-Path Failover</span>
+            <input
+              type="checkbox"
+              checked={network.dual_path_failover}
+              onChange={(e) => updateNetwork("dual_path_failover", e.target.checked)}
+            />
+          </label>
+          {network.dual_path_failover && (
+            <div className={styles.hint}>
+              Registers SIP on both ethernet and WiFi. If one interface fails,
+              calls continue on the other. Requires both interfaces connected.
+              Restart required to apply.
+            </div>
+          )}
           {network.mode === "static" && (
             <>
               <label className={styles.field}>

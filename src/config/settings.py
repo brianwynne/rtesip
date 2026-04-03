@@ -85,6 +85,7 @@ DEFAULTS: dict[str, dict] = {
     },
     "network": {
         "mode": "dhcp",  # dhcp | static
+        "dual_path_failover": False,  # Enable RFC 5626 dual-interface registration
         "hostname": "rtesip",
         "address": "",
         "netmask": "",

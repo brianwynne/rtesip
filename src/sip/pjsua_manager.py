@@ -269,7 +269,8 @@ class PjsuaProcess:
         env["OPUS_STEREO"] = "1" if audio.get("channels", 1) == 2 else "0"
 
         # Failover: detect secondary interface for dual-path registration
-        failover_addr = _get_failover_addr()
+        network = get_section("network")
+        failover_addr = _get_failover_addr() if network.get("dual_path_failover") else None
         if failover_addr:
             env["FAILOVER_BIND_ADDR"] = failover_addr
             logger.info("Failover interface detected: %s", failover_addr)
