@@ -132,9 +132,10 @@ def download_dependencies(src_dir: Path):
 
 def create_config_site(src_dir: Path):
     """Create config_site.h with Opus/TLS/SRTP enabled."""
-    deps_dir = BUILD_DIR / "deps"
-    has_opus = (deps_dir / "opus" / "include" / "opus" / "opus.h").exists()
-    has_openssl = (deps_dir / "openssl" / "include" / "openssl" / "ssl.h").exists()
+    vcpkg_root = Path(os.environ.get("VCPKG_ROOT", r"C:\Users\tighm\vcpkg"))
+    vcpkg_inc = vcpkg_root / "installed" / "x86-windows" / "include"
+    has_opus = (vcpkg_inc / "opus" / "opus.h").exists()
+    has_openssl = (vcpkg_inc / "openssl" / "ssl.h").exists()
 
     config = src_dir / "pjlib" / "include" / "pj" / "config_site.h"
     lines = [
@@ -367,19 +368,16 @@ def build(src_dir: Path):
     # Retarget to installed VS version
     retarget_solution(src_dir)
 
-    # Set include/lib paths for dependencies
-    deps_dir = BUILD_DIR / "deps"
+    # Set include/lib paths for dependencies (vcpkg)
+    vcpkg_root = Path(os.environ.get("VCPKG_ROOT", r"C:\Users\tighm\vcpkg"))
+    vcpkg_installed = vcpkg_root / "installed" / "x86-windows"
     env = dict(os.environ)
     include_paths = []
     lib_paths = []
-    if (deps_dir / "opus" / "include").exists():
-        include_paths.append(str(deps_dir / "opus" / "include"))
-    if (deps_dir / "openssl" / "include").exists():
-        include_paths.append(str(deps_dir / "openssl" / "include"))
-    if (deps_dir / "opus" / "lib").exists():
-        lib_paths.append(str(deps_dir / "opus" / "lib"))
-    if (deps_dir / "openssl" / "lib").exists():
-        lib_paths.append(str(deps_dir / "openssl" / "lib"))
+    if (vcpkg_installed / "include").exists():
+        include_paths.append(str(vcpkg_installed / "include"))
+    if (vcpkg_installed / "lib").exists():
+        lib_paths.append(str(vcpkg_installed / "lib"))
 
     if include_paths:
         env["INCLUDE"] = ";".join(include_paths) + ";" + env.get("INCLUDE", "")
