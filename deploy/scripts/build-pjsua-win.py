@@ -247,19 +247,25 @@ def retarget_solution(src_dir: Path):
     toolset = toolset_map.get(major, f"v{major}0")
     print(f"Retargeting to platform toolset: {toolset}")
 
-    # Update all .vcxproj files
+    # Update all .vcxproj and .props files
     count = 0
-    for vcxproj in glob.glob(str(src_dir / "**" / "*.vcxproj"), recursive=True):
-        text = Path(vcxproj).read_text(encoding="utf-8")
-        new_text = re.sub(
-            r"<PlatformToolset>v\d+</PlatformToolset>",
-            f"<PlatformToolset>{toolset}</PlatformToolset>",
-            text
-        )
-        if new_text != text:
-            Path(vcxproj).write_text(new_text, encoding="utf-8")
-            count += 1
-    print(f"Retargeted {count} project files")
+    for pattern in ("**/*.vcxproj", "**/*.props"):
+        for filepath in glob.glob(str(src_dir / pattern), recursive=True):
+            text = Path(filepath).read_text(encoding="utf-8")
+            new_text = re.sub(
+                r"<PlatformToolset>v\d+</PlatformToolset>",
+                f"<PlatformToolset>{toolset}</PlatformToolset>",
+                text
+            )
+            new_text = re.sub(
+                r"<BuildToolset>v\d+</BuildToolset>",
+                f"<BuildToolset>{toolset}</BuildToolset>",
+                new_text
+            )
+            if new_text != text:
+                Path(filepath).write_text(new_text, encoding="utf-8")
+                count += 1
+    print(f"Retargeted {count} project/props files")
 
 
 def build(src_dir: Path):
