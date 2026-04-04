@@ -26,13 +26,13 @@ FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import platform as _platform
     logger.info("rtesip starting")
 
-    # Performance governor
-    apply_performance_governor()
-
-    # Initialize audio hardware state (phantom power, HiFiBerry XLR)
-    await _init_audio_hardware()
+    # Linux-specific hardware init
+    if _platform.system() != "Windows":
+        apply_performance_governor()
+        await _init_audio_hardware()
 
     # Start pjsua
     await pjsua.start()

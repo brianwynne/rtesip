@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import logging
 import os
+import platform
 import socket
 import subprocess
 from pathlib import Path
@@ -56,17 +57,30 @@ async def lock_status():
 def _get_ip_addresses() -> dict[str, str]:
     """Get IP addresses for all active network interfaces."""
     import socket
-    import fcntl
-    import struct
+    import platform as _platform
     ips = {}
-    for iface in ("eth0", "wlan0"):
+    if _platform.system() == "Windows":
+        # Windows: get hostname IP
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            addr = fcntl.ioctl(s.fileno(), 0x8915,  # SIOCGIFADDR
-                               struct.pack('256s', iface.encode()))
-            ips[iface] = socket.inet_ntoa(addr[20:24])
-        except (OSError, IOError):
+            hostname = socket.gethostname()
+            for addr in socket.getaddrinfo(hostname, None, socket.AF_INET):
+                ip = addr[4][0]
+                if not ip.startswith("127."):
+                    ips["ethernet"] = ip
+                    break
+        except Exception:
             pass
+    else:
+        import fcntl
+        import struct
+        for iface in ("eth0", "wlan0"):
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                addr = fcntl.ioctl(s.fileno(), 0x8915,  # SIOCGIFADDR
+                                   struct.pack('256s', iface.encode()))
+                ips[iface] = socket.inet_ntoa(addr[20:24])
+            except (OSError, IOError):
+                pass
     return ips
 
 
@@ -235,12 +249,17 @@ async def reboot():
     if _system_action_in_progress:
         return {"status": "action already in progress"}
     _system_action_in_progress = True
-    subprocess.Popen(["sudo", "systemctl", "reboot"])
+    if platform.system() == "Windows":
+        subprocess.Popen(["shutdown", "/r", "/t", "5"])
+    else:
+        subprocess.Popen(["sudo", "systemctl", "reboot"])
     return {"status": "rebooting"}
 
 
 @router.post("/restart-services")
 async def restart_services():
+    if platform.system() == "Windows":
+        return {"status": "not supported on Windows"}
     subprocess.Popen(["sudo", "systemctl", "restart", "rtesip"])
     return {"status": "restarting"}
 
@@ -251,7 +270,10 @@ async def shutdown():
     if _system_action_in_progress:
         return {"status": "action already in progress"}
     _system_action_in_progress = True
-    subprocess.Popen(["sudo", "systemctl", "poweroff"])
+    if platform.system() == "Windows":
+        subprocess.Popen(["shutdown", "/s", "/t", "5"])
+    else:
+        subprocess.Popen(["sudo", "systemctl", "poweroff"])
     return {"status": "shutting down"}
 
 

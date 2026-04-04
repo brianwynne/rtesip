@@ -6,14 +6,20 @@ Single config.json with sections, plus separate contacts.json.
 import json
 import logging
 import os
+import platform
 import threading
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DIR = Path("/etc/rtesip")
-DATA_DIR = Path("/var/lib/rtesip")
+if platform.system() == "Windows":
+    _appdata = Path(os.environ.get("APPDATA", Path.home()))
+    CONFIG_DIR = _appdata / "rtesip"
+    DATA_DIR = _appdata / "rtesip" / "data"
+else:
+    CONFIG_DIR = Path("/etc/rtesip")
+    DATA_DIR = Path("/var/lib/rtesip")
 
 _config_lock = threading.Lock()
 
@@ -229,8 +235,11 @@ def update_section(section: str, values: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_hardware_info() -> dict:
-    """Get RPi CPU serial and model from /proc/cpuinfo."""
+    """Get hardware serial and model."""
     info = {"serial": "", "model": ""}
+    if platform.system() == "Windows":
+        info["model"] = f"Windows {platform.version()}"
+        return info
     try:
         cpuinfo = Path("/proc/cpuinfo").read_text()
         for line in cpuinfo.splitlines():

@@ -9,6 +9,7 @@
 import asyncio
 import logging
 import os
+import platform
 import signal
 from pathlib import Path
 from typing import Optional
@@ -18,14 +19,21 @@ from src.audio.devices import resolve_device
 
 logger = logging.getLogger(__name__)
 
-PJSUA_BIN = "/usr/local/bin/pjsua"
-PJSUA_CONF = DATA_DIR / "pjsua.conf"
-PID_FILE = Path("/run/rtesip/pjsua.pid")
-CLI_PORT = 9090  # Telnet CLI port (avoid 8000 conflict with our API)
+IS_WINDOWS = platform.system() == "Windows"
 
-# Audio files
-READY_WAV = Path("/opt/rtesip/assets/rdy.wav")
-ERROR_WAV = Path("/opt/rtesip/assets/err.wav")
+if IS_WINDOWS:
+    PJSUA_BIN = str(Path(__file__).parent.parent.parent / "pjsua" / "pjsua.exe")
+    PID_FILE = DATA_DIR / "pjsua.pid"
+    READY_WAV = Path(__file__).parent.parent.parent / "assets" / "rdy.wav"
+    ERROR_WAV = Path(__file__).parent.parent.parent / "assets" / "err.wav"
+else:
+    PJSUA_BIN = "/usr/local/bin/pjsua"
+    PID_FILE = Path("/run/rtesip/pjsua.pid")
+    READY_WAV = Path("/opt/rtesip/assets/rdy.wav")
+    ERROR_WAV = Path("/opt/rtesip/assets/err.wav")
+
+PJSUA_CONF = DATA_DIR / "pjsua.conf"
+CLI_PORT = 9090
 
 
 def generate_config() -> str:
@@ -131,7 +139,12 @@ def generate_config() -> str:
                 # keying: 1=SDES (pjsua 0), 2=DTLS (pjsua 1)
                 srtp_keying_map = {1: 0, 2: 1}
                 lines.append(f"--srtp-keying={srtp_keying_map.get(keying, 0)}")
-            lines.append("--tls-ca-file=/etc/ssl/certs/ca-certificates.crt")
+            if IS_WINDOWS:
+                # Use bundled cacert.pem or certifi package
+                import certifi
+                lines.append(f"--tls-ca-file={certifi.where()}")
+            else:
+                lines.append("--tls-ca-file=/etc/ssl/certs/ca-certificates.crt")
             lines.append("--tls-verify-server")
 
         lines.append(f"--reg-timeout={account.get('reg_timeout', 600)}")
@@ -204,21 +217,28 @@ class PjsuaProcess:
 
         self._stopping = False
 
-        # Regenerate ALSA config from saved per-channel settings
-        from src.api.routes.audio import generate_asound_conf
-        generate_asound_conf()
+        # Regenerate ALSA config from saved per-channel settings (Linux only)
+        if not IS_WINDOWS:
+            from src.api.routes.audio import generate_asound_conf
+            generate_asound_conf()
 
         write_config()
         device_args = get_device_string()
 
-        # Launch with RT priority 99 via chrt
-        cmd = [
-            "/usr/bin/chrt", "-r", "99",
-            PJSUA_BIN,
-            f"--config-file={PJSUA_CONF}",
-            # "--no-wav-loop",  # removed for pjsip 2.14
-            "--thread-cnt=3",
-        ] + device_args
+        # Build command — RT priority on Linux, normal on Windows
+        if IS_WINDOWS:
+            cmd = [
+                PJSUA_BIN,
+                f"--config-file={PJSUA_CONF}",
+                "--thread-cnt=3",
+            ] + device_args
+        else:
+            cmd = [
+                "/usr/bin/chrt", "-r", "99",
+                PJSUA_BIN,
+                f"--config-file={PJSUA_CONF}",
+                "--thread-cnt=3",
+            ] + device_args
 
         # Pass Opus settings via environment variables (read by patched pjsua)
         env = dict(os.environ)
@@ -265,7 +285,7 @@ class PjsuaProcess:
         if self._monitor_task:
             self._monitor_task.cancel()
 
-        self._process.send_signal(signal.SIGTERM)
+        self._process.terminate()  # SIGTERM on Linux, TerminateProcess on Windows
         try:
             await asyncio.wait_for(self._process.wait(), timeout=5)
         except asyncio.TimeoutError:
