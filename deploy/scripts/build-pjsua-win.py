@@ -241,9 +241,21 @@ def retarget_solution(src_dir: Path):
     msbuild_ver = result.stdout.strip().splitlines()[-1] if result.returncode == 0 else ""
     print(f"MSBuild version: {msbuild_ver}")
 
-    # Map MSBuild major version to platform toolset (vXY0 format)
-    major = msbuild_ver.split(".")[0] if msbuild_ver else "17"
-    toolset = f"v{major}0"  # MSBuild 17 → v170, 18 → v180
+    # Detect actual installed platform toolset
+    import glob as _glob
+    toolset = None
+    for vs_dir in ["/Program Files/Microsoft Visual Studio/18/Community",
+                   "/Program Files/Microsoft Visual Studio/2022/Community",
+                   "/Program Files (x86)/Microsoft Visual Studio/2019/Community"]:
+        win_dir = "C:" + vs_dir.replace("/", "\\")
+        pattern = os.path.join(win_dir, "MSBuild", "Microsoft", "VC", "*",
+                              "Platforms", "Win32", "PlatformToolsets", "v*")
+        matches = _glob.glob(pattern)
+        if matches:
+            toolset = os.path.basename(matches[-1])  # Use latest found
+            break
+    if not toolset:
+        toolset = "v143"  # fallback
     print(f"Retargeting to platform toolset: {toolset}")
 
     # Update all .vcxproj and .props files
