@@ -231,12 +231,46 @@ def apply_opus_patch(src_dir: Path):
         print("opus.c patched")
 
 
+def retarget_solution(src_dir: Path):
+    """Upgrade .vcxproj files to use the installed VS platform toolset."""
+    import re
+    import glob
+
+    # Detect installed toolset version
+    result = subprocess.run(["msbuild", "-version"], capture_output=True, text=True)
+    msbuild_ver = result.stdout.strip().splitlines()[-1] if result.returncode == 0 else ""
+    print(f"MSBuild version: {msbuild_ver}")
+
+    # Map MSBuild major version to platform toolset
+    major = msbuild_ver.split(".")[0] if msbuild_ver else "17"
+    toolset_map = {"17": "v143", "18": "v144"}
+    toolset = toolset_map.get(major, f"v{major}0")
+    print(f"Retargeting to platform toolset: {toolset}")
+
+    # Update all .vcxproj files
+    count = 0
+    for vcxproj in glob.glob(str(src_dir / "**" / "*.vcxproj"), recursive=True):
+        text = Path(vcxproj).read_text(encoding="utf-8")
+        new_text = re.sub(
+            r"<PlatformToolset>v\d+</PlatformToolset>",
+            f"<PlatformToolset>{toolset}</PlatformToolset>",
+            text
+        )
+        if new_text != text:
+            Path(vcxproj).write_text(new_text, encoding="utf-8")
+            count += 1
+    print(f"Retargeted {count} project files")
+
+
 def build(src_dir: Path):
     """Build pjsua using MSBuild."""
     sln = src_dir / "pjproject-vs14.sln"
     if not sln.exists():
         print(f"ERROR: Solution file not found: {sln}")
         sys.exit(1)
+
+    # Retarget to installed VS version
+    retarget_solution(src_dir)
 
     print("Building pjsua (this may take several minutes)...")
     result = subprocess.run(
