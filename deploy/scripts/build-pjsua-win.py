@@ -241,10 +241,9 @@ def retarget_solution(src_dir: Path):
     msbuild_ver = result.stdout.strip().splitlines()[-1] if result.returncode == 0 else ""
     print(f"MSBuild version: {msbuild_ver}")
 
-    # Map MSBuild major version to platform toolset
+    # Map MSBuild major version to platform toolset (vXY0 format)
     major = msbuild_ver.split(".")[0] if msbuild_ver else "17"
-    toolset_map = {"17": "v143", "18": "v144"}
-    toolset = toolset_map.get(major, f"v{major}0")
+    toolset = f"v{major}0"  # MSBuild 17 → v170, 18 → v180
     print(f"Retargeting to platform toolset: {toolset}")
 
     # Update all .vcxproj and .props files
