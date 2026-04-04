@@ -57,19 +57,97 @@ def download_source():
     return src_dir
 
 
+def download_dependencies(src_dir: Path):
+    """Download pre-built Opus and OpenSSL for Windows."""
+    import zipfile
+
+    deps_dir = BUILD_DIR / "deps"
+    deps_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- Opus ---
+    opus_inc = deps_dir / "opus" / "include" / "opus"
+    if not (opus_inc / "opus.h").exists():
+        print("Downloading Opus SDK...")
+        # Use vcpkg-exported or pre-built Opus
+        # Mozilla's build includes headers + lib
+        opus_url = "https://archive.mozilla.org/pub/opus/win32/opus-1.5.2-win32.zip"
+        opus_zip = deps_dir / "opus.zip"
+        try:
+            urllib.request.urlretrieve(opus_url, opus_zip)
+            with zipfile.ZipFile(opus_zip) as zf:
+                zf.extractall(deps_dir / "opus_tmp")
+            # Move contents to deps/opus
+            opus_extracted = deps_dir / "opus_tmp"
+            opus_dest = deps_dir / "opus"
+            opus_dest.mkdir(parents=True, exist_ok=True)
+            # Find the actual content dir
+            for d in opus_extracted.iterdir():
+                if d.is_dir():
+                    import shutil
+                    shutil.copytree(d, opus_dest, dirs_exist_ok=True)
+                    break
+            opus_zip.unlink(missing_ok=True)
+            import shutil
+            shutil.rmtree(opus_extracted, ignore_errors=True)
+            print(f"Opus installed at {opus_dest}")
+        except Exception as e:
+            print(f"WARNING: Failed to download Opus: {e}")
+            print("Build will proceed without Opus codec")
+    else:
+        print("Opus already downloaded")
+
+    # --- OpenSSL ---
+    openssl_inc = deps_dir / "openssl" / "include" / "openssl"
+    if not (openssl_inc / "ssl.h").exists():
+        print("Downloading OpenSSL SDK...")
+        # Use slproweb pre-built OpenSSL for Windows
+        # Light version includes headers + libs
+        openssl_url = "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.5.0.zip"
+        openssl_zip = deps_dir / "openssl.zip"
+        try:
+            urllib.request.urlretrieve(openssl_url, openssl_zip)
+            with zipfile.ZipFile(openssl_zip) as zf:
+                zf.extractall(deps_dir / "openssl_tmp")
+            # Find and move
+            openssl_dest = deps_dir / "openssl"
+            openssl_dest.mkdir(parents=True, exist_ok=True)
+            openssl_extracted = deps_dir / "openssl_tmp"
+            for d in openssl_extracted.rglob("include"):
+                if (d / "openssl" / "ssl.h").exists():
+                    import shutil
+                    shutil.copytree(d.parent, openssl_dest, dirs_exist_ok=True)
+                    break
+            openssl_zip.unlink(missing_ok=True)
+            import shutil
+            shutil.rmtree(openssl_extracted, ignore_errors=True)
+            print(f"OpenSSL installed at {openssl_dest}")
+        except Exception as e:
+            print(f"WARNING: Failed to download OpenSSL: {e}")
+            print("Build will proceed without TLS support")
+    else:
+        print("OpenSSL already downloaded")
+
+    return deps_dir
+
+
 def create_config_site(src_dir: Path):
     """Create config_site.h with Opus/TLS/SRTP enabled."""
+    deps_dir = BUILD_DIR / "deps"
+    has_opus = (deps_dir / "opus" / "include" / "opus" / "opus.h").exists()
+    has_openssl = (deps_dir / "openssl" / "include" / "openssl" / "ssl.h").exists()
+
     config = src_dir / "pjlib" / "include" / "pj" / "config_site.h"
-    config.write_text("""\
-/* rtesip config_site.h — enable Opus, TLS, SRTP */
-#define PJMEDIA_HAS_OPUS_CODEC 1
-#define PJ_HAS_SSL_SOCK 1
-#define PJMEDIA_HAS_SRTP 1
-#define PJMEDIA_SRTP_HAS_SDES 1
-#define PJMEDIA_SRTP_HAS_DTLS 0
-#define PJMEDIA_AUDIO_DEV_HAS_WMME 1
-""")
-    print("config_site.h created")
+    lines = [
+        "/* rtesip config_site.h */",
+        f"#define PJMEDIA_HAS_OPUS_CODEC {1 if has_opus else 0}",
+        f"#define PJ_HAS_SSL_SOCK {1 if has_openssl else 0}",
+        "#define PJMEDIA_HAS_SRTP 1",
+        "#define PJMEDIA_SRTP_HAS_SDES 1",
+        "#define PJMEDIA_SRTP_HAS_DTLS 0",
+        "#define PJMEDIA_AUDIO_DEV_HAS_WMME 1",
+    ]
+    config.write_text("\n".join(lines) + "\n")
+    print(f"config_site.h created (Opus={'yes' if has_opus else 'no'}, TLS={'yes' if has_openssl else 'no'})")
 
 
 def apply_opus_patch(src_dir: Path):
@@ -289,12 +367,34 @@ def build(src_dir: Path):
     # Retarget to installed VS version
     retarget_solution(src_dir)
 
+    # Set include/lib paths for dependencies
+    deps_dir = BUILD_DIR / "deps"
+    env = dict(os.environ)
+    include_paths = []
+    lib_paths = []
+    if (deps_dir / "opus" / "include").exists():
+        include_paths.append(str(deps_dir / "opus" / "include"))
+    if (deps_dir / "openssl" / "include").exists():
+        include_paths.append(str(deps_dir / "openssl" / "include"))
+    if (deps_dir / "opus" / "lib").exists():
+        lib_paths.append(str(deps_dir / "opus" / "lib"))
+    if (deps_dir / "openssl" / "lib").exists():
+        lib_paths.append(str(deps_dir / "openssl" / "lib"))
+
+    if include_paths:
+        env["INCLUDE"] = ";".join(include_paths) + ";" + env.get("INCLUDE", "")
+    if lib_paths:
+        env["LIB"] = ";".join(lib_paths) + ";" + env.get("LIB", "")
+
+    print(f"Include paths: {include_paths}")
+    print(f"Lib paths: {lib_paths}")
     print("Building pjsua (this may take several minutes)...")
     result = subprocess.run(
         ["msbuild", str(sln),
          "/t:pjsua", "/p:Configuration=Release", "/p:Platform=Win32",
          "/m", "/v:m"],
         cwd=str(src_dir),
+        env=env,
     )
     if result.returncode != 0:
         print("ERROR: Build failed!")
@@ -326,6 +426,7 @@ def main():
 
     check_prerequisites()
     src_dir = download_source()
+    deps_dir = download_dependencies(src_dir)
     create_config_site(src_dir)
     apply_opus_patch(src_dir)
     pjsua_exe = build(src_dir)
