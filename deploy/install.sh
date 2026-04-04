@@ -288,59 +288,6 @@ else
     ok "Kiosk user exists"
 fi
 
-# ── Configure network bonding (eth0 + wlan0 failover) ──────
-info "Configuring network bonding..."
-if ip link show eth0 &>/dev/null && ip link show wlan0 &>/dev/null; then
-    # Load bonding module
-    modprobe bonding 2>/dev/null || true
-    echo "bonding" > /etc/modules-load.d/bonding.conf
-
-    if ! nmcli connection show bond0 &>/dev/null; then
-        # Save WiFi credentials if connected
-        WIFI_CONN=$(nmcli -t -f NAME,DEVICE connection show --active | grep wlan0 | cut -d: -f1)
-        WIFI_SSID=""
-        WIFI_PSK=""
-        if [[ -n "$WIFI_CONN" ]]; then
-            WIFI_SSID=$(nmcli -t -f 802-11-wireless.ssid connection show "$WIFI_CONN" | cut -d: -f2)
-            WIFI_PSK=$(nmcli -t -s -f 802-11-wireless-security.psk connection show "$WIFI_CONN" | cut -d: -f2)
-        fi
-
-        # Create bond
-        nmcli connection add type bond \
-            ifname bond0 con-name bond0 \
-            bond.options "mode=active-backup,miimon=100,fail_over_mac=active,primary=eth0,primary_reselect=always,updelay=100,num_grat_arp=10,num_unsol_na=10,peer_notif_delay=100" \
-            ipv4.method auto connection.autoconnect yes
-
-        # Add eth0 slave
-        nmcli connection add type ethernet \
-            ifname eth0 con-name bond-eth0 \
-            master bond0 connection.autoconnect yes
-
-        # Add wlan0 slave with WiFi credentials
-        if [[ -n "$WIFI_SSID" && -n "$WIFI_PSK" ]]; then
-            nmcli connection add type wifi \
-                ifname wlan0 con-name bond-wlan0 \
-                master bond0 wifi.ssid "$WIFI_SSID" \
-                wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$WIFI_PSK" \
-                connection.autoconnect yes
-        else
-            warn "No WiFi credentials found — bond created with eth0 only."
-            warn "Connect WiFi manually: nmcli connection add type wifi ifname wlan0 con-name bond-wlan0 master bond0 wifi.ssid YOUR_SSID wifi-sec.key-mgmt wpa-psk wifi-sec.psk YOUR_PSK"
-        fi
-
-        # Disable old standalone connections
-        for conn in "Wired connection 1" "rtesip-wifi"; do
-            nmcli connection modify "$conn" connection.autoconnect no 2>/dev/null || true
-        done
-
-        ok "Network bond configured (eth0 primary, wlan0 backup)"
-    else
-        ok "Network bond already configured"
-    fi
-else
-    info "Bonding skipped — eth0 or wlan0 not available"
-fi
-
 # ── Stop service (upgrade) ──────────────────────────────────
 if [[ "$UPGRADE" == "true" ]]; then
     info "Stopping service for upgrade..."

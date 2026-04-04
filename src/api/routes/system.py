@@ -59,7 +59,7 @@ def _get_ip_addresses() -> dict[str, str]:
     import fcntl
     import struct
     ips = {}
-    for iface in ("bond0", "eth0", "wlan0"):
+    for iface in ("eth0", "wlan0"):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             addr = fcntl.ioctl(s.fileno(), 0x8915,  # SIOCGIFADDR
@@ -108,17 +108,6 @@ async def system_status():
     except Exception:
         pass
 
-    # Active bond interface
-    active_interface = None
-    try:
-        bond_status = Path("/proc/net/bonding/bond0").read_text()
-        for line in bond_status.splitlines():
-            if "Currently Active Slave:" in line:
-                active_interface = line.split(":")[1].strip()
-                break
-    except Exception:
-        pass
-
     return {
         "cpu_temp": temp,
         "uptime_seconds": float(uptime),
@@ -128,7 +117,6 @@ async def system_status():
         "ip_addresses": ips,
         "public_ip": public_ip,
         "wifi_signal": wifi_signal,
-        "active_interface": active_interface,
     }
 
 

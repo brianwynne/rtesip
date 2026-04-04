@@ -16,4 +16,3 @@ rtesip ALL=(ALL) NOPASSWD: /bin/systemctl disable aes67.service, /bin/systemctl 
 rtesip ALL=(ALL) NOPASSWD: /usr/bin/timedatectl set-timezone *
 rtesip ALL=(ALL) NOPASSWD: /usr/bin/hostname *
 rtesip ALL=(ALL) NOPASSWD: /usr/sbin/ufw *
-rtesip ALL=(ALL) NOPASSWD: /bin/bash -c echo eth0 > /sys/class/net/bond0/bonding/active_slave

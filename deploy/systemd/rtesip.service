@@ -14,7 +14,6 @@ WorkingDirectory=/opt/rtesip
 ExecStartPre=+/opt/rtesip/deploy/scripts/detect-audio.sh
 ExecStartPre=+/usr/sbin/rfkill unblock wifi
 ExecStartPre=+/usr/sbin/ip link set wlan0 up
-ExecStartPre=+/opt/rtesip/deploy/scripts/bond-lock-ip.sh
 ExecStart=/opt/rtesip/.venv/bin/python run.py
 Restart=always
 RestartSec=3
