@@ -730,29 +730,42 @@ else
 fi
 
 # ── 007 Bond — Multi-Path Network Bonding (optional) ────────
-# If BOND_SERVER and BOND_TOKEN are set, install 007 Bond client
-# for multi-path bonding over ethernet + WiFi + cellular.
+# Installs 007 Bond client for multi-path bonding over ethernet
+# + WiFi + cellular. Can be set via env vars or interactive prompt.
 #
-# Usage:
-#   sudo BOND_SERVER=http://server:8017 BOND_TOKEN=<token> bash deploy/install.sh
+# Non-interactive: sudo BOND_SERVER=http://server:8017 BOND_TOKEN=<token> bash deploy/install.sh
 #
 BOND_SERVER="${BOND_SERVER:-}"
 BOND_TOKEN="${BOND_TOKEN:-}"
 
-if [[ -n "$BOND_SERVER" && -n "$BOND_TOKEN" ]]; then
+if [[ -f /etc/007/.env ]]; then
+    ok "007 Bond already installed"
+elif [[ -n "$BOND_SERVER" && -n "$BOND_TOKEN" ]]; then
+    : # env vars provided — install below
+else
+    echo ""
+    echo -e "  ${BOLD}007 Bond — Multi-Path Network Bonding${NC}"
+    echo "  Bonds ethernet + WiFi + cellular for reliable audio delivery."
+    echo "  Requires an enrollment token from the 007 Bond server."
+    echo ""
+    read -rp "  Enter enrollment URL (or press Enter to skip): " BOND_SERVER
+    if [[ -n "$BOND_SERVER" ]]; then
+        read -rp "  Enter enrollment token: " BOND_TOKEN
+    fi
+    echo ""
+fi
+
+if [[ -n "$BOND_SERVER" && -n "$BOND_TOKEN" && ! -f /etc/007/.env ]]; then
     info "Installing 007 Bond client (multi-path bonding)..."
     BOND_INSTALLER=$(mktemp /tmp/007-install-XXXXXX.sh)
     if curl -fsSL "https://raw.githubusercontent.com/brianwynne/007/main/deploy/install-007-client.sh" -o "$BOND_INSTALLER" 2>/dev/null; then
         ENROLL_URL="$BOND_SERVER" ENROLL_TOKEN="$BOND_TOKEN" bash "$BOND_INSTALLER" || warn "007 Bond installation failed — continuing without bonding"
         rm -f "$BOND_INSTALLER"
-        ok "007 Bond client installed"
     else
         warn "Could not download 007 Bond installer — continuing without bonding"
     fi
-elif [[ -f /etc/007/.env ]]; then
-    ok "007 Bond already installed"
-else
-    info "007 Bond not configured (set BOND_SERVER and BOND_TOKEN to enable multi-path)"
+elif [[ ! -f /etc/007/.env ]]; then
+    info "Skipping 007 Bond (no enrollment details provided)"
 fi
 
 # Add 007-bond dependency to rtesip service if 007 is installed
