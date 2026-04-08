@@ -746,7 +746,9 @@ else
     echo ""
     echo -e "  ${BOLD}007 Bond — Multi-Path Network Bonding${NC}"
     echo "  Bonds ethernet + WiFi + cellular for reliable audio delivery."
-    echo "  Requires an enrollment token from the 007 Bond server."
+    echo ""
+    echo "  To get a token, run on the 007 Bond server:"
+    echo -e "    ${GREEN}sudo 007-bond enroll-token${NC}"
     echo ""
     read -rp "  Enter enrollment URL (or press Enter to skip): " BOND_SERVER
     if [[ -n "$BOND_SERVER" ]]; then
