@@ -1,9 +1,19 @@
 """FastAPI application — single process serving API, WebSocket, and static files."""
 
 import asyncio
+import faulthandler
 import logging
+import signal
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Dump all thread stacks on SIGUSR1 (kill -USR1 <pid>)
+faulthandler.enable()
+faulthandler.register(signal.SIGUSR1, file=sys.stderr, all_threads=True)
+
+# Asyncio slow callback detection (>100ms)
+asyncio.get_event_loop().slow_callback_duration = 0.1
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles

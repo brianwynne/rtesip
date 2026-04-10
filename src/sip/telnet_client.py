@@ -122,8 +122,11 @@ class PjsuaTelnet:
             return
         try:
             self._writer.write(f"{command}\r\n".encode())
-            await self._writer.drain()
+            await asyncio.wait_for(self._writer.drain(), timeout=5)
             logger.debug("Sent: %s", command)
+        except asyncio.TimeoutError:
+            logger.error("Send timed out (pjsua not reading): %s", command)
+            self._connected = False
         except Exception as e:
             logger.error("Send failed: %s", e)
             self._connected = False

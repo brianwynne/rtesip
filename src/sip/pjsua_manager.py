@@ -41,7 +41,7 @@ def generate_config() -> str:
         "--snd-clock-rate=48000",
         "--quality=10",
         # "--use-compact-form",  # disabled for Twilio compatibility
-        "--use-ice",  # Re-enabled for Twilio — causes Bad Request errors with some STUN servers
+        "--use-ice",
         "--max-calls=1",
         "--no-vad",
         f"--ec-tail={audio.get('ec_tail', 200)}",

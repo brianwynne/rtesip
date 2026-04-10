@@ -88,25 +88,28 @@ def _is_trusted(ip: str) -> bool:
 
 async def _send_initial_state(ws: WebSocket) -> None:
     """Send initial state snapshot to a newly authenticated client."""
-    await ws.send_text(json.dumps({
-        "event": "state",
-        "call_state": telnet.call_state,
-        "current_contact": telnet.current_contact,
-        "accounts": {k: v for k, v in telnet.active_accounts.items()},
-        "sip_ready": telnet.sip_ready,
-        "server_reachable": telnet.server_reachable,
-        "connected_at": telnet.connected_at,
-        "asset_version": _get_asset_version(),
-    }))
-    await ws.send_text(json.dumps({
-        "event": "levels",
-        "cl": mixer_state.capture_left,
-        "cr": mixer_state.capture_right,
-        "clink": mixer_state.capture_linked,
-        "pl": mixer_state.playback_left,
-        "pr": mixer_state.playback_right,
-        "plink": mixer_state.playback_linked,
-    }))
+    try:
+        await asyncio.wait_for(ws.send_text(json.dumps({
+            "event": "state",
+            "call_state": telnet.call_state,
+            "current_contact": telnet.current_contact,
+            "accounts": {k: v for k, v in telnet.active_accounts.items()},
+            "sip_ready": telnet.sip_ready,
+            "server_reachable": telnet.server_reachable,
+            "connected_at": telnet.connected_at,
+            "asset_version": _get_asset_version(),
+        })), timeout=5)
+        await asyncio.wait_for(ws.send_text(json.dumps({
+            "event": "levels",
+            "cl": mixer_state.capture_left,
+            "cr": mixer_state.capture_right,
+            "clink": mixer_state.capture_linked,
+            "pl": mixer_state.playback_left,
+            "pr": mixer_state.playback_right,
+            "plink": mixer_state.playback_linked,
+        })), timeout=5)
+    except (asyncio.TimeoutError, Exception) as e:
+        logger.warning("Failed to send initial state: %s", e)
 
 
 async def on_pjsua_event(event: str, data: dict) -> None:

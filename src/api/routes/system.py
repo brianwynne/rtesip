@@ -13,7 +13,46 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
+import time
+
 from src.api.auth import require_api_key
+
+# Cached public IP — refreshed in background to avoid blocking event loop
+_public_ip_cache: str | None = None
+_public_ip_time: float = 0
+
+
+async def _get_public_ip() -> str | None:
+    """Return cached public IP, refreshing in background every 5 minutes."""
+    global _public_ip_cache, _public_ip_time
+    now = time.monotonic()
+    if _public_ip_cache and now - _public_ip_time < 300:
+        return _public_ip_cache
+    # Non-blocking: run the sync lookup in a thread
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _fetch_public_ip), timeout=5
+        )
+        if result:
+            _public_ip_cache = result
+            _public_ip_time = now
+    except (asyncio.TimeoutError, Exception):
+        pass
+    return _public_ip_cache
+
+
+def _fetch_public_ip() -> str | None:
+    """Get outbound IP via UDP socket (no DNS, no HTTP, no blocking)."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(1)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
 from src.config.settings import get_section, update_section, load, get_hardware_info
 from src.config.system import (
     apply_network_config, apply_wifi_config, apply_8021x_config,
@@ -81,20 +120,8 @@ async def system_status():
     hw = get_hardware_info()
     ips = _get_ip_addresses()
 
-    # Public IP via STUN-discovered address or external service
-    public_ip = None
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(2)
-        s.connect(("8.8.8.8", 80))
-        public_ip = s.getsockname()[0]
-        s.close()
-        # If it's a private IP, it's behind NAT — try to get real public IP
-        if public_ip.startswith(("10.", "172.", "192.168.")):
-            import urllib.request
-            public_ip = urllib.request.urlopen("https://api.ipify.org", timeout=3).read().decode().strip()
-    except Exception:
-        pass
+    # Public IP — use cached value, refresh in background
+    public_ip = await _get_public_ip()
 
     # WiFi signal strength from /proc/net/wireless
     wifi_signal = None
