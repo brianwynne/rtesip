@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import styles from "./AudioPage.module.css";
 
 const ALL_CODECS = [
@@ -165,6 +165,37 @@ export function AudioPage() {
   const [saving, setSaving] = useState(false);
   const [detectedDevices, setDetectedDevices] = useState<DetectedDevice[]>([]);
 
+  // Bond state
+  const [bondPreset, setBondPreset] = useState("");
+  const [bondFECMode, setBondFECMode] = useState("");
+  const [bondAvailable, setBondAvailable] = useState(false);
+
+  const BOND_API = `http://${window.location.hostname}:8007`;
+
+  const fetchBondConfig = useCallback(() => {
+    fetch(`${BOND_API}/api/config`)
+      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
+      .then((data) => {
+        setBondPreset(data.preset || "");
+        setBondFECMode(data.fec_mode || "");
+        setBondAvailable(true);
+      })
+      .catch(() => setBondAvailable(false));
+  }, [BOND_API]);
+
+  const setBondSetting = async (updates: { preset?: string; fec_mode?: string }) => {
+    try {
+      const res = await fetch(`${BOND_API}/api/preset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) fetchBondConfig();
+    } catch {
+      // bond API unreachable
+    }
+  };
+
   useEffect(() => {
     fetch("/api/audio/settings")
       .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
@@ -178,7 +209,8 @@ export function AudioPage() {
       .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
       .then((data) => { if (data.devices) setDetectedDevices(data.devices); })
       .catch(() => {});
-  }, []);
+    fetchBondConfig();
+  }, [fetchBondConfig]);
 
   const save = async (updates: Partial<AudioSettings>) => {
     setSaving(true);
@@ -325,6 +357,35 @@ export function AudioPage() {
             </div>
           </label>
         </div>
+
+        {/* Bond — only shown when 007 Bond is active */}
+        {bondAvailable && (
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle}>Bond</h3>
+          <div className={styles.hint}>Changes apply immediately — no restart required.</div>
+          <label className={styles.field}>
+            <span>Preset</span>
+            <select
+              value={bondPreset}
+              onChange={(e) => setBondSetting({ preset: e.target.value })}
+            >
+              <option value="broadcast">Broadcast (40ms)</option>
+              <option value="studio">Studio (80ms)</option>
+              <option value="field">Field (200ms)</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>FEC Mode</span>
+            <select
+              value={bondFECMode}
+              onChange={(e) => setBondSetting({ fec_mode: e.target.value })}
+            >
+              <option value="sliding">Sliding</option>
+              <option value="block">Block</option>
+            </select>
+          </label>
+        </div>
+        )}
 
         {/* Opus */}
         <div className={styles.card}>
