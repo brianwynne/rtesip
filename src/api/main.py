@@ -44,6 +44,10 @@ async def lifespan(app: FastAPI):
     # Initialize audio hardware state (phantom power, HiFiBerry XLR)
     await _init_audio_hardware()
 
+    # Pre-fetch public IPs at startup (before call traffic starts)
+    from src.api.routes.system import _get_public_ips, _get_ip_addresses
+    asyncio.create_task(_get_public_ips(_get_ip_addresses()))
+
     # Start pjsua
     await pjsua.start()
 

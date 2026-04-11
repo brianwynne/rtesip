@@ -22,7 +22,7 @@ _public_ip_cache: str | None = None
 _public_ip_time: float = 0
 _public_ips_cache: dict[str, str] = {}
 _public_ips_time: float = 0
-_PUBLIC_IP_TTL = 60  # seconds
+_PUBLIC_IP_TTL = 3600  # seconds — poll hourly, not every 60s (Pi 3 CPU sensitive)
 
 
 async def _get_public_ip() -> str | None:
