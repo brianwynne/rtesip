@@ -17,18 +17,20 @@ import time
 
 from src.api.auth import require_api_key
 
-# Cached public IP — refreshed in background to avoid blocking event loop
+# Cached public IPs — refreshed every 60 seconds to detect IP changes
 _public_ip_cache: str | None = None
 _public_ip_time: float = 0
+_public_ips_cache: dict[str, str] = {}
+_public_ips_time: float = 0
+_PUBLIC_IP_TTL = 60  # seconds
 
 
 async def _get_public_ip() -> str | None:
-    """Return cached public IP, refreshing in background every 5 minutes."""
+    """Return cached default public IP."""
     global _public_ip_cache, _public_ip_time
     now = time.monotonic()
-    if _public_ip_cache and now - _public_ip_time < 300:
+    if _public_ip_cache and now - _public_ip_time < _PUBLIC_IP_TTL:
         return _public_ip_cache
-    # Non-blocking: run the sync lookup in a thread
     loop = asyncio.get_event_loop()
     try:
         result = await asyncio.wait_for(
@@ -42,8 +44,28 @@ async def _get_public_ip() -> str | None:
     return _public_ip_cache
 
 
+async def _get_public_ips(interfaces: dict[str, str]) -> dict[str, str]:
+    """Return cached per-interface public IPs, refreshing every 60s."""
+    global _public_ips_cache, _public_ips_time
+    now = time.monotonic()
+    if _public_ips_cache and now - _public_ips_time < _PUBLIC_IP_TTL:
+        return _public_ips_cache
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _fetch_public_ip_per_interface, interfaces),
+            timeout=5,
+        )
+        if result:
+            _public_ips_cache = result
+            _public_ips_time = now
+    except (asyncio.TimeoutError, Exception):
+        pass
+    return _public_ips_cache
+
+
 def _fetch_public_ip() -> str | None:
-    """Get outbound IP via UDP socket (no DNS, no HTTP, no blocking)."""
+    """Get default outbound IP via UDP socket (no DNS, no HTTP, no blocking)."""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(1)
@@ -53,6 +75,22 @@ def _fetch_public_ip() -> str | None:
         return ip
     except Exception:
         return None
+
+
+def _fetch_public_ip_per_interface(interfaces: dict[str, str]) -> dict[str, str]:
+    """Get outbound IP for each interface by binding the UDP socket to each local IP."""
+    result = {}
+    for iface, local_ip in interfaces.items():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(1)
+            s.bind((local_ip, 0))
+            s.connect(("8.8.8.8", 80))
+            result[iface] = s.getsockname()[0]
+            s.close()
+        except Exception:
+            pass
+    return result
 from src.config.settings import get_section, update_section, load, get_hardware_info
 from src.config.system import (
     apply_network_config, apply_wifi_config, apply_8021x_config,
@@ -120,8 +158,9 @@ async def system_status():
     hw = get_hardware_info()
     ips = _get_ip_addresses()
 
-    # Public IP — use cached value, refresh in background
-    public_ip = await _get_public_ip()
+    # Public IPs — cached per-interface, refreshes every 60s
+    public_ips = await _get_public_ips(ips)
+    public_ip = public_ips.get("eth0") or public_ips.get("wlan0") or await _get_public_ip()
 
     # WiFi signal strength from /proc/net/wireless
     wifi_signal = None
@@ -142,6 +181,7 @@ async def system_status():
         "serial": hw.get("serial", ""),
         "model": hw.get("model", ""),
         "ip_addresses": ips,
+        "public_ips": public_ips,
         "public_ip": public_ip,
         "wifi_signal": wifi_signal,
     }
