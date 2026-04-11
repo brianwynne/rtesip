@@ -60,7 +60,7 @@ export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onTog
                 {iface.startsWith("wlan") ? <Wifi size={14} /> : <Cable size={14} />}
                 {ip}
               </span>
-              {publicIps[iface] && publicIps[iface] !== ip && (
+              {publicIps[iface] && (
                 <span className={styles.ipLine}>
                   <Globe size={12} />
                   {publicIps[iface]}

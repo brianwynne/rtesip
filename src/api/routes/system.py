@@ -78,19 +78,20 @@ def _fetch_public_ip() -> str | None:
 
 
 def _fetch_public_ip_per_interface(interfaces: dict[str, str]) -> dict[str, str]:
-    """Get outbound IP for each interface by binding the UDP socket to each local IP."""
-    result = {}
-    for iface, local_ip in interfaces.items():
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.settimeout(1)
-            s.bind((local_ip, 0))
-            s.connect(("8.8.8.8", 80))
-            result[iface] = s.getsockname()[0]
-            s.close()
-        except Exception:
-            pass
-    return result
+    """Get public IP for each interface.
+    Uses HTTP to api.ipify.org (cached, runs in thread pool).
+    On same-NAT interfaces, all will show the same public IP."""
+    import urllib.request
+    # Get the single public IP once
+    try:
+        public = urllib.request.urlopen("https://api.ipify.org", timeout=3).read().decode().strip()
+    except Exception:
+        public = None
+    if not public:
+        return {}
+    # Assign to all interfaces (same NAT = same public IP)
+    # When cellular is added, per-interface detection can be enhanced
+    return {iface: public for iface in interfaces}
 from src.config.settings import get_section, update_section, load, get_hardware_info
 from src.config.system import (
     apply_network_config, apply_wifi_config, apply_8021x_config,
