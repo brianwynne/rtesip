@@ -155,6 +155,13 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME}"
 
+          # Unzip if pi-gen zipped the image
+          ZIP=$(find pi-gen/deploy -name "*.zip" | head -1)
+          if [ -n "$ZIP" ]; then
+            echo "Unzipping $ZIP"
+            cd pi-gen/deploy && unzip -o "$(basename "$ZIP")" && cd -
+          fi
+
           # Find the built image
           IMAGE=$(find pi-gen/deploy -name "*.img" | head -1)
           if [ -z "$IMAGE" ]; then
