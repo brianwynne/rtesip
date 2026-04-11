@@ -71,10 +71,10 @@ jobs:
           VERSION="${GITHUB_REF_NAME}"
           BUNDLE_NAME="sip-reporter-${VERSION}-noarch.tar.gz"
 
+          mkdir -p staging/frontend
           cp -r src/ staging/src/
           cp run.py staging/
           cp requirements.txt staging/
-          mkdir -p staging/frontend
           cp -r frontend/dist staging/frontend/dist
           cp -r deploy/ staging/deploy/
           cp -r boot/ staging/boot/
