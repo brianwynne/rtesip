@@ -135,7 +135,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: 1fr 1fr;
-  gap: 1.6rem;
+  gap: 3.5rem 4.5rem;
   width: 80%;
   max-width: 30rem;
 }
