@@ -126,7 +126,8 @@ def test_registration_status_format2(telnet):
 # --- Incoming call ---
 
 def test_incoming_call_from_header(telnet):
-    """From: header triggers incoming state with parsed contact."""
+    """From: header after 'Incoming call' triggers incoming state with parsed contact."""
+    telnet._parse_line("Incoming call for account 3!")
     telnet._parse_line('From: "Bob Smith" <sip:bob@example.com>')
     assert telnet.call_state == CallState.INCOMING
     assert "bob@example.com" in telnet.current_contact
@@ -136,8 +137,8 @@ def test_incoming_call_from_header(telnet):
 
 
 def test_incoming_call_list_format(telnet):
-    """INCOMING in call list also triggers incoming state."""
-    telnet._parse_line("Current call id=0 to sip:bob@example.com [INCOMING]")
+    """INCOMING state change also triggers incoming state."""
+    telnet._parse_line("Call 0 state changed to INCOMING")
     assert telnet.call_state == CallState.INCOMING
 
 
