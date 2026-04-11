@@ -80,6 +80,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# ── Derived paths ───────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # ── Must run as root ─────────────────────────────────────────
 if [[ "$(id -u)" -ne 0 ]]; then
     fatal "This script must be run as root (sudo)."

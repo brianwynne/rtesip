@@ -82,7 +82,7 @@ upgrade() {
 
     echo "Installing..."
     cd "$TMPDIR"
-    bash deploy/install.sh --local
+    bash deploy/install.sh --local "$TMPDIR"
 
     rm -rf "$TMPDIR"
     echo -e "${GREEN}Upgrade complete${NC}"
