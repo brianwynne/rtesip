@@ -189,3 +189,62 @@
 }
 .connectBtn:hover:not(:disabled) { background: #34d16f; }
 .connectBtn:disabled { opacity: 0.3; }
+
+/* ── Keyboard Overlay ── */
+.keyboardOverlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  z-index: 100;
+}
+
+.overlayHeader {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.passwordDisplay {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.passwordLabel {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.passwordText {
+  font-size: 1.3rem;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  min-height: 1.5rem;
+}
+
+.overlayClose {
+  width: 9rem;
+  height: 3rem;
+  border-radius: var(--radius);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--red);
+}
+.overlayClose:hover { background: var(--red); color: #fff; }

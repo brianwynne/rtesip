@@ -6,7 +6,7 @@ interface Props {
   onKey: (char: string) => void;
   onBackspace: () => void;
   onClear: () => void;
-  onSubmit: () => void;
+  onSubmit?: () => void;
   domains?: string[];
 }
 
@@ -24,6 +24,12 @@ const ROWS_UPPER = [
 
 const NUM_ROW = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 const SIP_ROW = ["@", ".", "-", "_", ":", "+", "/"];
+const SYM_ROWS = [
+  ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")"],
+  ["-", "_", "=", "+", "[", "]", "{", "}", "\\", "|"],
+  ["`", "~", ";", ":", "'", "\"", ",", ".", "/", "?"],
+  ["<", ">"]
+];
 
 const DEFAULT_DOMAINS = ["@sip.rtegroup.ie", "@sip.audio"];
 
@@ -45,13 +51,15 @@ export function SoftKeyboard({ onKey, onBackspace, onSubmit, domains }: Props) {
   return (
     <div className={styles.keyboard}>
       {/* Domain shortcuts */}
-      <div className={styles.domainRow}>
-        {sipDomains.map((d) => (
-          <button key={d} className={styles.domainBtn} onPointerDown={prevent} onClick={() => onKey(d)}>
-            {d}
-          </button>
-        ))}
-      </div>
+      {sipDomains.length > 0 && (
+        <div className={styles.domainRow}>
+          {sipDomains.map((d) => (
+            <button key={d} className={styles.domainBtn} onPointerDown={prevent} onClick={() => onKey(d)}>
+              {d}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Number row */}
       <div className={styles.row}>
@@ -64,24 +72,34 @@ export function SoftKeyboard({ onKey, onBackspace, onSubmit, domains }: Props) {
 
       {showSymbols ? (
         <>
-          {/* SIP symbols */}
-          <div className={styles.row}>
-            {SIP_ROW.map((k) => (
-              <button key={k} className={styles.key} onPointerDown={prevent} onClick={() => handleKey(k)}>
-                {k}
-              </button>
-            ))}
-          </div>
+          {SYM_ROWS.map((row, i) => (
+            <div key={`sym-${i}`} className={styles.row}>
+              {row.map((k) => (
+                <button key={k} className={styles.key} onPointerDown={prevent} onClick={() => handleKey(k)}>
+                  {k}
+                </button>
+              ))}
+              {i === 3 && (
+                <>
+                  <button className={`${styles.key} ${styles.keyFlex}`} onPointerDown={prevent} onClick={() => handleKey(" ")}>
+                    space
+                  </button>
+                  <button className={`${styles.key} ${styles.keyWide}`} onPointerDown={prevent} onClick={onBackspace}>
+                    <Delete size={18} />
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
           <div className={styles.row}>
             <button className={`${styles.key} ${styles.keyWide}`} onPointerDown={prevent} onClick={() => setShowSymbols(false)}>
               ABC
             </button>
-            <button className={`${styles.key} ${styles.keyFlex}`} onPointerDown={prevent} onClick={() => handleKey(" ")}>
-              space
-            </button>
-            <button className={`${styles.key} ${styles.keyAction}`} onPointerDown={prevent} onClick={onBackspace}>
-              <Delete size={18} />
-            </button>
+            {onSubmit && (
+              <button className={`${styles.key} ${styles.keyCall}`} onPointerDown={prevent} onClick={onSubmit}>
+                <CornerDownLeft size={18} />
+              </button>
+            )}
           </div>
         </>
       ) : (
@@ -125,9 +143,11 @@ export function SoftKeyboard({ onKey, onBackspace, onSubmit, domains }: Props) {
             <button className={`${styles.key} ${styles.keySip}`} onPointerDown={prevent} onClick={() => handleKey("-")}>
               -
             </button>
-            <button className={`${styles.key} ${styles.keyCall}`} onPointerDown={prevent} onClick={onSubmit}>
-              <CornerDownLeft size={18} />
-            </button>
+            {onSubmit && (
+              <button className={`${styles.key} ${styles.keyCall}`} onPointerDown={prevent} onClick={onSubmit}>
+                <CornerDownLeft size={18} />
+              </button>
+            )}
           </div>
         </>
       )}

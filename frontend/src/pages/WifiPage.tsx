@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Wifi, WifiOff, Lock, Unlock, RefreshCw, Check } from "lucide-react";
+import { Wifi, WifiOff, Lock, Unlock, RefreshCw, Check, X } from "lucide-react";
+import { SoftKeyboard } from "../components/SoftKeyboard";
 import styles from "./WifiPage.module.css";
 
 interface Network {
@@ -17,6 +18,7 @@ export function WifiPage() {
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [showKeyboard, setShowKeyboard] = useState(false);
 
   const scan = async () => {
     setScanning(true);
@@ -124,8 +126,10 @@ export function WifiPage() {
             className={`${styles.network} ${selected === net.ssid ? styles.networkSelected : ""} ${connected === net.ssid ? styles.networkConnected : ""}`}
             onClick={() => {
               if (connected === net.ssid) return;
-              setSelected(selected === net.ssid ? null : net.ssid);
+              const toggling = selected === net.ssid;
+              setSelected(toggling ? null : net.ssid);
               setPassword("");
+              setShowKeyboard(!toggling && net.security !== "Open");
             }}
           >
             <div className={styles.signalBars} data-bars={signalBars(net.signal)}>
@@ -149,23 +153,44 @@ export function WifiPage() {
         )}
       </div>
 
-      {selected && connected !== selected && (
-        <div className={styles.connectForm}>
-          {networks.find((n) => n.ssid === selected)?.security !== "Open" && (
-            <input
-              className={styles.passwordInput}
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && connect()}
-              autoFocus
-            />
-          )}
+      {selected && connected !== selected && (() => {
+        const needsPassword = networks.find((n) => n.ssid === selected)?.security !== "Open";
+        return !needsPassword ? (
+          <div className={styles.connectForm}>
+            <button
+              className={styles.connectBtn}
+              onClick={connect}
+              disabled={connecting}
+            >
+              {connecting ? "Connecting..." : `Connect to ${selected}`}
+            </button>
+          </div>
+        ) : null;
+      })()}
+
+      {showKeyboard && selected && (
+        <div className={styles.keyboardOverlay}>
+          <div className={styles.overlayHeader}>
+            <div className={styles.passwordDisplay}>
+              <span className={styles.passwordLabel}>{selected}</span>
+              <span className={styles.passwordText}>{password ? "•".repeat(password.length) : "Enter password"}</span>
+            </div>
+            <button className={styles.overlayClose} onClick={() => { setShowKeyboard(false); setSelected(null); setPassword(""); }}>
+              <X size={16} />
+            </button>
+          </div>
+
+          <SoftKeyboard
+            domains={[]}
+            onKey={(char) => setPassword((p) => p + char)}
+            onBackspace={() => setPassword((p) => p.slice(0, -1))}
+            onClear={() => setPassword("")}
+          />
+
           <button
             className={styles.connectBtn}
             onClick={connect}
-            disabled={connecting || (!password && networks.find((n) => n.ssid === selected)?.security !== "Open")}
+            disabled={connecting || !password}
           >
             {connecting ? "Connecting..." : `Connect to ${selected}`}
           </button>
