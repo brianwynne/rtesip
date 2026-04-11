@@ -19,7 +19,7 @@ interface Props {
   publicIps: Record<string, string>;
 }
 
-export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal, publicIp, publicIps }: Props) {
+export function StatusBar({ serverReachable, accounts, ipAddresses, theme, onToggleTheme, callState, wifiSignal, publicIps }: Props) {
   const [showQuality, setShowQuality] = useState(false);
   const isConnected = callState.state === "connected";
 
